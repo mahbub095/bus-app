@@ -167,8 +167,12 @@
     const logsUrl = @json(route('admin.bookings.logs.api'));
     const bodyEl = document.getElementById('bookings-log-body');
     const liveTextEl = document.getElementById('bookings-live-text');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const updateRouteTemplate = @json(route('admin.bookings.update', ['id' => '__ID__']));
+    const destroyRouteTemplate = @json(route('admin.bookings.destroy', ['id' => '__ID__']));
     let timer = null;
     let isFetching = false;
+    let bookingsMap = {};
 
     function formatDateTime(iso) {
         if (!iso) return 'N/A';
@@ -182,6 +186,10 @@
         });
     }
 
+    function getRoute(template, id) {
+        return template.replace('__ID__', encodeURIComponent(id));
+    }
+
     function escapeHtml(str) {
         const div = document.createElement('div');
         div.textContent = str ?? '';
@@ -189,6 +197,8 @@
     }
 
     function renderRows(bookings) {
+        bookingsMap = {};
+
         if (!Array.isArray(bookings) || bookings.length === 0) {
             bodyEl.innerHTML = `
                 <tr>
@@ -200,10 +210,14 @@
         }
 
         bodyEl.innerHTML = bookings.map((b) => {
+            bookingsMap[b.id] = b;
             const statusClass = b.status === 'PAID' ? 'paid' : (b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
             const routeFrom = b.schedule?.route?.from || 'N/A';
             const routeTo = b.schedule?.route?.to || 'N/A';
             const busName = b.schedule?.bus?.operator_name || 'N/A';
+            const updateUrl = getRoute(updateRouteTemplate, b.id);
+            const destroyUrl = getRoute(destroyRouteTemplate, b.id);
+
             return `
                 <tr>
                     <td style="font-weight: bold; color: var(--primary);">${escapeHtml(b.pnr)}</td>
@@ -226,9 +240,42 @@
                     <td>
                         <span class="badge-status ${statusClass}">${escapeHtml(b.status)}</span>
                     </td>
-                    <td style="color: var(--text-muted); font-size: 12px;">Use actions after page refresh.</td>
+                    <td>
+                        <div class="action-btns">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="editBookingFromLog(${b.id})">
+                                Edit
+                            </button>
+                            <form action="${escapeHtml(destroyUrl)}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');">
+                                <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>`;
         }).join('');
+    }
+
+    window.editBookingFromLog = function (bookingId) {
+        const booking = bookingsMap[bookingId];
+        if (!booking) return;
+
+        setCrudFormMode('booking-form', {
+            mode: 'edit',
+            id: booking.id,
+            action: getRoute(updateRouteTemplate, booking.id),
+            title: `Edit Booking ${booking.pnr}`,
+            submitLabel: 'Update Booking',
+            fields: {
+                passenger_name: booking.passenger_name,
+                passenger_phone: booking.passenger_phone,
+                passenger_email: booking.passenger_email,
+                seat_numbers: booking.seat_numbers,
+                total_fare: booking.total_fare,
+                status: booking.status,
+                payment_method: booking.payment_method || 'bKash'
+            }
+        });
     }
 
     function setLiveText(text) {

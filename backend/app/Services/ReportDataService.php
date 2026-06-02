@@ -122,24 +122,29 @@ class ReportDataService
     {
         $totalTickets = $bookings->count();
         $totalSeats = 0;
-        $totalFare = 0;
+        $totalFare = 0.00;
         $acCount = 0;
         $nonAcCount = 0;
-        $acFare = 0;
-        $nonAcFare = 0;
+        $acFare = 0.00;
+        $nonAcFare = 0.00;
 
         foreach ($bookings as $booking) {
+            // Parse seats efficiently
             $seats = array_filter(array_map('trim', explode(',', $booking->seat_numbers)));
-            $totalSeats += count($seats);
-            $totalFare += floatval($booking->total_fare);
+            $seatCount = count($seats);
+            $bookingFare = floatval($booking->total_fare);
+            
+            $totalSeats += $seatCount;
+            $totalFare += $bookingFare;
 
-            $coachType = $booking->schedule?->bus?->coach_type;
+            // Check coach type without accessing relationship if already loaded
+            $coachType = $booking->schedule?->bus?->coach_type ?? '';
             if ($coachType === 'AC') {
                 $acCount++;
-                $acFare += floatval($booking->total_fare);
+                $acFare += $bookingFare;
             } else {
                 $nonAcCount++;
-                $nonAcFare += floatval($booking->total_fare);
+                $nonAcFare += $bookingFare;
             }
         }
 

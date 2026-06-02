@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Promotion;
-use App\Services\SmsGatewayService;
+use App\Jobs\SendBookingSmsNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
-    public function __construct(protected SmsGatewayService $smsGatewayService)
+    public function __construct()
     {
     }
 
@@ -47,14 +47,10 @@ class BookingController extends Controller
         return DB::transaction(function () use ($request, $schedule, $requestedSeats, $promoCode, $user) {
             $activeBookings = Booking::where('schedule_id', $schedule->id)
                 ->where('status', 'PAID')
-                ->get();
+                ->get(['seat_numbers']); // Only fetch seats column
 
-            $bookedSeats = [];
-            foreach ($activeBookings as $booking) {
-                foreach (explode(',', $booking->seat_numbers) as $seat) {
-                    $bookedSeats[trim($seat)] = true;
-                }
-            }
+            // Extract booked seats more efficiently
+            $bookedSeats = $this->extractBookedSeats($activeBookings);
 
             foreach ($requestedSeats as $reqSeat) {
                 if (isset($bookedSeats[$reqSeat])) {
@@ -89,7 +85,8 @@ class BookingController extends Controller
                 'status' => 'PAID',
             ]);
 
-            $this->smsGatewayService->sendBookingVerification($booking);
+            // Dispatch SMS notification to queue (non-blocking)
+            SendBookingSmsNotification::dispatch($booking);
 
             return response()->json([
                 'message' => 'Booking successfully created!',
@@ -193,5 +190,21 @@ class BookingController extends Controller
                 ],
             ],
         ];
+    }
+
+    /**
+     * Extract booked seats from bookings collection.
+     * Optimized to reduce memory and processing time.
+     */
+    protected function extractBookedSeats($bookings): array
+    {
+        $bookedSeats = [];
+        foreach ($bookings as $booking) {
+            $seats = array_filter(array_map('trim', explode(',', $booking->seat_numbers)));
+            foreach ($seats as $seat) {
+                $bookedSeats[$seat] = true;
+            }
+        }
+        return $bookedSeats;
     }
 }

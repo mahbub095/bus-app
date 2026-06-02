@@ -38,7 +38,7 @@ class SearchController extends Controller
 
         $query = Schedule::where('route_id', $route->id)
             ->whereBetween('departure_time', [$startDate, $endDate])
-            ->with(['bus', 'bookings' => function($q) {
+            ->with(['bus', 'route.departureStation', 'route.arrivalStation', 'bookings' => function($q) {
                 $q->where('status', 'PAID');
             }]);
 
@@ -53,17 +53,8 @@ class SearchController extends Controller
 
         // 4. Format the output with seat booking summaries
         $formattedSchedules = $schedules->map(function($sched) {
-            // Collect all reserved seats
-            $bookedSeats = [];
-            foreach ($sched->bookings as $booking) {
-                $seats = explode(',', $booking->seat_numbers);
-                foreach ($seats as $seat) {
-                    $seatTrimmed = trim($seat);
-                    if ($seatTrimmed !== '') {
-                        $bookedSeats[] = $seatTrimmed;
-                    }
-                }
-            }
+            // Collect all reserved seats efficiently
+            $bookedSeats = $this->extractBookedSeatsFromSchedule($sched);
 
             return [
                 'id' => $sched->id,
@@ -88,5 +79,19 @@ class SearchController extends Controller
         });
 
         return response()->json($formattedSchedules);
+    }
+
+    /**
+     * Extract booked seats from schedule bookings collection.
+     * Optimized for performance with single pass.
+     */
+    protected function extractBookedSeatsFromSchedule($schedule): array
+    {
+        $bookedSeats = [];
+        foreach ($schedule->bookings as $booking) {
+            $seats = array_filter(array_map('trim', explode(',', $booking->seat_numbers)));
+            $bookedSeats = array_merge($bookedSeats, $seats);
+        }
+        return array_values($bookedSeats); // Re-index array
     }
 }

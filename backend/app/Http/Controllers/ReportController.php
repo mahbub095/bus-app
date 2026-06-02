@@ -20,13 +20,15 @@ class ReportController extends Controller
     {
         $this->filters->validateFilters($request);
 
-        $bookings = $this->data->sellingQuery($request)->get();
+        // Limit preview to 500 records for performance
+        $bookings = $this->data->sellingQuery($request)->limit(500)->get();
         $rows = $bookings->map(fn ($b) => $this->data->formatSellingRow($b))->values();
 
         return response()->json([
             'summary' => $this->data->buildSummary($bookings, 'selling'),
             'filter_label' => $this->filters->filterSummary($request),
             'rows' => $rows,
+            'total_count' => $this->data->sellingQuery($request)->count(),
         ]);
     }
 
@@ -34,13 +36,15 @@ class ReportController extends Controller
     {
         $this->filters->validateFilters($request);
 
-        $bookings = $this->data->cancelQuery($request)->get();
+        // Limit preview to 500 records for performance
+        $bookings = $this->data->cancelQuery($request)->limit(500)->get();
         $rows = $bookings->map(fn ($b) => $this->data->formatCancelRow($b))->values();
 
         return response()->json([
             'summary' => $this->data->buildSummary($bookings, 'cancel'),
             'filter_label' => $this->filters->filterSummary($request),
             'rows' => $rows,
+            'total_count' => $this->data->cancelQuery($request)->count(),
         ]);
     }
 

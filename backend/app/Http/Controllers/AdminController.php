@@ -31,12 +31,14 @@ class AdminController extends Controller
         $cancelledBookingsCount = Booking::where('status', 'CANCELLED')->count();
         $totalSchedules = Schedule::count();
 
+        // Limit recent bookings to 50 for performance
         $recentBookings = Booking::with([
             'schedule.bus',
             'schedule.route.departureStation',
             'schedule.route.arrivalStation'
         ])
         ->orderBy('created_at', 'desc')
+        ->limit(50)
         ->get();
 
         $formattedBookings = $recentBookings->map(function($b) {
@@ -64,35 +66,45 @@ class AdminController extends Controller
             ];
         });
 
+        // Limit stations, buses, routes, schedules for performance
         $stations = Station::orderBy('name', 'asc')->get();
         $buses = Bus::orderBy('operator_name', 'asc')->get();
-        $routes = Route::with(['departureStation', 'arrivalStation'])->get()->map(function($r) {
-            return [
-                'id' => $r->id,
-                'departure_station_id' => $r->departure_station_id,
-                'arrival_station_id' => $r->arrival_station_id,
-                'from' => $r->departureStation->name,
-                'to' => $r->arrivalStation->name,
-                'distance' => $r->distance,
-                'duration' => $r->duration
-            ];
-        });
+        
+        // Paginate routes
+        $routes = Route::with(['departureStation', 'arrivalStation'])
+            ->limit(100)
+            ->get()
+            ->map(function($r) {
+                return [
+                    'id' => $r->id,
+                    'departure_station_id' => $r->departure_station_id,
+                    'arrival_station_id' => $r->arrival_station_id,
+                    'from' => $r->departureStation->name,
+                    'to' => $r->arrivalStation->name,
+                    'distance' => $r->distance,
+                    'duration' => $r->duration
+                ];
+            });
 
-        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->get()->map(function($s) {
-            return [
-                'id' => $s->id,
-                'bus_id' => $s->bus_id,
-                'route_id' => $s->route_id,
-                'bus_operator' => $s->bus->operator_name,
-                'coach_number' => $s->bus->coach_number,
-                'coach_type' => $s->bus->coach_type,
-                'route_from' => $s->route->departureStation->name,
-                'route_to' => $s->route->arrivalStation->name,
-                'departure_time' => $s->departure_time->toIso8601String(),
-                'arrival_time' => $s->arrival_time->toIso8601String(),
-                'fare' => floatval($s->fare)
-            ];
-        });
+        // Paginate schedules
+        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
+            ->limit(100)
+            ->get()
+            ->map(function($s) {
+                return [
+                    'id' => $s->id,
+                    'bus_id' => $s->bus_id,
+                    'route_id' => $s->route_id,
+                    'bus_operator' => $s->bus->operator_name,
+                    'coach_number' => $s->bus->coach_number,
+                    'coach_type' => $s->bus->coach_type,
+                    'route_from' => $s->route->departureStation->name,
+                    'route_to' => $s->route->arrivalStation->name,
+                    'departure_time' => $s->departure_time->toIso8601String(),
+                    'arrival_time' => $s->arrival_time->toIso8601String(),
+                    'fare' => floatval($s->fare)
+                ];
+            });
 
         $promotions = Promotion::orderBy('code', 'asc')->get();
 
@@ -130,6 +142,7 @@ class AdminController extends Controller
             'schedule.route.arrivalStation'
         ])
         ->orderBy('created_at', 'desc')
+        ->limit(50)
         ->get();
 
         $cancelRequests = Booking::with([
@@ -139,18 +152,24 @@ class AdminController extends Controller
         ])
             ->where('status', 'CANCEL_REQUESTED')
             ->orderBy('updated_at', 'desc')
+            ->limit(50)
             ->get();
 
         $stations = Station::orderBy('name', 'asc')->get();
         $buses = Bus::orderBy('operator_name', 'asc')->get();
         
-        $routes = Route::with(['departureStation', 'arrivalStation'])->get()->map(function($r) {
-            $r->from = $r->departureStation->name;
-            $r->to = $r->arrivalStation->name;
-            return $r;
-        });
+        $routes = Route::with(['departureStation', 'arrivalStation'])
+            ->limit(100)
+            ->get()
+            ->map(function($r) {
+                $r->from = $r->departureStation->name;
+                $r->to = $r->arrivalStation->name;
+                return $r;
+            });
 
-        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->get();
+        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
+            ->limit(100)
+            ->get();
         $promotions = Promotion::orderBy('code', 'asc')->get();
         $smsConfig = SmsConfig::query()->latest('id')->first();
 
@@ -219,6 +238,7 @@ class AdminController extends Controller
                 'seat_numbers' => $b->seat_numbers,
                 'total_fare' => (float) $b->total_fare,
                 'status' => $b->status,
+                'payment_method' => $b->payment_method,
                 'created_at' => optional($b->created_at)->toIso8601String(),
                 'schedule' => [
                     'departure_time' => optional($b->schedule?->departure_time)->toIso8601String(),
