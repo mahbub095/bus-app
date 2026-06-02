@@ -24,6 +24,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Coach Services (realtime search + seat map)
     Route::get('/admin/api/coach-services/search', [AdminController::class, 'searchCoachServices'])->name('admin.coach-services.search');
     Route::post('/admin/api/bookings/{id}/cancel', [AdminController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
+    Route::get('/admin/api/bookings/logs', [AdminController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
 
     // Reports
     Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/admin/bookings/{id}', [AdminController::class, 'updateBookingWeb'])->name('admin.bookings.update');
     Route::delete('/admin/bookings/{id}', [AdminController::class, 'destroyBookingWeb'])->name('admin.bookings.destroy');
     Route::post('/admin/bookings/{id}/cancel', [AdminController::class, 'cancelBookingWeb'])->name('admin.bookings.cancel');
+    Route::post('/admin/bookings/{id}/approve-cancel', [AdminController::class, 'approveCancelRequestWeb'])->name('admin.bookings.approve-cancel');
 
     // Stations CRUD
     Route::post('/admin/stations', [AdminController::class, 'storeStationWeb'])->name('admin.stations.store');
@@ -63,6 +65,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/promotions', [AdminController::class, 'storePromotionWeb'])->name('admin.promotions.store');
     Route::put('/admin/promotions/{id}', [AdminController::class, 'updatePromotionWeb'])->name('admin.promotions.update');
     Route::delete('/admin/promotions/{id}', [AdminController::class, 'destroyPromotionWeb'])->name('admin.promotions.destroy');
+    Route::post('/admin/sms-config', [AdminController::class, 'updateSmsConfigWeb'])->name('admin.sms-config.update');
 
     // System Database Migration Actions
     Route::post('/admin/system/migrate', [AdminController::class, 'systemMigrate'])->name('admin.system.migrate');

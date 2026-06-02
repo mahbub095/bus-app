@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('seat_numbers'); // Comma-separated like A1,A2 or B3
             $table->decimal('total_fare', 10, 2);
             $table->string('payment_method')->default('bKash');
-            $table->enum('status', ['PAID', 'CANCELLED'])->default('PAID');
+            $table->enum('status', ['PAID', 'CANCEL_REQUESTED', 'CANCELLED'])->default('PAID');
             $table->timestamps();
         });
     }

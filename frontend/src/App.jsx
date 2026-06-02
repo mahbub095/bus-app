@@ -493,7 +493,7 @@ function App() {
   // Cancel Booking action (owner only)
   const handleCancelBooking = async (bookingId) => {
     if (!requireAuth()) return;
-    if (!window.confirm('Are you sure you want to cancel this ticket booking? This will release your seats.')) {
+    if (!window.confirm('Submit cancellation request for this ticket? Admin approval is required before final cancellation.')) {
       return;
     }
 
@@ -514,8 +514,8 @@ function App() {
         return;
       }
       if (res.ok) {
-        showToast('Booking successfully cancelled and seat released!', 'success');
-        setCancelBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELLED' } : b));
+        showToast(data.message || 'Cancellation request submitted successfully.', 'success');
+        setCancelBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'CANCEL_REQUESTED' } : b));
         
         // Refresh search results
         if (searchDone) {
@@ -785,6 +785,10 @@ function App() {
 
                     <div className="ticket-row-grid">
                       <div className="ticket-field">
+                        <span className="ticket-label">Bus Name</span>
+                        <span className="ticket-val">{bookingSuccess.schedule?.bus?.operator_name || 'N/A'}</span>
+                      </div>
+                      <div className="ticket-field">
                         <span className="ticket-label">Departure Date & Time</span>
                         <span className="ticket-val">
                           {formatDate(bookingSuccess.schedule.departure_time)} @ {formatTime(bookingSuccess.schedule.departure_time)}
@@ -1026,6 +1030,11 @@ function App() {
                                     className={`btn ${isExpanded ? 'btn-secondary' : 'btn-primary'}`} 
                                     style={{ marginTop: '8px', padding: '6px 12px', fontSize: '12px' }}
                                     onClick={() => {
+                                      if (!authUser) {
+                                        openAuthModal('login');
+                                        showToast('Login required to select seats and book tickets.', 'error');
+                                        return;
+                                      }
                                       if (isExpanded) {
                                         setSelectedSchedule(null);
                                         setSelectedSeats([]);
@@ -1037,7 +1046,7 @@ function App() {
                                       setPromoInput('');
                                     }}
                                   >
-                                    {isExpanded ? 'Close Map' : 'Select Seats'}
+                                    {isExpanded ? 'Close Map' : (authUser ? 'Select Seats' : 'Login to Book')}
                                   </button>
                                 </div>
                               </div>
@@ -1316,7 +1325,7 @@ function App() {
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                             <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Ticket PNR: {b.pnr}</span>
-                            <span className={`badge-status ${b.status === 'PAID' ? 'paid' : 'cancelled'}`}>{b.status}</span>
+                            <span className={`badge-status ${b.status === 'PAID' ? 'paid' : (b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled')}`}>{b.status}</span>
                           </div>
 
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
@@ -1324,6 +1333,7 @@ function App() {
                             <div>Phone: <strong style={{ color: '#fff' }}>{b.passenger_phone}</strong></div>
                             <div>From: <strong style={{ color: '#fff' }}>{b.schedule.route.from}</strong></div>
                             <div>To: <strong style={{ color: '#fff' }}>{b.schedule.route.to}</strong></div>
+                            <div>Bus Name: <strong style={{ color: '#fff' }}>{b.schedule?.bus?.operator_name || 'N/A'}</strong></div>
                             <div>Date: <strong style={{ color: '#fff' }}>{formatDate(b.schedule.departure_time)}</strong></div>
                             <div>Departure: <strong style={{ color: '#fff' }}>{formatTime(b.schedule.departure_time)}</strong></div>
                             <div>Seats Reserved: <strong style={{ color: 'var(--primary)' }}>{b.seat_numbers}</strong></div>
@@ -1333,14 +1343,18 @@ function App() {
                           {b.status === 'PAID' ? (
                             <div style={{ marginTop: '20px' }}>
                               <div className="cancellation-refund-info">
-                                <strong>Notice:</strong> Cancelling this ticket releases your reserved seats instantly. A 100% refund will be credited back to your account ({b.payment_method}) within 24 hours.
+                                <strong>Notice:</strong> You can submit a cancellation request for admin verification. After approval, the ticket is cancelled and refund is processed to your {b.payment_method} account.
                               </div>
                               <button 
                                 className="btn btn-danger w-full"
                                 onClick={() => handleCancelBooking(b.id)}
                               >
-                                Cancel Reservation & Request Refund
+                                Submit Cancellation Request
                               </button>
+                            </div>
+                          ) : b.status === 'CANCEL_REQUESTED' ? (
+                            <div style={{ marginTop: '15px', color: '#FBBF24', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
+                              Cancellation request submitted. Waiting for admin approval.
                             </div>
                           ) : (
                             <div style={{ marginTop: '15px', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>

@@ -8,6 +8,8 @@ use App\Models\Station;
 use App\Models\Bus;
 use App\Models\Route;
 use App\Models\Promotion;
+use App\Models\SmsConfig;
+use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -15,6 +17,10 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminController extends Controller
 {
+    public function __construct(protected SmsGatewayService $smsGatewayService)
+    {
+    }
+
     /**
      * Get dashboard metrics and JSON data for API.
      */
@@ -126,6 +132,15 @@ class AdminController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
+        $cancelRequests = Booking::with([
+            'schedule.bus',
+            'schedule.route.departureStation',
+            'schedule.route.arrivalStation',
+        ])
+            ->where('status', 'CANCEL_REQUESTED')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
         $stations = Station::orderBy('name', 'asc')->get();
         $buses = Bus::orderBy('operator_name', 'asc')->get();
         
@@ -137,16 +152,91 @@ class AdminController extends Controller
 
         $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->get();
         $promotions = Promotion::orderBy('code', 'asc')->get();
+        $smsConfig = SmsConfig::query()->latest('id')->first();
 
         return view('admin.dashboard', compact(
             'metrics',
             'recentBookings',
+            'cancelRequests',
             'stations',
             'buses',
             'routes',
             'schedules',
-            'promotions'
+            'promotions',
+            'smsConfig'
         ));
+    }
+
+    /**
+     * Update SMS gateway configuration for customer notifications.
+     */
+    public function updateSmsConfigWeb(Request $request)
+    {
+        $validated = $request->validate([
+            'gateway_name' => 'required|string|max:100',
+            'api_url' => 'nullable|url|max:255',
+            'api_key' => 'nullable|string|max:255',
+            'sender_id' => 'nullable|string|max:50',
+            'is_active' => 'nullable|in:0,1',
+            'message_template' => 'nullable|string|max:500',
+        ]);
+
+        $config = SmsConfig::query()->latest('id')->first() ?? new SmsConfig();
+        $config->fill([
+            'gateway_name' => trim($validated['gateway_name']),
+            'api_url' => $validated['api_url'] ?? null,
+            'api_key' => $validated['api_key'] ?? null,
+            'sender_id' => $validated['sender_id'] ?? null,
+            'is_active' => ($validated['is_active'] ?? '0') === '1',
+            'message_template' => $validated['message_template'] ?? null,
+        ]);
+        $config->save();
+
+        return redirect()->back()->with('success', 'SMS gateway configuration saved successfully!');
+    }
+
+    /**
+     * Live booking logs for admin dashboard (poll every 5s).
+     */
+    public function bookingLogsApi()
+    {
+        $recentBookings = Booking::with([
+            'schedule.bus',
+            'schedule.route.departureStation',
+            'schedule.route.arrivalStation',
+        ])
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        $formattedBookings = $recentBookings->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'pnr' => 'SE' . str_pad($b->id, 5, '0', STR_PAD_LEFT),
+                'passenger_name' => $b->passenger_name,
+                'passenger_phone' => $b->passenger_phone,
+                'passenger_email' => $b->passenger_email,
+                'seat_numbers' => $b->seat_numbers,
+                'total_fare' => (float) $b->total_fare,
+                'status' => $b->status,
+                'created_at' => optional($b->created_at)->toIso8601String(),
+                'schedule' => [
+                    'departure_time' => optional($b->schedule?->departure_time)->toIso8601String(),
+                    'bus' => [
+                        'operator_name' => $b->schedule?->bus?->operator_name,
+                    ],
+                    'route' => [
+                        'from' => $b->schedule?->route?->departureStation?->name,
+                        'to' => $b->schedule?->route?->arrivalStation?->name,
+                    ],
+                ],
+            ];
+        })->values();
+
+        return response()->json([
+            'bookings' => $formattedBookings,
+            'updated_at' => now()->toIso8601String(),
+        ]);
     }
 
     // Manual creation store methods for Blade Web Interface
@@ -379,10 +469,10 @@ class AdminController extends Controller
             'seat_numbers' => 'required|string|max:255',
             'payment_method' => 'required|string|max:50',
             'total_fare' => 'required|numeric|min:0',
-            'status' => 'required|in:PAID,CANCELLED'
+            'status' => 'required|in:PAID,CANCEL_REQUESTED,CANCELLED'
         ]);
 
-        Booking::create([
+        $booking = Booking::create([
             'schedule_id' => $request->input('schedule_id'),
             'passenger_name' => $request->input('passenger_name'),
             'passenger_phone' => $request->input('passenger_phone'),
@@ -392,6 +482,10 @@ class AdminController extends Controller
             'payment_method' => $request->input('payment_method'),
             'status' => $request->input('status'),
         ]);
+
+        if ($request->input('status') === 'PAID') {
+            $this->smsGatewayService->sendBookingVerification($booking);
+        }
 
         return redirect()->back()->with('success', 'Booking created successfully!');
     }
@@ -406,7 +500,7 @@ class AdminController extends Controller
             'passenger_email' => 'required|email|max:100',
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
-            'status' => 'required|in:PAID,CANCELLED'
+            'status' => 'required|in:PAID,CANCEL_REQUESTED,CANCELLED'
         ]);
 
         $booking->update($request->only(
@@ -446,6 +540,26 @@ class AdminController extends Controller
         $booking->update(['status' => 'CANCELLED']);
 
         return redirect()->back()->with('success', 'Reservation successfully cancelled and seat released!');
+    }
+
+    /**
+     * Approve a customer cancel request from admin dashboard.
+     */
+    public function approveCancelRequestWeb($id)
+    {
+        $booking = Booking::find($id);
+
+        if (!$booking) {
+            return redirect()->back()->withErrors(['message' => 'Booking not found.']);
+        }
+
+        if ($booking->status !== 'CANCEL_REQUESTED') {
+            return redirect()->back()->withErrors(['message' => 'This booking has no pending cancellation request.']);
+        }
+
+        $booking->update(['status' => 'CANCELLED']);
+
+        return redirect()->back()->with('success', 'Cancellation request approved successfully. Booking is now cancelled.');
     }
 
     /**

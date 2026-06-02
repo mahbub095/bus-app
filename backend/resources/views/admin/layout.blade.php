@@ -420,6 +420,11 @@
             color: #F87171;
         }
 
+        .badge-status.pending {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #FBBF24;
+        }
+
         .coach-tag {
             display: inline-flex;
             padding: 3px 8px;
@@ -1044,6 +1049,10 @@
                 <span class="sidebar-nav-icon">📋</span>
                 Bookings Logs
             </div>
+            <div class="sidebar-nav-item" data-tab="cancel-requests">
+                <span class="sidebar-nav-icon">📝</span>
+                Cancel Requests
+            </div>
             <div class="sidebar-nav-item" data-tab="stations">
                 <span class="sidebar-nav-icon">🚉</span>
                 Stations
@@ -1063,6 +1072,10 @@
             <div class="sidebar-nav-item" data-tab="promotions">
                 <span class="sidebar-nav-icon">🎟️</span>
                 Coupons
+            </div>
+            <div class="sidebar-nav-item" data-tab="sms-config">
+                <span class="sidebar-nav-icon">📲</span>
+                SMS Gateway
             </div>
 
             <div class="sidebar-section-label">Reports</div>
@@ -1196,6 +1209,14 @@
                         window.coachServicesModule.startPolling();
                     } else {
                         window.coachServicesModule.stopPolling();
+                    }
+                }
+
+                if (window.bookingsLogsModule) {
+                    if (tabName === 'bookings') {
+                        window.bookingsLogsModule.startPolling();
+                    } else {
+                        window.bookingsLogsModule.stopPolling();
                     }
                 }
             };

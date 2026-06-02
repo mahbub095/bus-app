@@ -1247,6 +1247,11 @@ a {
   color: #F87171;
 }
 
+.badge-status.pending {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+}
+
 /* Footer Section */
 .app-footer {
   background-color: #08080E;

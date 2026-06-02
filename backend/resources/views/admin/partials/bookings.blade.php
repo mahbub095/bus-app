@@ -1,7 +1,13 @@
 <div class="admin-sections-layout" style="grid-column: 1 / -1;">
 
     <div class="admin-panel">
-        <h3 class="admin-panel-title">Ticket Reservation Logs</h3>
+        <h3 class="admin-panel-title">
+            Ticket Reservation Logs
+            <span id="bookings-live-text" class="live-status" style="font-size: 11px;">
+                <span class="live-dot"></span>
+                Live disabled
+            </span>
+        </h3>
         <div class="table-wrapper">
             <table class="admin-table">
                 <thead>
@@ -16,7 +22,7 @@
                         <th>Operations</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="bookings-log-body">
                     @forelse($recentBookings as $b)
                         <tr>
                             <td style="font-weight: bold; color: var(--primary)">
@@ -31,6 +37,9 @@
                                 @if($b->schedule && $b->schedule->route)
                                     <div>{{ $b->schedule->route->departureStation->name }} ➔ {{ $b->schedule->route->arrivalStation->name }}</div>
                                     <div style="font-size: 11px; color: var(--text-secondary)">
+                                        Bus: {{ $b->schedule->bus?->operator_name ?? 'N/A' }}
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--text-secondary)">
                                         {{ $b->schedule->departure_time->format('D, M d, Y @ h:i A') }}
                                     </div>
                                 @else
@@ -40,7 +49,7 @@
                             <td style="font-weight: bold;">{{ $b->seat_numbers }}</td>
                             <td style="color: var(--gold); font-weight: bold;">BDT {{ number_format($b->total_fare) }}</td>
                             <td>
-                                <span class="badge-status {{ $b->status === 'PAID' ? 'paid' : 'cancelled' }}">
+                                <span class="badge-status {{ $b->status === 'PAID' ? 'paid' : ($b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
                                     {{ $b->status }}
                                 </span>
                             </td>
@@ -65,12 +74,6 @@
                                         })">
                                         Edit
                                     </button>
-                                    @if($b->status === 'PAID')
-                                        <form action="{{ route('admin.bookings.cancel', $b->id) }}" method="POST" onsubmit="return confirm('Cancel this booking?');">
-                                            @csrf
-                                            <button class="btn btn-danger btn-sm" type="submit">Cancel</button>
-                                        </form>
-                                    @endif
                                     <form action="{{ route('admin.bookings.destroy', $b->id) }}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');">
                                         @csrf
                                         @method('DELETE')
@@ -143,6 +146,7 @@
                 <label>Status</label>
                 <select name="status" class="coupon-input" required>
                     <option value="PAID">PAID</option>
+                    <option value="CANCEL_REQUESTED">CANCEL_REQUESTED</option>
                     <option value="CANCELLED">CANCELLED</option>
                 </select>
             </div>
@@ -157,3 +161,112 @@
     </div>
 
 </div>
+
+<script>
+(function () {
+    const logsUrl = @json(route('admin.bookings.logs.api'));
+    const bodyEl = document.getElementById('bookings-log-body');
+    const liveTextEl = document.getElementById('bookings-live-text');
+    let timer = null;
+    let isFetching = false;
+
+    function formatDateTime(iso) {
+        if (!iso) return 'N/A';
+        return new Date(iso).toLocaleString([], {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str ?? '';
+        return div.innerHTML;
+    }
+
+    function renderRows(bookings) {
+        if (!Array.isArray(bookings) || bookings.length === 0) {
+            bodyEl.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                        No reservation records found.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        bodyEl.innerHTML = bookings.map((b) => {
+            const statusClass = b.status === 'PAID' ? 'paid' : (b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
+            const routeFrom = b.schedule?.route?.from || 'N/A';
+            const routeTo = b.schedule?.route?.to || 'N/A';
+            const busName = b.schedule?.bus?.operator_name || 'N/A';
+            return `
+                <tr>
+                    <td style="font-weight: bold; color: var(--primary);">${escapeHtml(b.pnr)}</td>
+                    <td style="font-weight: 600;">${escapeHtml(b.passenger_name)}</td>
+                    <td>
+                        <div>${escapeHtml(b.passenger_phone)}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary)">${escapeHtml(b.passenger_email)}</div>
+                    </td>
+                    <td>
+                        <div>${escapeHtml(routeFrom)} ➔ ${escapeHtml(routeTo)}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary)">
+                            Bus: ${escapeHtml(busName)}
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary)">
+                            ${escapeHtml(formatDateTime(b.schedule?.departure_time))}
+                        </div>
+                    </td>
+                    <td style="font-weight: bold;">${escapeHtml(b.seat_numbers)}</td>
+                    <td style="color: var(--gold); font-weight: bold;">BDT ${Number(b.total_fare || 0).toLocaleString()}</td>
+                    <td>
+                        <span class="badge-status ${statusClass}">${escapeHtml(b.status)}</span>
+                    </td>
+                    <td style="color: var(--text-muted); font-size: 12px;">Use actions after page refresh.</td>
+                </tr>`;
+        }).join('');
+    }
+
+    function setLiveText(text) {
+        if (!liveTextEl) return;
+        liveTextEl.innerHTML = `<span class="live-dot"></span>${text}`;
+    }
+
+    async function fetchLogs(silent = false) {
+        if (!bodyEl || isFetching) return;
+        isFetching = true;
+        try {
+            const res = await fetch(logsUrl, { headers: { Accept: 'application/json' } });
+            if (!res.ok) return;
+            const data = await res.json();
+            renderRows(data.bookings || []);
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            setLiveText(`Live — last updated ${now} (refreshes every 5s)`);
+        } catch (err) {
+            if (!silent) setLiveText('Live update failed');
+        } finally {
+            isFetching = false;
+        }
+    }
+
+    function startPolling() {
+        stopPolling();
+        fetchLogs();
+        timer = setInterval(() => fetchLogs(true), 5000);
+    }
+
+    function stopPolling() {
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+        setLiveText('Live paused');
+    }
+
+    window.bookingsLogsModule = { startPolling, stopPolling };
+})();
+</script>

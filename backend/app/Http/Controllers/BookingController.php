@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Promotion;
+use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
+    public function __construct(protected SmsGatewayService $smsGatewayService)
+    {
+    }
+
     /**
      * Store a new booking (authenticated customers only).
      */
@@ -84,6 +89,8 @@ class BookingController extends Controller
                 'status' => 'PAID',
             ]);
 
+            $this->smsGatewayService->sendBookingVerification($booking);
+
             return response()->json([
                 'message' => 'Booking successfully created!',
                 'booking' => $this->formatBooking($booking, $schedule),
@@ -135,14 +142,18 @@ class BookingController extends Controller
             ], 400);
         }
 
-        $booking->update([
-            'status' => 'CANCELLED',
-        ]);
+        if ($booking->status === 'CANCEL_REQUESTED') {
+            return response()->json([
+                'message' => 'Cancellation request already submitted. Please wait for admin approval.',
+            ], 400);
+        }
+
+        $booking->update(['status' => 'CANCEL_REQUESTED']);
 
         return response()->json([
-            'message' => 'Booking successfully cancelled! Refund will be processed shortly.',
+            'message' => 'Cancellation request submitted. It will be cancelled after admin approval.',
             'booking_id' => $booking->id,
-            'status' => 'CANCELLED',
+            'status' => 'CANCEL_REQUESTED',
         ]);
     }
 
