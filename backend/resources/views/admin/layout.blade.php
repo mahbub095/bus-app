@@ -1151,14 +1151,10 @@
             const adminHeader = document.getElementById('admin-header');
             const currentPath = window.location.pathname.replace(/\/+$/, '');
             const isAdminRoute = currentPath === '/admin';
-            let activeTab = localStorage.getItem('admin_active_tab') || 'coach-services';
-
-            if (activeTab === 'dashboard') {
-                activeTab = 'coach-services';
-            }
+            let activeTab = localStorage.getItem('admin_active_tab') || 'dashboard';
 
             if (isAdminRoute) {
-                activeTab = 'coach-services';
+                activeTab = 'dashboard';
             }
             
             const switchTab = (tabName) => {
@@ -1178,7 +1174,7 @@
                     }
                 });
                 
-                if (tabName === 'coach-services') {
+                if (tabName === 'dashboard') {
                     dashboardMetrics?.style.setProperty('display', 'grid');
                     adminHeader?.style.setProperty('display', 'block');
                 } else {
@@ -1186,7 +1182,7 @@
                     adminHeader?.style.setProperty('display', 'none');
                 }
                 
-                if (tabName !== 'coach-services') {
+                if (tabName !== 'dashboard') {
                     localStorage.setItem('admin_active_tab', tabName);
                 }
 
