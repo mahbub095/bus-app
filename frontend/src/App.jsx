@@ -649,6 +649,70 @@ function App() {
     return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const ensureJsPdf = async () => {
+    if (window.jspdf?.jsPDF) {
+      return window.jspdf.jsPDF;
+    }
+
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-jspdf="true"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Failed to load PDF library.')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.async = true;
+      script.dataset.jspdf = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load PDF library.'));
+      document.body.appendChild(script);
+    });
+
+    if (!window.jspdf?.jsPDF) {
+      throw new Error('PDF library is unavailable.');
+    }
+
+    return window.jspdf.jsPDF;
+  };
+
+  const handleDownloadTicketPdf = async (booking) => {
+    try {
+      const JsPdfClass = await ensureJsPdf();
+      const doc = new JsPdfClass();
+
+      const lines = [
+        'SonyaBus - Ticket Invoice',
+        `PNR: ${booking.pnr}`,
+        `Passenger: ${booking.passenger_name}`,
+        `Phone: ${booking.passenger_phone}`,
+        `Email: ${booking.passenger_email}`,
+        `From: ${booking.schedule?.route?.from || 'N/A'}`,
+        `To: ${booking.schedule?.route?.to || 'N/A'}`,
+        `Bus Name: ${booking.schedule?.bus?.operator_name || 'N/A'}`,
+        `Coach Type: ${booking.schedule?.bus?.coach_type || 'N/A'}`,
+        `Departure Date: ${formatDate(booking.schedule?.departure_time) || 'N/A'}`,
+        `Departure Time: ${formatTime(booking.schedule?.departure_time) || 'N/A'}`,
+        `Seats: ${booking.seat_numbers}`,
+        `Payment Method: ${booking.payment_method}`,
+        `Status: ${booking.status}`,
+        `Total Fare: BDT ${Number(booking.total_fare || 0).toLocaleString()}`
+      ];
+
+      doc.setFontSize(14);
+      doc.text(lines[0], 14, 18);
+      doc.setFontSize(11);
+      doc.text(lines.slice(1), 14, 30);
+
+      const fileName = `ticket-${booking.pnr || booking.id}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      showToast('Unable to download PDF right now. Please try again.', 'error');
+    }
+  };
+
   return (
     <>
       {/* Toast Notification */}
@@ -1345,6 +1409,13 @@ function App() {
                               <div className="cancellation-refund-info">
                                 <strong>Notice:</strong> You can submit a cancellation request for admin verification. After approval, the ticket is cancelled and refund is processed to your {b.payment_method} account.
                               </div>
+                              <button
+                                className="btn btn-secondary w-full"
+                                style={{ marginBottom: '10px' }}
+                                onClick={() => handleDownloadTicketPdf(b)}
+                              >
+                                Download Ticket PDF
+                              </button>
                               <button 
                                 className="btn btn-danger w-full"
                                 onClick={() => handleCancelBooking(b.id)}
@@ -1355,10 +1426,28 @@ function App() {
                           ) : b.status === 'CANCEL_REQUESTED' ? (
                             <div style={{ marginTop: '15px', color: '#FBBF24', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
                               Cancellation request submitted. Waiting for admin approval.
+                              <div style={{ marginTop: '10px' }}>
+                                <button
+                                  className="btn btn-secondary w-full"
+                                  onClick={() => handleDownloadTicketPdf(b)}
+                                >
+                                  Download Ticket PDF
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div style={{ marginTop: '15px', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
-                              This reservation was cancelled. Refund has been processed.
+                            <div style={{ marginTop: '15px' }}>
+                              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
+                                This reservation was cancelled. Refund has been processed.
+                              </div>
+                              <div style={{ marginTop: '10px' }}>
+                                <button
+                                  className="btn btn-secondary w-full"
+                                  onClick={() => handleDownloadTicketPdf(b)}
+                                >
+                                  Download Ticket PDF
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
