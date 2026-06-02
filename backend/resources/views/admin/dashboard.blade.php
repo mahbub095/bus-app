@@ -45,4 +45,9 @@
     <section class="admin-tab-content" id="tab-content-database">
         @include('admin.partials.database')
     </section>
+
+    <!-- Sub-tab 9: Admin profile -->
+    <section class="admin-tab-content" id="tab-content-profile">
+        @include('admin.partials.profile')
+    </section>
 @endsection

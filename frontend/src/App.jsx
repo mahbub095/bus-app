@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import './App.css';
 
 const API_BASE = 'http://localhost:8000/api';
+const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
+const AUTH_USER_KEY = 'sonyabus_auth_user';
 
 function App() {
   // Navigation & View Tabs
-  const [activeTab, setActiveTab] = useState('home'); // home, cancel, offers
+  const [activeTab, setActiveTab] = useState('home'); // home, cancel, offers, profile
 
   // Search States
   const [stations, setStations] = useState([]);
@@ -34,7 +36,6 @@ function App() {
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
   // Cancellation States
-  const [cancelQuery, setCancelQuery] = useState('');
   const [cancelBookings, setCancelBookings] = useState([]);
   const [isSearchingCancel, setIsSearchingCancel] = useState(false);
 
@@ -45,6 +46,26 @@ function App() {
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
+  // Auth States
+  const [authUser, setAuthUser] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [authForm, setAuthForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: ''
+  });
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authReturnAction, setAuthReturnAction] = useState(null);
+  const [profileForm, setProfileForm] = useState({
+    current_password: '',
+    password: '',
+    password_confirmation: ''
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
   // Min Date constraint for safety
   const minDateStr = new Date().toISOString().split('T')[0];
 
@@ -54,6 +75,171 @@ function App() {
     setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
     }, 4500);
+  };
+
+  const authHeaders = (extra = {}) => {
+    const headers = { 'Accept': 'application/json', ...extra };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    return headers;
+  };
+
+  const persistAuth = (user, token) => {
+    setAuthUser(user);
+    setAuthToken(token);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    setPassengerDetails(prev => ({
+      ...prev,
+      name: prev.name || user.name,
+      email: user.email
+    }));
+  };
+
+  const clearAuth = () => {
+    setAuthUser(null);
+    setAuthToken(null);
+    setCancelBookings([]);
+    localStorage.removeItem(AUTH_USER_KEY);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  };
+
+  const openAuthModal = (mode = 'login', returnAction = null) => {
+    setAuthMode(mode);
+    setAuthReturnAction(returnAction);
+    setShowAuthModal(true);
+  };
+
+  const closeAuthModal = () => {
+    setShowAuthModal(false);
+    setAuthReturnAction(null);
+    setAuthForm({ name: '', email: '', password: '', password_confirmation: '' });
+  };
+
+  const fetchMyBookings = async () => {
+    if (!authToken) return;
+
+    setIsSearchingCancel(true);
+    try {
+      const res = await fetch(`${API_BASE}/bookings/mine`, {
+        headers: authHeaders()
+      });
+      if (res.status === 401) {
+        clearAuth();
+        showToast('Session expired. Please log in again.', 'error');
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setCancelBookings(data);
+      } else {
+        showToast('Failed to load your tickets.', 'error');
+      }
+    } catch (err) {
+      showToast('Error connecting to server.', 'error');
+    } finally {
+      setIsSearchingCancel(false);
+    }
+  };
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setIsAuthLoading(true);
+
+    const endpoint = authMode === 'register' ? '/auth/register' : '/auth/login';
+    const body = authMode === 'register'
+      ? authForm
+      : { email: authForm.email, password: authForm.password };
+
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        persistAuth(data.user, data.token);
+        showToast(data.message || 'Welcome!', 'success');
+        const returnAction = authReturnAction;
+        closeAuthModal();
+        if (typeof returnAction === 'function') returnAction();
+        if (activeTab === 'cancel') fetchMyBookings();
+      } else {
+        const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Authentication failed.');
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      showToast('Network error during authentication.', 'error');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (authToken) {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: authHeaders()
+        });
+      }
+    } catch (err) {
+      // ignore network errors on logout
+    }
+    clearAuth();
+    showToast('Logged out successfully.', 'success');
+  };
+
+  const handleProfilePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!requireAuth(() => setActiveTab('profile'))) return;
+
+    if (profileForm.password !== profileForm.password_confirmation) {
+      showToast('New password and confirmation do not match.', 'error');
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/password`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(profileForm)
+      });
+      const data = await res.json();
+      if (res.status === 401) {
+        clearAuth();
+        showToast('Session expired. Please log in again.', 'error');
+        openAuthModal('login', () => setActiveTab('profile'));
+        return;
+      }
+      if (res.ok) {
+        if (data.user) {
+          setAuthUser(data.user);
+          localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+        }
+        setProfileForm({ current_password: '', password: '', password_confirmation: '' });
+        showToast(data.message || 'Password updated successfully.', 'success');
+      } else {
+        const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Failed to update password.');
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      showToast('Network error while updating password.', 'error');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const requireAuth = (returnAction) => {
+    if (authUser && authToken) {
+      return true;
+    }
+    openAuthModal('login', returnAction);
+    return false;
   };
 
   // Fetch Stations on Mount
@@ -71,7 +257,43 @@ function App() {
 
   useEffect(() => {
     fetchStations();
+
+    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    const savedUser = localStorage.getItem(AUTH_USER_KEY);
+    if (savedToken && savedUser) {
+      setAuthToken(savedToken);
+      try {
+        setAuthUser(JSON.parse(savedUser));
+      } catch (err) {
+        clearAuth();
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (!authToken) return;
+
+    fetch(`${API_BASE}/auth/me`, {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` }
+    })
+      .then(res => (res.ok ? res.json() : Promise.reject()))
+      .then(data => {
+        setAuthUser(data.user);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+        setPassengerDetails(prev => ({
+          ...prev,
+          name: prev.name || data.user.name,
+          email: data.user.email
+        }));
+      })
+      .catch(() => clearAuth());
+  }, [authToken]);
+
+  useEffect(() => {
+    if (activeTab === 'cancel' && authToken) {
+      fetchMyBookings();
+    }
+  }, [activeTab, authToken]);
 
   // Fetch Promotions when visiting offers tab
   const fetchOffers = async () => {
@@ -190,6 +412,7 @@ function App() {
   // Confirm booking
   const handleConfirmBooking = async (e) => {
     e.preventDefault();
+    if (!requireAuth()) return;
     if (selectedSeats.length === 0) {
       showToast('Please select at least one seat.', 'error');
       return;
@@ -211,10 +434,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/bookings`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           schedule_id: selectedSchedule.id,
           passenger_name: passengerDetails.name,
@@ -227,6 +447,12 @@ function App() {
       });
 
       const data = await res.json();
+      if (res.status === 401) {
+        clearAuth();
+        showToast('Please log in to book tickets.', 'error');
+        openAuthModal('login');
+        return;
+      }
       if (res.ok) {
         setBookingSuccess(data.booking);
         showToast('Ticket reserved successfully!', 'success');
@@ -235,9 +461,9 @@ function App() {
         setAppliedPromo(null);
         setPromoInput('');
         setPassengerDetails({
-          name: '',
+          name: authUser?.name || '',
           phone: '',
-          email: '',
+          email: authUser?.email || '',
           paymentMethod: 'bKash'
         });
         
@@ -264,37 +490,9 @@ function App() {
     }
   };
 
-  // Search booking for cancellation
-  const handleSearchCancel = async (e) => {
-    e.preventDefault();
-    if (!cancelQuery.trim()) {
-      showToast('Please enter PNR or Phone number', 'error');
-      return;
-    }
-
-    setIsSearchingCancel(true);
-    try {
-      const res = await fetch(`${API_BASE}/bookings/search?query=${encodeURIComponent(cancelQuery.trim())}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCancelBookings(data);
-        if (data.length === 0) {
-          showToast('No tickets found matching your query.', 'error');
-        } else {
-          showToast(`Found ${data.length} bookings.`, 'success');
-        }
-      } else {
-        showToast('Failed to search tickets.', 'error');
-      }
-    } catch (err) {
-      showToast('Error connecting to server.', 'error');
-    } finally {
-      setIsSearchingCancel(false);
-    }
-  };
-
-  // Cancel Booking action
+  // Cancel Booking action (owner only)
   const handleCancelBooking = async (bookingId) => {
+    if (!requireAuth()) return;
     if (!window.confirm('Are you sure you want to cancel this ticket booking? This will release your seats.')) {
       return;
     }
@@ -302,11 +500,19 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancel`, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: authHeaders()
       });
       const data = await res.json();
+      if (res.status === 401) {
+        clearAuth();
+        showToast('Please log in to cancel tickets.', 'error');
+        openAuthModal('login');
+        return;
+      }
+      if (res.status === 403) {
+        showToast(data.message || 'You cannot cancel this ticket.', 'error');
+        return;
+      }
       if (res.ok) {
         showToast('Booking successfully cancelled and seat released!', 'success');
         setCancelBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELLED' } : b));
@@ -482,7 +688,7 @@ function App() {
               className={`nav-link ${activeTab === 'cancel' ? 'active' : ''}`}
               onClick={() => setActiveTab('cancel')}
             >
-              Cancel Ticket
+              My Tickets
             </li>
             <li 
               className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`}
@@ -490,7 +696,41 @@ function App() {
             >
               Promotions & Offers
             </li>
+            <li
+              className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
+              onClick={() => {
+                if (!authUser) {
+                  openAuthModal('login', () => setActiveTab('profile'));
+                  return;
+                }
+                setActiveTab('profile');
+              }}
+            >
+              My Profile
+            </li>
           </ul>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {authUser ? (
+              <>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  Hi, <strong style={{ color: '#fff' }}>{authUser.name}</strong>
+                </span>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={handleLogout}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => openAuthModal('login')}>
+                  Login
+                </button>
+                <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => openAuthModal('register')}>
+                  Register
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -1034,82 +1274,89 @@ function App() {
         {activeTab === 'cancel' && (
           <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
             <div className="cancel-card">
-              <h2 className="cancel-title">Manage ticket / Cancellations</h2>
-              <p className="cancel-desc">Enter your PNR Ticket code or Passenger mobile number to view details or request a cancellation.</p>
-              
-              <form className="coupon-field" onSubmit={handleSearchCancel}>
-                <input 
-                  type="text" 
-                  className="coupon-input" 
-                  placeholder="e.g. SE00001 or 01712345678"
-                  value={cancelQuery}
-                  onChange={(e) => setCancelQuery(e.target.value)}
-                />
-                <button 
-                  className="btn btn-primary" 
-                  type="submit"
-                  disabled={isSearchingCancel}
-                >
-                  {isSearchingCancel ? 'Searching...' : 'Search Ticket'}
-                </button>
-              </form>
+              <h2 className="cancel-title">My Tickets & Cancellations</h2>
+              <p className="cancel-desc">
+                Sign in to view tickets you purchased online. You can only cancel your own reservations.
+              </p>
 
-              <div className="cancellation-preview">
-                {cancelBookings.length > 0 ? (
-                  cancelBookings.map(b => (
-                    <div 
-                      key={b.id} 
-                      style={{ 
-                        border: '1px solid var(--border-color)', 
-                        borderRadius: '12px', 
-                        padding: '20px', 
-                        backgroundColor: '#111124',
-                        marginBottom: '15px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Ticket PNR: {b.pnr}</span>
-                        <span className={`badge-status ${b.status === 'PAID' ? 'paid' : 'cancelled'}`}>{b.status}</span>
-                      </div>
+              {!authUser ? (
+                <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                    Please log in to access your ticket dashboard.
+                  </p>
+                  <button className="btn btn-primary" onClick={() => openAuthModal('login', () => setActiveTab('cancel'))}>
+                    Login to Continue
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
+                    </span>
+                    <button className="btn btn-secondary btn-sm" onClick={fetchMyBookings} disabled={isSearchingCancel}>
+                      {isSearchingCancel ? 'Refreshing...' : 'Refresh My Tickets'}
+                    </button>
+                  </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        <div>Passenger: <strong style={{ color: '#fff' }}>{b.passenger_name}</strong></div>
-                        <div>Phone: <strong style={{ color: '#fff' }}>{b.passenger_phone}</strong></div>
-                        <div>From: <strong style={{ color: '#fff' }}>{b.schedule.route.from}</strong></div>
-                        <div>To: <strong style={{ color: '#fff' }}>{b.schedule.route.to}</strong></div>
-                        <div>Date: <strong style={{ color: '#fff' }}>{formatDate(b.schedule.departure_time)}</strong></div>
-                        <div>Departure: <strong style={{ color: '#fff' }}>{formatTime(b.schedule.departure_time)}</strong></div>
-                        <div>Seats Reserved: <strong style={{ color: 'var(--primary)' }}>{b.seat_numbers}</strong></div>
-                        <div>Fare paid: <strong style={{ color: 'var(--gold)' }}>BDT {b.total_fare.toLocaleString()}</strong></div>
-                      </div>
-
-                      {b.status === 'PAID' ? (
-                        <div style={{ marginTop: '20px' }}>
-                          <div className="cancellation-refund-info">
-                            <strong>Notice:</strong> Cancelling this ticket releases your reserved seats instantly. A 100% refund will be credited back to your account ({b.payment_method}) within 24 hours.
+                  <div className="cancellation-preview">
+                    {isSearchingCancel ? (
+                      <div className="loading-spinner"></div>
+                    ) : cancelBookings.length > 0 ? (
+                      cancelBookings.map(b => (
+                        <div 
+                          key={b.id} 
+                          style={{ 
+                            border: '1px solid var(--border-color)', 
+                            borderRadius: '12px', 
+                            padding: '20px', 
+                            backgroundColor: '#111124',
+                            marginBottom: '15px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Ticket PNR: {b.pnr}</span>
+                            <span className={`badge-status ${b.status === 'PAID' ? 'paid' : 'cancelled'}`}>{b.status}</span>
                           </div>
-                          <button 
-                            className="btn btn-danger w-full"
-                            onClick={() => handleCancelBooking(b.id)}
-                          >
-                            Cancel Reservation & Request Refund
-                          </button>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            <div>Passenger: <strong style={{ color: '#fff' }}>{b.passenger_name}</strong></div>
+                            <div>Phone: <strong style={{ color: '#fff' }}>{b.passenger_phone}</strong></div>
+                            <div>From: <strong style={{ color: '#fff' }}>{b.schedule.route.from}</strong></div>
+                            <div>To: <strong style={{ color: '#fff' }}>{b.schedule.route.to}</strong></div>
+                            <div>Date: <strong style={{ color: '#fff' }}>{formatDate(b.schedule.departure_time)}</strong></div>
+                            <div>Departure: <strong style={{ color: '#fff' }}>{formatTime(b.schedule.departure_time)}</strong></div>
+                            <div>Seats Reserved: <strong style={{ color: 'var(--primary)' }}>{b.seat_numbers}</strong></div>
+                            <div>Fare paid: <strong style={{ color: 'var(--gold)' }}>BDT {b.total_fare.toLocaleString()}</strong></div>
+                          </div>
+
+                          {b.status === 'PAID' ? (
+                            <div style={{ marginTop: '20px' }}>
+                              <div className="cancellation-refund-info">
+                                <strong>Notice:</strong> Cancelling this ticket releases your reserved seats instantly. A 100% refund will be credited back to your account ({b.payment_method}) within 24 hours.
+                              </div>
+                              <button 
+                                className="btn btn-danger w-full"
+                                onClick={() => handleCancelBooking(b.id)}
+                              >
+                                Cancel Reservation & Request Refund
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ marginTop: '15px', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
+                              This reservation was cancelled. Refund has been processed.
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div style={{ marginTop: '15px', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
-                          This reservation was cancelled. Refund has been processed.
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  cancelQuery && !isSearchingCancel && (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>
-                      No active reservations found for this inquiry.
-                    </div>
-                  )
-                )}
-              </div>
+                      ))
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>
+                        You have no ticket bookings yet. Book a ticket from the home page while logged in.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
             </div>
           </div>
@@ -1156,7 +1403,157 @@ function App() {
           </div>
         )}
 
+        {/* VIEW: PROFILE */}
+        {activeTab === 'profile' && (
+          <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
+            <div className="cancel-card">
+              <h2 className="cancel-title">My Profile</h2>
+              {!authUser ? (
+                <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                    Please log in to manage your account password.
+                  </p>
+                  <button className="btn btn-primary" onClick={() => openAuthModal('login', () => setActiveTab('profile'))}>
+                    Login to Continue
+                  </button>
+                </div>
+              ) : (
+                <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '18px' }}>
+                    Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
+                  </p>
+                  <form onSubmit={handleProfilePasswordSubmit} className="booking-form-fields">
+                    <div className="input-group">
+                      <label>Current Password</label>
+                      <input
+                        type="password"
+                        className="coupon-input"
+                        value={profileForm.current_password}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, current_password: e.target.value }))}
+                        required
+                        minLength={6}
+                        autoComplete="current-password"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>New Password</label>
+                      <input
+                        type="password"
+                        className="coupon-input"
+                        value={profileForm.password}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, password: e.target.value }))}
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Confirm New Password</label>
+                      <input
+                        type="password"
+                        className="coupon-input"
+                        value={profileForm.password_confirmation}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, password_confirmation: e.target.value }))}
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <button className="btn btn-primary" type="submit" disabled={isUpdatingProfile}>
+                      {isUpdatingProfile ? 'Updating Password...' : 'Update Password'}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </main>
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="modal-overlay" onClick={closeAuthModal}>
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" type="button" onClick={closeAuthModal}>&times;</button>
+            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: '8px' }}>
+              {authMode === 'register' ? 'Create Account' : 'Customer Login'}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
+              {authMode === 'register'
+                ? 'Register to book and manage your bus tickets online.'
+                : 'Sign in to purchase tickets and cancel your own bookings.'}
+            </p>
+
+            <div className="auth-tabs">
+              <div
+                className={`auth-tab ${authMode === 'login' ? 'active' : ''}`}
+                onClick={() => setAuthMode('login')}
+              >
+                Login
+              </div>
+              <div
+                className={`auth-tab ${authMode === 'register' ? 'active' : ''}`}
+                onClick={() => setAuthMode('register')}
+              >
+                Register
+              </div>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
+              {authMode === 'register' && (
+                <div className="input-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className="coupon-input"
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+              )}
+              <div className="input-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  className="coupon-input"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="input-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  className="coupon-input"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                  minLength={6}
+                />
+              </div>
+              {authMode === 'register' && (
+                <div className="input-group">
+                  <label>Confirm Password</label>
+                  <input
+                    type="password"
+                    className="coupon-input"
+                    value={authForm.password_confirmation}
+                    onChange={(e) => setAuthForm(prev => ({ ...prev, password_confirmation: e.target.value }))}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              )}
+              <button className="btn btn-primary w-full" type="submit" disabled={isAuthLoading}>
+                {isAuthLoading ? 'Please wait...' : (authMode === 'register' ? 'Create Account' : 'Sign In')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="app-footer">
@@ -1164,8 +1561,9 @@ function App() {
           <div className="footer-logo">SonyaBus Enterprise</div>
           <ul className="footer-links">
             <li onClick={() => { setActiveTab('home'); setBookingSuccess(null); }} style={{ cursor: 'pointer' }}>Search Buses</li>
-            <li onClick={() => setActiveTab('cancel')} style={{ cursor: 'pointer' }}>Cancel Booking</li>
+            <li onClick={() => setActiveTab('cancel')} style={{ cursor: 'pointer' }}>My Tickets</li>
             <li onClick={() => setActiveTab('offers')} style={{ cursor: 'pointer' }}>Special Promotions</li>
+            <li onClick={() => authUser ? setActiveTab('profile') : openAuthModal('login', () => setActiveTab('profile'))} style={{ cursor: 'pointer' }}>My Profile</li>
           </ul>
           <p>© 2026 SonyaBus Enterprise Ltd. All rights reserved. Built with React + Laravel.</p>
         </div>

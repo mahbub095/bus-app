@@ -14,11 +14,12 @@ Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/admin/login', [AuthController::class, 'login']);
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Protected Admin Console Area (requires authentication)
-Route::middleware(['auth'])->group(function () {
+// Protected Admin Console Area (admin role only)
+Route::middleware(['auth', 'admin'])->group(function () {
     
     // Dashboard View
     Route::get('/admin', [AdminController::class, 'dashboardView'])->name('admin.dashboard');
+    Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
 
     // Coach Services (realtime search + seat map)
     Route::get('/admin/api/coach-services/search', [AdminController::class, 'searchCoachServices'])->name('admin.coach-services.search');

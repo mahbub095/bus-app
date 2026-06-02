@@ -18,6 +18,16 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Sonya Admin',
                 'password' => bcrypt('password123'),
+                'role' => 'admin',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'user@sonyabus.com'],
+            [
+                'name' => 'Demo Customer',
+                'password' => bcrypt('password123'),
+                'role' => 'user',
             ]
         );
 

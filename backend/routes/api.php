@@ -5,27 +5,27 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\UserAuthController;
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider or bootstrap/app.php.
-|
-*/
 
 Route::get('/stations', [StationController::class, 'index']);
 Route::get('/search', [SearchController::class, 'search']);
 
-Route::post('/bookings', [BookingController::class, 'store']);
-Route::get('/bookings/search', [BookingController::class, 'search']);
-Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+Route::post('/auth/register', [UserAuthController::class, 'register']);
+Route::post('/auth/login', [UserAuthController::class, 'login']);
 
 Route::get('/promotions', [PromotionController::class, 'index']);
 Route::get('/promotions/check', [PromotionController::class, 'check']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [UserAuthController::class, 'logout']);
+    Route::get('/auth/me', [UserAuthController::class, 'me']);
+    Route::post('/auth/password', [UserAuthController::class, 'updatePassword']);
+
+    Route::post('/bookings', [BookingController::class, 'store']);
+    Route::get('/bookings/mine', [BookingController::class, 'mine']);
+    Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+});
 
 Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
 Route::post('/admin/stations', [AdminController::class, 'storeStation']);

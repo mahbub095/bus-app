@@ -1078,6 +1078,10 @@
                 <span class="sidebar-nav-icon">⚙️</span>
                 Database Operations
             </div>
+            <div class="sidebar-nav-item" data-tab="profile">
+                <span class="sidebar-nav-icon">👤</span>
+                Profile
+            </div>
         </aside>
 
         <!-- Main Content Area -->
