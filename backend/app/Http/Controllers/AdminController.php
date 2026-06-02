@@ -259,6 +259,52 @@ class AdminController extends Controller
         ]);
     }
 
+    /**
+     * Live cancel requests logs for admin dashboard (poll every 5s).
+     */
+    public function cancelRequestsLogsApi()
+    {
+        $cancelRequests = Booking::where('status', 'CANCEL_REQUESTED')
+            ->with([
+                'schedule.bus',
+                'schedule.route.departureStation',
+                'schedule.route.arrivalStation',
+            ])
+            ->orderBy('updated_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        $formattedCancelRequests = $cancelRequests->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'pnr' => 'SE' . str_pad($b->id, 5, '0', STR_PAD_LEFT),
+                'passenger_name' => $b->passenger_name,
+                'passenger_phone' => $b->passenger_phone,
+                'passenger_email' => $b->passenger_email,
+                'seat_numbers' => $b->seat_numbers,
+                'total_fare' => (float) $b->total_fare,
+                'status' => $b->status,
+                'created_at' => optional($b->created_at)->toIso8601String(),
+                'updated_at' => optional($b->updated_at)->toIso8601String(),
+                'schedule' => [
+                    'departure_time' => optional($b->schedule?->departure_time)->toIso8601String(),
+                    'bus' => [
+                        'operator_name' => $b->schedule?->bus?->operator_name,
+                    ],
+                    'route' => [
+                        'from' => $b->schedule?->route?->departureStation?->name,
+                        'to' => $b->schedule?->route?->arrivalStation?->name,
+                    ],
+                ],
+            ];
+        })->values();
+
+        return response()->json([
+            'cancel_requests' => $formattedCancelRequests,
+            'updated_at' => now()->toIso8601String(),
+        ]);
+    }
+
     // Manual creation store methods for Blade Web Interface
 
     public function storeStationWeb(Request $request)

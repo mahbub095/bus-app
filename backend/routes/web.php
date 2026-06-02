@@ -25,6 +25,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/api/coach-services/search', [AdminController::class, 'searchCoachServices'])->name('admin.coach-services.search');
     Route::post('/admin/api/bookings/{id}/cancel', [AdminController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
     Route::get('/admin/api/bookings/logs', [AdminController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
+    Route::get('/admin/api/cancel-requests/logs', [AdminController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');
 
     // Reports
     Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');

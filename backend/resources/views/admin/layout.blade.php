@@ -1219,6 +1219,14 @@
                         window.bookingsLogsModule.stopPolling();
                     }
                 }
+
+                if (window.cancelRequestsLogsModule) {
+                    if (tabName === 'cancel-requests') {
+                        window.cancelRequestsLogsModule.startPolling();
+                    } else {
+                        window.cancelRequestsLogsModule.stopPolling();
+                    }
+                }
             };
             
             navItems.forEach(item => {
