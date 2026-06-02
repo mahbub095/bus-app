@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -18,6 +19,18 @@ Route::middleware(['auth'])->group(function () {
     
     // Dashboard View
     Route::get('/admin', [AdminController::class, 'dashboardView'])->name('admin.dashboard');
+
+    // Coach Services (realtime search + seat map)
+    Route::get('/admin/api/coach-services/search', [AdminController::class, 'searchCoachServices'])->name('admin.coach-services.search');
+    Route::post('/admin/api/bookings/{id}/cancel', [AdminController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
+
+    // Reports
+    Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');
+    Route::get('/admin/reports/selling/export/excel', [ReportController::class, 'sellingExportExcel'])->name('admin.reports.selling.excel');
+    Route::get('/admin/reports/selling/export/pdf', [ReportController::class, 'sellingExportPdf'])->name('admin.reports.selling.pdf');
+    Route::get('/admin/reports/cancel/preview', [ReportController::class, 'cancelPreview'])->name('admin.reports.cancel.preview');
+    Route::get('/admin/reports/cancel/export/excel', [ReportController::class, 'cancelExportExcel'])->name('admin.reports.cancel.excel');
+    Route::get('/admin/reports/cancel/export/pdf', [ReportController::class, 'cancelExportPdf'])->name('admin.reports.cancel.pdf');
 
     // Bookings CRUD
     Route::post('/admin/bookings', [AdminController::class, 'storeBookingWeb'])->name('admin.bookings.store');

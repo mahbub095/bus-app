@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SonyaBus | Admin Dashboard Portal</title>
     
     <!-- Outfit & Inter fonts from Google Fonts -->
@@ -672,6 +673,338 @@
             font-size: 13px;
             margin-top: 60px;
         }
+
+        /* Coach Services — frontend-style search & seat map */
+        .search-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 16px;
+            align-items: end;
+        }
+
+        @media (max-width: 900px) {
+            .search-form {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .results-count {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .bus-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .bus-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .bus-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .bus-main-info {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1.5fr 1.5fr;
+            padding: 24px;
+            align-items: center;
+            gap: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .bus-main-info {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+
+        .operator-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .operator-name {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .time-block, .seats-block, .price-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .time-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .time-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 2px;
+        }
+
+        .station-value {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .seats-count {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .price-amount {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--gold);
+            font-family: var(--font-display);
+        }
+
+        .seats-selector-container {
+            border-top: 1px solid var(--border-color);
+            background-color: #121221;
+            padding: 30px;
+        }
+
+        .seat-selection-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .seat-selection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .bus-blueprint {
+            background-color: #0A0A12;
+            border: 2px solid #2A2A44;
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .bus-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed #2A2A44;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .bus-body-seats {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .seat-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .seat-pair {
+            display: flex;
+            gap: 8px;
+        }
+
+        .bus-aisle {
+            width: 36px;
+        }
+
+        .seat {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid #3F3F5F;
+            background-color: #161625;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: default;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        .seat.admin-booked {
+            background-color: #2F1E24;
+            border-color: #65232A;
+            color: #E53E3E;
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        .seat.admin-booked:hover {
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            transform: scale(1.05);
+        }
+
+        .seat-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid #3F3F5F;
+        }
+
+        .legend-dot.available {
+            background-color: #161625;
+        }
+
+        .legend-dot.booked {
+            background-color: #2F1E24;
+            border-color: #65232A;
+        }
+
+        .selected-seats-badge {
+            display: inline-block;
+            background-color: rgba(99, 102, 241, 0.2);
+            color: #818CF8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .summary-value {
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .live-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        }
+
+        /* Reports */
+        .report-filter-block {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .report-custom-dates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            grid-column: 1 / -1;
+        }
+
+        .report-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .report-filter-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            background-color: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            padding: 10px 14px;
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 20px;
+        }
+
+        .report-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -703,7 +1036,11 @@
         <!-- Left Sidebar Navigation -->
         <aside class="admin-sidebar">
             <div class="sidebar-section-label">Management</div>
-            <div class="sidebar-nav-item active" data-tab="bookings">
+            <div class="sidebar-nav-item active" data-tab="coach-services">
+                <span class="sidebar-nav-icon">🚌</span>
+                Coach Services
+            </div>
+            <div class="sidebar-nav-item" data-tab="bookings">
                 <span class="sidebar-nav-icon">📋</span>
                 Bookings Logs
             </div>
@@ -726,6 +1063,12 @@
             <div class="sidebar-nav-item" data-tab="promotions">
                 <span class="sidebar-nav-icon">🎟️</span>
                 Coupons
+            </div>
+
+            <div class="sidebar-section-label">Reports</div>
+            <div class="sidebar-nav-item" data-tab="reports">
+                <span class="sidebar-nav-icon">📊</span>
+                Ticket Reports
             </div>
 
             <div class="sidebar-spacer"></div>
@@ -823,7 +1166,7 @@
             const navItems = document.querySelectorAll('.sidebar-nav-item');
             const contents = document.querySelectorAll('.admin-tab-content');
             
-            let activeTab = localStorage.getItem('admin_active_tab') || 'bookings';
+            let activeTab = localStorage.getItem('admin_active_tab') || 'coach-services';
             
             const switchTab = (tabName) => {
                 navItems.forEach(item => {
@@ -843,6 +1186,14 @@
                 });
                 
                 localStorage.setItem('admin_active_tab', tabName);
+
+                if (window.coachServicesModule) {
+                    if (tabName === 'coach-services') {
+                        window.coachServicesModule.startPolling();
+                    } else {
+                        window.coachServicesModule.stopPolling();
+                    }
+                }
             };
             
             navItems.forEach(item => {

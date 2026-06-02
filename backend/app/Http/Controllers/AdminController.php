@@ -9,6 +9,7 @@ use App\Models\Bus;
 use App\Models\Route;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 
@@ -445,6 +446,124 @@ class AdminController extends Controller
         $booking->update(['status' => 'CANCELLED']);
 
         return redirect()->back()->with('success', 'Reservation successfully cancelled and seat released!');
+    }
+
+    /**
+     * Search coach services with seat occupancy for admin dashboard (JSON).
+     */
+    public function searchCoachServices(Request $request)
+    {
+        $request->validate([
+            'from' => 'required|exists:stations,id',
+            'to' => 'required|exists:stations,id',
+            'date' => 'required|date_format:Y-m-d',
+            'coach_type' => 'nullable|string',
+        ]);
+
+        $fromId = $request->query('from');
+        $toId = $request->query('to');
+        $date = $request->query('date');
+        $coachType = $request->query('coach_type');
+
+        $route = Route::where('departure_station_id', $fromId)
+            ->where('arrival_station_id', $toId)
+            ->first();
+
+        if (!$route) {
+            return response()->json([]);
+        }
+
+        $startDate = Carbon::parse($date)->startOfDay();
+        $endDate = Carbon::parse($date)->endOfDay();
+
+        $schedules = Schedule::where('route_id', $route->id)
+            ->whereBetween('departure_time', [$startDate, $endDate])
+            ->with(['bus', 'route', 'bookings' => function ($q) {
+                $q->where('status', 'PAID');
+            }])
+            ->get();
+
+        if ($coachType && $coachType !== 'All') {
+            $schedules = $schedules->filter(function ($sched) use ($coachType) {
+                return strtolower($sched->bus->coach_type) === strtolower($coachType);
+            })->values();
+        }
+
+        $formattedSchedules = $schedules->map(function ($sched) {
+            $bookedSeats = [];
+            $seatBookings = [];
+
+            foreach ($sched->bookings as $booking) {
+                $seats = explode(',', $booking->seat_numbers);
+                foreach ($seats as $seat) {
+                    $seatTrimmed = trim($seat);
+                    if ($seatTrimmed === '') {
+                        continue;
+                    }
+
+                    $bookedSeats[] = $seatTrimmed;
+                    $seatBookings[$seatTrimmed] = [
+                        'booking_id' => $booking->id,
+                        'pnr' => 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
+                        'passenger_name' => $booking->passenger_name,
+                        'passenger_phone' => $booking->passenger_phone,
+                        'passenger_email' => $booking->passenger_email,
+                        'seat_numbers' => $booking->seat_numbers,
+                        'total_fare' => floatval($booking->total_fare),
+                        'payment_method' => $booking->payment_method,
+                        'status' => $booking->status,
+                    ];
+                }
+            }
+
+            return [
+                'id' => $sched->id,
+                'departure_time' => $sched->departure_time->toIso8601String(),
+                'arrival_time' => $sched->arrival_time->toIso8601String(),
+                'fare' => floatval($sched->fare),
+                'bus' => [
+                    'id' => $sched->bus->id,
+                    'operator_name' => $sched->bus->operator_name,
+                    'coach_number' => $sched->bus->coach_number,
+                    'coach_type' => $sched->bus->coach_type,
+                    'total_seats' => $sched->bus->total_seats,
+                ],
+                'route' => [
+                    'id' => $sched->route->id,
+                    'distance' => $sched->route->distance,
+                    'duration' => $sched->route->duration,
+                ],
+                'booked_seats' => $bookedSeats,
+                'seat_bookings' => $seatBookings,
+                'available_seats_count' => $sched->bus->total_seats - count($bookedSeats),
+            ];
+        });
+
+        return response()->json($formattedSchedules);
+    }
+
+    /**
+     * Cancel a booking via AJAX for realtime admin seat map updates.
+     */
+    public function cancelBookingApi($id)
+    {
+        $booking = Booking::find($id);
+
+        if (!$booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        if ($booking->status === 'CANCELLED') {
+            return response()->json(['message' => 'Ticket is already cancelled.'], 400);
+        }
+
+        $booking->update(['status' => 'CANCELLED']);
+
+        return response()->json([
+            'message' => 'Booking successfully cancelled and seat released!',
+            'booking_id' => $booking->id,
+            'status' => 'CANCELLED',
+        ]);
     }
 
     // Programmatical database operations via Artisan triggers

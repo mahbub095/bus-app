@@ -1,6 +1,11 @@
 @extends('admin.layout')
 
 @section('content')
+    <!-- Sub-tab 0: Available Coach Services (Live) -->
+    <section class="admin-tab-content" id="tab-content-coach-services">
+        @include('admin.partials.coach-services')
+    </section>
+
     <!-- Sub-tab 1: Bookings Logs -->
     <section class="admin-tab-content" id="tab-content-bookings">
         @include('admin.partials.bookings')
@@ -31,7 +36,12 @@
         @include('admin.partials.promotions')
     </section>
 
-    <!-- Sub-tab 7: System Database Migrations & Artisan hooks -->
+    <!-- Sub-tab 7: Reports -->
+    <section class="admin-tab-content" id="tab-content-reports">
+        @include('admin.partials.reports')
+    </section>
+
+    <!-- Sub-tab 8: System Database Migrations & Artisan hooks -->
     <section class="admin-tab-content" id="tab-content-database">
         @include('admin.partials.database')
     </section>
