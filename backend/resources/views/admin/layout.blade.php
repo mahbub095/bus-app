@@ -1101,7 +1101,7 @@
         <main class="admin-main">
         
         <!-- Header Banner -->
-        <section class="admin-header">
+        <section class="admin-header" id="admin-header">
             <div class="admin-title-wrap">
                 <h1>Control Panel Dashboard</h1>
                 <p>Welcome back, {{ Auth::user()->name }}. Manage timetables, seating templates, and database migrations.</p>
@@ -1129,41 +1129,6 @@
             </div>
         @endif
 
-        <!-- Metrics widgets -->
-        <section class="admin-stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="color: var(--gold)">$</div>
-                <div class="stat-info">
-                    <span class="stat-label">Sales Revenue</span>
-                    <span class="stat-value">BDT {{ number_format($metrics['total_sales']) }}</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon" style="color: var(--success)">✔</div>
-                <div class="stat-info">
-                    <span class="stat-label">Active Bookings</span>
-                    <span class="stat-value">{{ $metrics['active_bookings'] }} Tickets</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon" style="color: var(--danger)">🗙</div>
-                <div class="stat-info">
-                    <span class="stat-label">Cancelled Tickets</span>
-                    <span class="stat-value">{{ $metrics['cancelled_bookings'] }} Cancelled</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon" style="color: var(--primary)">🚌</div>
-                <div class="stat-info">
-                    <span class="stat-label">Active Schedules</span>
-                    <span class="stat-value">{{ $metrics['total_schedules'] }} Runs</span>
-                </div>
-            </div>
-        </section>
-
         <!-- Yield the content which contains tab panels -->
         @yield('content')
 
@@ -1182,8 +1147,19 @@
         document.addEventListener('DOMContentLoaded', () => {
             const navItems = document.querySelectorAll('.sidebar-nav-item');
             const contents = document.querySelectorAll('.admin-tab-content');
-            
+            const dashboardMetrics = document.getElementById('dashboard-metrics');
+            const adminHeader = document.getElementById('admin-header');
+            const currentPath = window.location.pathname.replace(/\/+$/, '');
+            const isAdminRoute = currentPath === '/admin';
             let activeTab = localStorage.getItem('admin_active_tab') || 'coach-services';
+
+            if (activeTab === 'dashboard') {
+                activeTab = 'coach-services';
+            }
+
+            if (isAdminRoute) {
+                activeTab = 'coach-services';
+            }
             
             const switchTab = (tabName) => {
                 navItems.forEach(item => {
@@ -1202,7 +1178,17 @@
                     }
                 });
                 
-                localStorage.setItem('admin_active_tab', tabName);
+                if (tabName === 'coach-services') {
+                    dashboardMetrics?.style.setProperty('display', 'grid');
+                    adminHeader?.style.setProperty('display', 'block');
+                } else {
+                    dashboardMetrics?.style.setProperty('display', 'none');
+                    adminHeader?.style.setProperty('display', 'none');
+                }
+                
+                if (tabName !== 'coach-services') {
+                    localStorage.setItem('admin_active_tab', tabName);
+                }
 
                 if (window.coachServicesModule) {
                     if (tabName === 'coach-services') {

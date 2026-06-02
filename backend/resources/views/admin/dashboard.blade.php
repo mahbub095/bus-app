@@ -1,6 +1,41 @@
 @extends('admin.layout')
 
 @section('content')
+    <!-- Dashboard Metrics Cards - Shows only on dashboard (hidden when tabs are active) -->
+    <section class="admin-stats-grid dashboard-metrics" id="dashboard-metrics">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--gold)">$</div>
+            <div class="stat-info">
+                <span class="stat-label">Sales Revenue</span>
+                <span class="stat-value">BDT {{ number_format($metrics['total_sales']) }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--success)">✔</div>
+            <div class="stat-info">
+                <span class="stat-label">Active Bookings</span>
+                <span class="stat-value">{{ $metrics['active_bookings'] }} Tickets</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--danger)">🗙</div>
+            <div class="stat-info">
+                <span class="stat-label">Cancelled Tickets</span>
+                <span class="stat-value">{{ $metrics['cancelled_bookings'] }} Cancelled</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--primary)">🚌</div>
+            <div class="stat-info">
+                <span class="stat-label">Active Schedules</span>
+                <span class="stat-value">{{ $metrics['total_schedules'] }} Runs</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Sub-tab 0: Available Coach Services (Live) -->
     <section class="admin-tab-content" id="tab-content-coach-services">
         @include('admin.partials.coach-services')
