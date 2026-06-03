@@ -242,7 +242,7 @@
                     </td>
                     <td>
                         <div class="action-btns">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="editBookingFromLog(${b.id})">
+                            <button type="button" class="btn btn-secondary btn-sm edit-booking-btn" data-booking-id="${b.id}">
                                 Edit
                             </button>
                             <form action="${escapeHtml(destroyUrl)}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');">
@@ -254,6 +254,18 @@
                     </td>
                 </tr>`;
         }).join('');
+        bindEditButtons();
+    }
+
+    function bindEditButtons() {
+        document.querySelectorAll('.edit-booking-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.bookingId, 10);
+                if (!Number.isNaN(id)) {
+                    editBookingFromLog(id);
+                }
+            });
+        });
     }
 
     window.editBookingFromLog = function (bookingId) {

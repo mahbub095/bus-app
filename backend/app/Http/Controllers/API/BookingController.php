@@ -86,8 +86,8 @@ class BookingController extends Controller
                 'status' => 'PAID',
             ]);
 
-            // Dispatch SMS notification to queue (non-blocking)
-            SendBookingSmsNotification::dispatch($booking);
+            // Dispatch SMS notification immediately so passengers receive verification without waiting for a queue worker.
+            SendBookingSmsNotification::dispatchSync($booking);
 
             return response()->json([
                 'message' => 'Booking successfully created!',

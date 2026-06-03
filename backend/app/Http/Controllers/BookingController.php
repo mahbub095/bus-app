@@ -25,7 +25,7 @@ class BookingController extends Controller
             'seat_numbers' => 'required|string|max:255',
             'payment_method' => 'required|string|max:50',
             'total_fare' => 'required|numeric|min:0',
-            'status' => 'required|in:PAID,CANCEL_REQUESTED,CANCELLED'
+            'status' => 'sometimes|in:PAID,CANCEL_REQUESTED,CANCELLED'
         ]);
 
         $schedule = Schedule::findOrFail($request->input('schedule_id'));
@@ -38,11 +38,18 @@ class BookingController extends Controller
             'seat_numbers' => $request->input('seat_numbers'),
             'total_fare' => $request->input('total_fare'),
             'payment_method' => $request->input('payment_method'),
-            'status' => $request->input('status'),
+            'status' => $request->input('status', 'PAID'),
         ]);
 
         if ($booking->status === 'PAID') {
-            SendBookingSmsNotification::dispatch($booking);
+            SendBookingSmsNotification::dispatchSync($booking);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Booking created successfully!',
+                'booking' => $booking,
+            ], 201);
         }
 
         return redirect()->back()->with('success', 'Booking created successfully!');
