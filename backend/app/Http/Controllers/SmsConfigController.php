@@ -30,6 +30,6 @@ class SmsConfigController extends Controller
         ]);
         $config->save();
 
-        return redirect()->back()->with('success', 'SMS gateway configuration saved successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'SMS gateway configuration saved successfully!');
     }
 }

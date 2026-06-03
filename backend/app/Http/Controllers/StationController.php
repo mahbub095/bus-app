@@ -20,7 +20,7 @@ class StationController extends Controller
             'district' => trim($request->input('district'))
         ]);
 
-        return redirect()->back()->with('success', 'Station terminal created successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Station terminal created successfully!');
     }
 
     public function update(Request $request, $id)
@@ -37,19 +37,19 @@ class StationController extends Controller
             'district' => trim($request->input('district'))
         ]);
 
-        return redirect()->back()->with('success', 'Station terminal updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Station terminal updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $station = Station::findOrFail($id);
 
         if ($station->departureRoutes()->exists() || $station->arrivalRoutes()->exists()) {
-            return redirect()->back()->withErrors(['message' => 'Cannot delete station — it is linked to existing routes.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'Cannot delete station — it is linked to existing routes.']);
         }
 
         $station->delete();
 
-        return redirect()->back()->with('success', 'Station terminal deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Station terminal deleted successfully!');
     }
 }

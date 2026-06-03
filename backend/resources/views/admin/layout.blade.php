@@ -1041,8 +1041,14 @@
     <div class="admin-shell">
         <!-- Left Sidebar Navigation -->
         <aside class="admin-sidebar">
+            <div class="sidebar-section-label">Overview</div>
+            <a href="/admin" class="sidebar-nav-item active" data-tab="dashboard">
+                <span class="sidebar-nav-icon">📊</span>
+                Dashboard
+            </a>
+
             <div class="sidebar-section-label">Management</div>
-            <a href="/admin#coach-services" class="sidebar-nav-item active" data-tab="coach-services">
+            <a href="/admin#coach-services" class="sidebar-nav-item" data-tab="coach-services">
                 <span class="sidebar-nav-icon">🚌</span>
                 Coach Services
             </a>
@@ -1150,15 +1156,41 @@
             const contents = document.querySelectorAll('.admin-tab-content');
             const dashboardMetrics = document.getElementById('dashboard-metrics');
             const adminHeader = document.getElementById('admin-header');
-            const currentPath = window.location.pathname.replace(/\/+$/, '');
-            const isAdminRoute = currentPath === '/admin';
-            let activeTab = localStorage.getItem('admin_active_tab') || 'dashboard';
-            const hashTab = window.location.hash.replace(/^#/, '').trim();
+            function resolveAdminTab() {
+                const path = window.location.pathname.replace(/\/+$/, '');
+                const hashTab = window.location.hash.replace(/^#/, '').trim();
 
-            if (hashTab && document.getElementById(`tab-content-${hashTab}`)) {
-                activeTab = hashTab;
-            } else if (isAdminRoute) {
-                activeTab = 'dashboard';
+                if (hashTab === 'dashboard') {
+                    return 'dashboard';
+                }
+
+                if (hashTab && document.getElementById(`tab-content-${hashTab}`)) {
+                    return hashTab;
+                }
+
+                if (path === '/admin' && !hashTab) {
+                    return 'dashboard';
+                }
+
+                return 'dashboard';
+            }
+
+            function getCurrentAdminTab() {
+                const navActive = document.querySelector('.sidebar-nav-item.active');
+                const navTab = navActive?.getAttribute('data-tab');
+                if (navTab === 'dashboard') {
+                    return 'dashboard';
+                }
+                if (navTab && document.getElementById(`tab-content-${navTab}`)) {
+                    return navTab;
+                }
+                return resolveAdminTab();
+            }
+
+            let activeTab = resolveAdminTab();
+            const serverTab = @json(old('admin_tab'));
+            if (serverTab === 'dashboard' || (serverTab && document.getElementById(`tab-content-${serverTab}`))) {
+                activeTab = serverTab;
             }
             
             const switchTab = (tabName, updateHash = false) => {
@@ -1171,13 +1203,16 @@
                 });
                 
                 contents.forEach(c => {
-                    if (c.id === `tab-content-${tabName}`) {
-                        c.style.display = 'grid';
-                    } else {
-                        c.style.display = 'none';
-                    }
+                    c.style.display = 'none';
                 });
-                
+
+                if (tabName !== 'dashboard') {
+                    const panel = document.getElementById(`tab-content-${tabName}`);
+                    if (panel) {
+                        panel.style.display = 'grid';
+                    }
+                }
+
                 if (tabName === 'dashboard') {
                     dashboardMetrics?.style.setProperty('display', 'grid');
                     adminHeader?.style.setProperty('display', 'block');
@@ -1232,6 +1267,28 @@
             });
             
             switchTab(activeTab);
+
+            document.querySelector('.admin-main')?.addEventListener('submit', (event) => {
+                const form = event.target;
+                if (!(form instanceof HTMLFormElement)) {
+                    return;
+                }
+
+                const method = (form.getAttribute('method') || 'get').toLowerCase();
+                if (method !== 'post') {
+                    return;
+                }
+
+                const tab = getCurrentAdminTab();
+                let input = form.querySelector('input[name="admin_tab"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'admin_tab';
+                    form.appendChild(input);
+                }
+                input.value = tab;
+            });
         });
 
         function setCrudFormMode(formId, config) {

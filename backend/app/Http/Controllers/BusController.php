@@ -19,7 +19,7 @@ class BusController extends Controller
 
         Bus::create($request->only('operator_name', 'coach_number', 'coach_type', 'total_seats'));
 
-        return redirect()->back()->with('success', 'Bus fleet registered successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Bus fleet registered successfully!');
     }
 
     public function update(Request $request, $id)
@@ -35,13 +35,13 @@ class BusController extends Controller
 
         $bus->update($request->only('operator_name', 'coach_number', 'coach_type', 'total_seats'));
 
-        return redirect()->back()->with('success', 'Coach updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Coach updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         Bus::findOrFail($id)->delete();
 
-        return redirect()->back()->with('success', 'Coach deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Coach deleted successfully!');
     }
 }

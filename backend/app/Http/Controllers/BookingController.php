@@ -52,7 +52,7 @@ class BookingController extends Controller
             ], 201);
         }
 
-        return redirect()->back()->with('success', 'Booking created successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Booking created successfully!');
     }
 
     public function update(Request $request, $id)
@@ -79,51 +79,51 @@ class BookingController extends Controller
             'status',
         ]));
 
-        return redirect()->back()->with('success', 'Booking updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Booking updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         Booking::findOrFail($id)->delete();
 
-        return redirect()->back()->with('success', 'Booking deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Booking deleted successfully!');
     }
 
-    public function cancel($id)
+    public function cancel(Request $request, $id)
     {
         $booking = Booking::find($id);
 
         if (! $booking) {
-            return redirect()->back()->withErrors(['message' => 'Booking not found.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'Booking not found.']);
         }
 
         if ($booking->status === 'CANCELLED') {
-            return redirect()->back()->withErrors(['message' => 'Ticket is already cancelled.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'Ticket is already cancelled.']);
         }
 
         if ($booking->status === 'CANCEL_REQUESTED') {
-            return redirect()->back()->withErrors(['message' => 'Cancellation request already submitted. Please wait for admin approval.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'Cancellation request already submitted. Please wait for admin approval.']);
         }
 
         $booking->update(['status' => 'CANCEL_REQUESTED']);
 
-        return redirect()->back()->with('success', 'Cancellation request submitted. It will be cancelled after admin approval.');
+        return $this->adminTabRedirect($request)->with('success', 'Cancellation request submitted. It will be cancelled after admin approval.');
     }
 
-    public function approveCancelRequest($id)
+    public function approveCancelRequest(Request $request, $id)
     {
         $booking = Booking::find($id);
 
         if (! $booking) {
-            return redirect()->back()->withErrors(['message' => 'Booking not found.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'Booking not found.']);
         }
 
         if ($booking->status !== 'CANCEL_REQUESTED') {
-            return redirect()->back()->withErrors(['message' => 'This booking has no pending cancellation request.']);
+            return $this->adminTabRedirect($request)->withErrors(['message' => 'This booking has no pending cancellation request.']);
         }
 
         $booking->update(['status' => 'CANCELLED']);
 
-        return redirect()->back()->with('success', 'Cancellation request approved successfully. Booking is now cancelled.');
+        return $this->adminTabRedirect($request)->with('success', 'Cancellation request approved successfully. Booking is now cancelled.');
     }
 }

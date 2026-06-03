@@ -81,7 +81,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         if (! Hash::check($validated['current_password'], $user->password)) {
-            return redirect()->back()->withErrors([
+            return $this->adminTabRedirect($request)->withErrors([
                 'current_password' => 'Current password is incorrect.',
             ]);
         }
@@ -90,6 +90,6 @@ class AuthController extends Controller
             'password' => $validated['password'],
         ]);
 
-        return redirect()->back()->with('success', 'Password updated successfully.');
+        return $this->adminTabRedirect($request)->with('success', 'Password updated successfully.');
     }
 }

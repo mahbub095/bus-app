@@ -22,12 +22,12 @@ class RouteController extends Controller
             ->first();
 
         if ($exists) {
-            return redirect()->back()->withInput()->withErrors(['departure_station_id' => 'A route between these stations already exists.']);
+            return $this->adminTabRedirect($request)->withInput()->withErrors(['departure_station_id' => 'A route between these stations already exists.']);
         }
 
         RouteModel::create($request->only('departure_station_id', 'arrival_station_id', 'distance', 'duration'));
 
-        return redirect()->back()->with('success', 'Transport line route connection configured successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Transport line route connection configured successfully!');
     }
 
     public function update(Request $request, $id)
@@ -47,18 +47,18 @@ class RouteController extends Controller
             ->first();
 
         if ($exists) {
-            return redirect()->back()->withInput()->withErrors(['departure_station_id' => 'A route between these stations already exists.']);
+            return $this->adminTabRedirect($request)->withInput()->withErrors(['departure_station_id' => 'A route between these stations already exists.']);
         }
 
         $route->update($request->only('departure_station_id', 'arrival_station_id', 'distance', 'duration'));
 
-        return redirect()->back()->with('success', 'Route updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Route updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         RouteModel::findOrFail($id)->delete();
 
-        return redirect()->back()->with('success', 'Route deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Route deleted successfully!');
     }
 }

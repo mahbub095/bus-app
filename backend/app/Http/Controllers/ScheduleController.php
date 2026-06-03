@@ -20,7 +20,7 @@ class ScheduleController extends Controller
 
         Schedule::create($request->only('bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare'));
 
-        return redirect()->back()->with('success', 'Schedule run registered successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Schedule run registered successfully!');
     }
 
     public function update(Request $request, $id)
@@ -37,13 +37,13 @@ class ScheduleController extends Controller
 
         $schedule->update($request->only('bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare'));
 
-        return redirect()->back()->with('success', 'Schedule updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Schedule updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         Schedule::findOrFail($id)->delete();
 
-        return redirect()->back()->with('success', 'Schedule deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Schedule deleted successfully!');
     }
 }

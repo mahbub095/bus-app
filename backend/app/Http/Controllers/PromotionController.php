@@ -22,7 +22,7 @@ class PromotionController extends Controller
             'description' => trim($request->input('description'))
         ]);
 
-        return redirect()->back()->with('success', 'Promotion code coupon generated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Promotion code coupon generated successfully!');
     }
 
     public function update(Request $request, $id)
@@ -41,13 +41,13 @@ class PromotionController extends Controller
             'description' => trim($request->input('description'))
         ]);
 
-        return redirect()->back()->with('success', 'Coupon updated successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Coupon updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         Promotion::findOrFail($id)->delete();
 
-        return redirect()->back()->with('success', 'Coupon deleted successfully!');
+        return $this->adminTabRedirect($request)->with('success', 'Coupon deleted successfully!');
     }
 }
