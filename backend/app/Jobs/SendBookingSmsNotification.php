@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Services\SmsGatewayService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class SendBookingSmsNotification implements ShouldQueue
 {
@@ -23,6 +24,13 @@ class SendBookingSmsNotification implements ShouldQueue
      */
     public function handle(SmsGatewayService $smsGatewayService): void
     {
-        $smsGatewayService->sendBookingVerification($this->booking);
+        $result = $smsGatewayService->sendBookingVerification($this->booking);
+
+        if (! $result['success']) {
+            Log::warning('Booking SMS was not sent.', [
+                'booking_id' => $this->booking->id,
+                'reason' => $result['message'],
+            ]);
+        }
     }
 }

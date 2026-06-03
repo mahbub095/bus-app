@@ -2,9 +2,21 @@
     <div class="admin-panel">
         <h3 class="admin-panel-title">Bangladesh SMS Gateway Configuration</h3>
         <div class="notice-info-box">
-            Configure your SMS provider to send customer verification messages after successful ticket payment.
-            Supported placeholders in message template: <strong>{PNR}</strong>, <strong>{SEATS}</strong>, <strong>{FARE}</strong>, <strong>{STATUS}</strong>.
+            <p style="margin-bottom: 8px;">
+                SMS is sent automatically when a booking status is <strong>PAID</strong>.
+                Use a Bangladesh mobile number format: <strong>01712345678</strong> or <strong>8801712345678</strong>.
+            </p>
+            <p style="margin-bottom: 0;">
+                Message placeholders: <strong>{PNR}</strong>, <strong>{SEATS}</strong>, <strong>{FARE}</strong>, <strong>{STATUS}</strong>.
+            </p>
         </div>
+
+        @if($errors->has('sms_test'))
+            <div class="alert-banner" style="margin-top: 16px; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12);">
+                <span>✖</span>
+                <span>{{ $errors->first('sms_test') }}</span>
+            </div>
+        @endif
     </div>
 
     <div class="booking-form-sidebar">
@@ -25,13 +37,31 @@
             </div>
 
             <div class="input-group">
+                <label>Provider / API Format</label>
+                <select name="gateway_driver" class="coupon-input" required>
+                    @php
+                        $driver = old('gateway_driver', $smsConfig?->gateway_driver ?? 'bulksmsbd');
+                    @endphp
+                    <option value="bulksmsbd" {{ $driver === 'bulksmsbd' ? 'selected' : '' }}>
+                        BulkSMSBD (api_key, number, senderid, message)
+                    </option>
+                    <option value="custom" {{ $driver === 'custom' ? 'selected' : '' }}>
+                        Custom POST (api_key, sender_id, mobile, message)
+                    </option>
+                    <option value="get_query" {{ $driver === 'get_query' ? 'selected' : '' }}>
+                        Custom GET (query string parameters)
+                    </option>
+                </select>
+            </div>
+
+            <div class="input-group">
                 <label>Gateway API URL</label>
                 <input
                     type="url"
                     name="api_url"
                     class="coupon-input"
                     value="{{ old('api_url', $smsConfig?->api_url) }}"
-                    placeholder="https://example.com/send-sms"
+                    placeholder="https://bulksmsbd.net/api/smsapi"
                 >
             </div>
 
@@ -53,7 +83,7 @@
                     name="sender_id"
                     class="coupon-input"
                     value="{{ old('sender_id', $smsConfig?->sender_id) }}"
-                    placeholder="SONYABUS"
+                    placeholder="Approved sender ID from your provider"
                 >
             </div>
 
@@ -77,6 +107,30 @@
 
             <button class="btn btn-primary" type="submit" style="height: 42px; margin-top: 10px;">
                 Save SMS Configuration
+            </button>
+        </form>
+
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+        <h3 class="booking-summary-title" style="font-size: 16px;">Send Test SMS</h3>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+            Save your configuration first, then send a test message to verify the gateway.
+        </p>
+        <form class="booking-form-fields" action="{{ route('admin.sms-config.test') }}" method="POST">
+            @csrf
+            <div class="input-group">
+                <label>Test Mobile Number</label>
+                <input
+                    type="text"
+                    name="test_phone"
+                    class="coupon-input"
+                    required
+                    value="{{ old('test_phone') }}"
+                    placeholder="01712345678"
+                >
+            </div>
+            <button class="btn btn-secondary" type="submit" style="height: 42px; margin-top: 10px;">
+                Send Test SMS
             </button>
         </form>
     </div>

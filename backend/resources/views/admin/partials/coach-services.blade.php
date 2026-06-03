@@ -546,10 +546,14 @@
             });
 
             if (res.ok) {
+                const data = await res.json().catch(() => ({}));
                 closeBookingModal();
                 selectedSeatBooking = null;
                 await fetchCoachServices(true);
-                alert('Booking created successfully. SMS notification has been submitted.');
+                const smsNote = data.sms?.success
+                    ? ' SMS was sent to the passenger.'
+                    : (data.sms?.message ? ` SMS was not sent: ${data.sms.message}` : '');
+                alert(`Booking created successfully.${smsNote}`);
                 return;
             }
 

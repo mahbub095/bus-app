@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendBookingSmsNotification;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Services\SmsGatewayService;
@@ -41,14 +40,16 @@ class BookingController extends Controller
             'status' => $request->input('status', 'PAID'),
         ]);
 
+        $smsResult = ['success' => false, 'message' => 'SMS not sent (booking is not PAID).'];
         if ($booking->status === 'PAID') {
-            SendBookingSmsNotification::dispatchSync($booking);
+            $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
         }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'message' => 'Booking created successfully!',
                 'booking' => $booking,
+                'sms' => $smsResult,
             ], 201);
         }
 

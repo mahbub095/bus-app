@@ -8,6 +8,7 @@ class SmsConfig extends Model
 {
     protected $fillable = [
         'gateway_name',
+        'gateway_driver',
         'api_url',
         'api_key',
         'sender_id',

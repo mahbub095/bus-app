@@ -76,6 +76,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/admin/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
     Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
     Route::post('/admin/sms-config', [SmsConfigController::class, 'update'])->name('admin.sms-config.update');
+    Route::post('/admin/sms-config/test', [SmsConfigController::class, 'testSend'])->name('admin.sms-config.test');
 
     // System Database Migration Actions
     Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');

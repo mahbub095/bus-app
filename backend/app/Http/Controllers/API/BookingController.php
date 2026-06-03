@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Promotion;
-use App\Jobs\SendBookingSmsNotification;
+use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
-    public function __construct()
+    public function __construct(protected SmsGatewayService $smsGatewayService)
     {
     }
 
@@ -86,12 +86,12 @@ class BookingController extends Controller
                 'status' => 'PAID',
             ]);
 
-            // Dispatch SMS notification immediately so passengers receive verification without waiting for a queue worker.
-            SendBookingSmsNotification::dispatchSync($booking);
+            $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
 
             return response()->json([
                 'message' => 'Booking successfully created!',
                 'booking' => $this->formatBooking($booking, $schedule),
+                'sms' => $smsResult,
             ], 201);
         });
     }
