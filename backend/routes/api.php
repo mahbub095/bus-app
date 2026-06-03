@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Controllers\StationController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\BookingController;
-use App\Http\Controllers\PromotionController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\UserAuthController;
+use App\Http\Controllers\API\StationController;
+use App\Http\Controllers\API\SearchController;
+use App\Http\Controllers\API\BookingController;
+use App\Http\Controllers\API\PromotionController;
+use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\UserAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/stations', [StationController::class, 'index']);

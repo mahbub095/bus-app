@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\API\AdminController as AdminApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReportController;
 
@@ -22,10 +23,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
 
     // Coach Services (realtime search + seat map)
-    Route::get('/admin/api/coach-services/search', [AdminController::class, 'searchCoachServices'])->name('admin.coach-services.search');
-    Route::post('/admin/api/bookings/{id}/cancel', [AdminController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
-    Route::get('/admin/api/bookings/logs', [AdminController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
-    Route::get('/admin/api/cancel-requests/logs', [AdminController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');
+    Route::get('/admin/api/coach-services/search', [AdminApiController::class, 'searchCoachServices'])->name('admin.coach-services.search');
+    Route::post('/admin/api/bookings/{id}/cancel', [AdminApiController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
+    Route::get('/admin/api/bookings/logs', [AdminApiController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
+    Route::get('/admin/api/cancel-requests/logs', [AdminApiController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');
 
     // Reports
     Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');
