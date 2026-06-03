@@ -205,6 +205,16 @@
             align-items: center;
             gap: 10px;
             text-align: left;
+            transition: opacity 0.4s ease, transform 0.4s ease, margin 0.4s ease, padding 0.4s ease;
+        }
+
+        .alert-banner.flash-dismissed {
+            opacity: 0;
+            transform: translateY(-6px);
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            pointer-events: none;
         }
 
         .alert-success {
@@ -234,14 +244,14 @@
 
             <!-- Notifications / Session logs -->
             @if(session('success'))
-                <div class="alert-banner alert-success">
+                <div class="alert-banner alert-success flash-alert" role="alert">
                     <span>✔</span>
                     <span>{{ session('success') }}</span>
                 </div>
             @endif
 
             @if($errors->any())
-                <div class="alert-banner alert-danger">
+                <div class="alert-banner alert-danger flash-alert" role="alert">
                     <span>🗙</span>
                     <div>
                         <ul style="list-style: none; padding-left: 0;">
@@ -297,6 +307,20 @@
         </div>
         
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const FLASH_ALERT_MS = 10000;
+            document.querySelectorAll('.flash-alert').forEach((el) => {
+                setTimeout(() => {
+                    el.classList.add('flash-dismissed');
+                    const removeEl = () => el.remove();
+                    el.addEventListener('transitionend', removeEl, { once: true });
+                    setTimeout(removeEl, 500);
+                }, FLASH_ALERT_MS);
+            });
+        });
+    </script>
 
 </body>
 </html>

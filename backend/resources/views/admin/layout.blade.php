@@ -579,6 +579,16 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            transition: opacity 0.4s ease, transform 0.4s ease, margin 0.4s ease, padding 0.4s ease;
+        }
+
+        .alert-banner.flash-dismissed {
+            opacity: 0;
+            transform: translateY(-6px);
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            pointer-events: none;
         }
 
         .alert-success {
@@ -1117,14 +1127,14 @@
 
         <!-- Notification messages -->
         @if(session('success'))
-            <div class="alert-banner alert-success">
+            <div class="alert-banner alert-success flash-alert" role="alert">
                 <span>✔</span>
                 <span>{{ session('success') }}</span>
             </div>
         @endif
 
         @if($errors->any())
-            <div class="alert-banner alert-danger">
+            <div class="alert-banner alert-danger flash-alert" role="alert">
                 <span>🗙</span>
                 <div>
                     <ul style="list-style: none; padding-left: 0;">
@@ -1151,7 +1161,22 @@
 
     <!-- Tab state switching javascript -->
     <script>
+        const FLASH_ALERT_MS = 10000;
+
+        function initFlashAlerts() {
+            document.querySelectorAll('.flash-alert').forEach((el) => {
+                setTimeout(() => {
+                    el.classList.add('flash-dismissed');
+                    const removeEl = () => el.remove();
+                    el.addEventListener('transitionend', removeEl, { once: true });
+                    setTimeout(removeEl, 500);
+                }, FLASH_ALERT_MS);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            initFlashAlerts();
+
             const navItems = document.querySelectorAll('.sidebar-nav-item');
             const contents = document.querySelectorAll('.admin-tab-content');
             const dashboardMetrics = document.getElementById('dashboard-metrics');
