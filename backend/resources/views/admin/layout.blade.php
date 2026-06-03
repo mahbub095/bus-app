@@ -108,6 +108,7 @@
             font-size: 14px;
             font-weight: 600;
             transition: var(--transition);
+            text-decoration: none;
             user-select: none;
         }
 
@@ -1041,60 +1042,60 @@
         <!-- Left Sidebar Navigation -->
         <aside class="admin-sidebar">
             <div class="sidebar-section-label">Management</div>
-            <div class="sidebar-nav-item active" data-tab="coach-services">
+            <a href="/admin#coach-services" class="sidebar-nav-item active" data-tab="coach-services">
                 <span class="sidebar-nav-icon">🚌</span>
                 Coach Services
-            </div>
-            <div class="sidebar-nav-item" data-tab="bookings">
+            </a>
+            <a href="/admin#bookings" class="sidebar-nav-item" data-tab="bookings">
                 <span class="sidebar-nav-icon">📋</span>
                 Bookings Logs
-            </div>
-            <div class="sidebar-nav-item" data-tab="cancel-requests">
+            </a>
+            <a href="/admin#cancel-requests" class="sidebar-nav-item" data-tab="cancel-requests">
                 <span class="sidebar-nav-icon">📝</span>
                 Cancel Requests
-            </div>
-            <div class="sidebar-nav-item" data-tab="stations">
+            </a>
+            <a href="/admin#stations" class="sidebar-nav-item" data-tab="stations">
                 <span class="sidebar-nav-icon">🚉</span>
                 Stations
-            </div>
-            <div class="sidebar-nav-item" data-tab="buses">
+            </a>
+            <a href="/admin#buses" class="sidebar-nav-item" data-tab="buses">
                 <span class="sidebar-nav-icon">🚌</span>
                 Coaches
-            </div>
-            <div class="sidebar-nav-item" data-tab="routes">
+            </a>
+            <a href="/admin#routes" class="sidebar-nav-item" data-tab="routes">
                 <span class="sidebar-nav-icon">🛣️</span>
                 Routes
-            </div>
-            <div class="sidebar-nav-item" data-tab="schedules">
+            </a>
+            <a href="/admin#schedules" class="sidebar-nav-item" data-tab="schedules">
                 <span class="sidebar-nav-icon">📅</span>
                 Schedules
-            </div>
-            <div class="sidebar-nav-item" data-tab="promotions">
+            </a>
+            <a href="/admin#promotions" class="sidebar-nav-item" data-tab="promotions">
                 <span class="sidebar-nav-icon">🎟️</span>
                 Coupons
-            </div>
-            <div class="sidebar-nav-item" data-tab="sms-config">
+            </a>
+            <a href="/admin#sms-config" class="sidebar-nav-item" data-tab="sms-config">
                 <span class="sidebar-nav-icon">📲</span>
                 SMS Gateway
-            </div>
+            </a>
 
             <div class="sidebar-section-label">Reports</div>
-            <div class="sidebar-nav-item" data-tab="reports">
+            <a href="/admin#reports" class="sidebar-nav-item" data-tab="reports">
                 <span class="sidebar-nav-icon">📊</span>
                 Ticket Reports
-            </div>
+            </a>
 
             <div class="sidebar-spacer"></div>
 
             <div class="sidebar-section-label">System</div>
-            <div class="sidebar-nav-item danger" data-tab="database">
+            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database" target="_blank" rel="noopener noreferrer">
                 <span class="sidebar-nav-icon">⚙️</span>
                 Database Operations
-            </div>
-            <div class="sidebar-nav-item" data-tab="profile">
+            </a>
+            <a href="/admin#profile" class="sidebar-nav-item" data-tab="profile">
                 <span class="sidebar-nav-icon">👤</span>
                 Profile
-            </div>
+            </a>
         </aside>
 
         <!-- Main Content Area -->
@@ -1152,12 +1153,15 @@
             const currentPath = window.location.pathname.replace(/\/+$/, '');
             const isAdminRoute = currentPath === '/admin';
             let activeTab = localStorage.getItem('admin_active_tab') || 'dashboard';
+            const hashTab = window.location.hash.replace(/^#/, '').trim();
 
-            if (isAdminRoute) {
+            if (hashTab && document.getElementById(`tab-content-${hashTab}`)) {
+                activeTab = hashTab;
+            } else if (isAdminRoute) {
                 activeTab = 'dashboard';
             }
             
-            const switchTab = (tabName) => {
+            const switchTab = (tabName, updateHash = false) => {
                 navItems.forEach(item => {
                     if (item.getAttribute('data-tab') === tabName) {
                         item.classList.add('active');
@@ -1186,6 +1190,10 @@
                     localStorage.setItem('admin_active_tab', tabName);
                 }
 
+                if (updateHash) {
+                    window.location.hash = tabName;
+                }
+
                 if (window.coachServicesModule) {
                     if (tabName === 'coach-services') {
                         window.coachServicesModule.startPolling();
@@ -1212,8 +1220,14 @@
             };
             
             navItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    switchTab(item.getAttribute('data-tab'));
+                item.addEventListener('click', (event) => {
+                    if (item.target === '_blank') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const tabName = item.getAttribute('data-tab');
+                    switchTab(tabName, true);
                 });
             });
             
