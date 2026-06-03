@@ -65,6 +65,7 @@ class BookingController extends Controller
             'passenger_email' => 'required|email|max:100',
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
+            'payment_method' => 'required|string|max:50',
             'status' => 'required|in:PAID,CANCEL_REQUESTED,CANCELLED'
         ]);
 
@@ -74,6 +75,7 @@ class BookingController extends Controller
             'passenger_email',
             'seat_numbers',
             'total_fare',
+            'payment_method',
             'status',
         ]));
 

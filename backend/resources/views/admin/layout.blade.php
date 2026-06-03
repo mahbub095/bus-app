@@ -1268,8 +1268,18 @@
 
             if (formId === 'booking-form') {
                 const scheduleGroup = document.getElementById('booking-schedule-group');
+                const scheduleSelect = scheduleGroup?.querySelector('select[name="schedule_id"]');
                 if (scheduleGroup) {
                     scheduleGroup.style.display = config.mode === 'edit' ? 'none' : 'flex';
+                }
+                if (scheduleSelect) {
+                    if (config.mode === 'edit') {
+                        scheduleSelect.required = false;
+                        scheduleSelect.disabled = true;
+                    } else {
+                        scheduleSelect.required = true;
+                        scheduleSelect.disabled = false;
+                    }
                 }
             }
         }

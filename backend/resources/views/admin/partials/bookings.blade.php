@@ -98,7 +98,7 @@
         <h3 class="booking-summary-title" id="booking-form-title">Create Booking</h3>
         <form class="booking-form-fields" id="booking-form" action="{{ route('admin.bookings.store') }}" method="POST">
             @csrf
-            @method('POST')
+            <input type="hidden" name="_method" id="booking-form-method" value="POST">
             <input type="hidden" name="_edit_id" value="">
 
             <div class="input-group" id="booking-schedule-group">
