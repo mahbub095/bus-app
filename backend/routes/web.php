@@ -2,7 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminWebController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\BusController;
+use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\RouteController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\SmsConfigController;
+use App\Http\Controllers\StationController;
+use App\Http\Controllers\SystemController;
 use App\Http\Controllers\API\AdminController as AdminApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReportController;
@@ -38,41 +45,41 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/reports/cancel/export/pdf', [ReportController::class, 'cancelExportPdf'])->name('admin.reports.cancel.pdf');
 
     // Bookings CRUD
-    Route::post('/admin/bookings', [AdminWebController::class, 'storeBookingWeb'])->name('admin.bookings.store');
-    Route::put('/admin/bookings/{id}', [AdminWebController::class, 'updateBookingWeb'])->name('admin.bookings.update');
-    Route::delete('/admin/bookings/{id}', [AdminWebController::class, 'destroyBookingWeb'])->name('admin.bookings.destroy');
-    Route::post('/admin/bookings/{id}/cancel', [AdminWebController::class, 'cancelBookingWeb'])->name('admin.bookings.cancel');
-    Route::post('/admin/bookings/{id}/approve-cancel', [AdminWebController::class, 'approveCancelRequestWeb'])->name('admin.bookings.approve-cancel');
+    Route::post('/admin/bookings', [BookingController::class, 'store'])->name('admin.bookings.store');
+    Route::put('/admin/bookings/{id}', [BookingController::class, 'update'])->name('admin.bookings.update');
+    Route::delete('/admin/bookings/{id}', [BookingController::class, 'destroy'])->name('admin.bookings.destroy');
+    Route::post('/admin/bookings/{id}/cancel', [BookingController::class, 'cancel'])->name('admin.bookings.cancel');
+    Route::post('/admin/bookings/{id}/approve-cancel', [BookingController::class, 'approveCancelRequest'])->name('admin.bookings.approve-cancel');
 
     // Stations CRUD
-    Route::post('/admin/stations', [AdminWebController::class, 'storeStationWeb'])->name('admin.stations.store');
-    Route::put('/admin/stations/{id}', [AdminWebController::class, 'updateStationWeb'])->name('admin.stations.update');
-    Route::delete('/admin/stations/{id}', [AdminWebController::class, 'destroyStationWeb'])->name('admin.stations.destroy');
+    Route::post('/admin/stations', [StationController::class, 'store'])->name('admin.stations.store');
+    Route::put('/admin/stations/{id}', [StationController::class, 'update'])->name('admin.stations.update');
+    Route::delete('/admin/stations/{id}', [StationController::class, 'destroy'])->name('admin.stations.destroy');
 
     // Coaches (Buses) CRUD
-    Route::post('/admin/buses', [AdminWebController::class, 'storeBusWeb'])->name('admin.buses.store');
-    Route::put('/admin/buses/{id}', [AdminWebController::class, 'updateBusWeb'])->name('admin.buses.update');
-    Route::delete('/admin/buses/{id}', [AdminWebController::class, 'destroyBusWeb'])->name('admin.buses.destroy');
+    Route::post('/admin/buses', [BusController::class, 'store'])->name('admin.buses.store');
+    Route::put('/admin/buses/{id}', [BusController::class, 'update'])->name('admin.buses.update');
+    Route::delete('/admin/buses/{id}', [BusController::class, 'destroy'])->name('admin.buses.destroy');
 
     // Routes CRUD
-    Route::post('/admin/routes', [AdminWebController::class, 'storeRouteWeb'])->name('admin.routes.store');
-    Route::put('/admin/routes/{id}', [AdminWebController::class, 'updateRouteWeb'])->name('admin.routes.update');
-    Route::delete('/admin/routes/{id}', [AdminWebController::class, 'destroyRouteWeb'])->name('admin.routes.destroy');
+    Route::post('/admin/routes', [RouteController::class, 'store'])->name('admin.routes.store');
+    Route::put('/admin/routes/{id}', [RouteController::class, 'update'])->name('admin.routes.update');
+    Route::delete('/admin/routes/{id}', [RouteController::class, 'destroy'])->name('admin.routes.destroy');
 
     // Schedules CRUD
-    Route::post('/admin/schedules', [AdminWebController::class, 'storeScheduleWeb'])->name('admin.schedules.store');
-    Route::put('/admin/schedules/{id}', [AdminWebController::class, 'updateScheduleWeb'])->name('admin.schedules.update');
-    Route::delete('/admin/schedules/{id}', [AdminWebController::class, 'destroyScheduleWeb'])->name('admin.schedules.destroy');
+    Route::post('/admin/schedules', [ScheduleController::class, 'store'])->name('admin.schedules.store');
+    Route::put('/admin/schedules/{id}', [ScheduleController::class, 'update'])->name('admin.schedules.update');
+    Route::delete('/admin/schedules/{id}', [ScheduleController::class, 'destroy'])->name('admin.schedules.destroy');
 
     // Coupons (Promotions) CRUD
-    Route::post('/admin/promotions', [AdminWebController::class, 'storePromotionWeb'])->name('admin.promotions.store');
-    Route::put('/admin/promotions/{id}', [AdminWebController::class, 'updatePromotionWeb'])->name('admin.promotions.update');
-    Route::delete('/admin/promotions/{id}', [AdminWebController::class, 'destroyPromotionWeb'])->name('admin.promotions.destroy');
-    Route::post('/admin/sms-config', [AdminWebController::class, 'updateSmsConfigWeb'])->name('admin.sms-config.update');
+    Route::post('/admin/promotions', [PromotionController::class, 'store'])->name('admin.promotions.store');
+    Route::put('/admin/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
+    Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
+    Route::post('/admin/sms-config', [SmsConfigController::class, 'update'])->name('admin.sms-config.update');
 
     // System Database Migration Actions
-    Route::post('/admin/system/migrate', [AdminWebController::class, 'systemMigrate'])->name('admin.system.migrate');
-    Route::post('/admin/system/seed', [AdminWebController::class, 'systemSeed'])->name('admin.system.seed');
-    Route::post('/admin/system/migrate-fresh-seed', [AdminWebController::class, 'systemMigrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
+    Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');
+    Route::post('/admin/system/seed', [SystemController::class, 'seed'])->name('admin.system.seed');
+    Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
     
 });
