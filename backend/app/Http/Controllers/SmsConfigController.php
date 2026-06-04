@@ -22,7 +22,7 @@ class SmsConfigController extends Controller
             'gateway_driver' => ['required', Rule::in(['bulksmsbd', 'custom', 'get_query'])],
             'api_url' => [$isActive ? 'required' : 'nullable', 'url', 'max:255'],
             'api_key' => [$isActive ? 'required' : 'nullable', 'string', 'max:255'],
-            // 'sender_id' => [$isActive ? 'required' : 'nullable', 'string', 'max:50'],
+            'sender_id' => [$isActive ? 'required' : 'nullable', 'string', 'max:50'],
             'is_active' => 'nullable|in:0,1',
             'message_template' => 'nullable|string|max:500',
         ]);
