@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             StationSeeder::class,
             BusSeeder::class,
             RouteSeeder::class,
+            RoutePointsSeeder::class,
             ScheduleSeeder::class,
             BookingSeeder::class,
             PromotionSeeder::class,

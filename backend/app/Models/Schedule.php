@@ -9,7 +9,7 @@ class Schedule extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare'];
+    protected $fillable = ['bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare', 'blocked_seats'];
 
     protected $casts = [
         'departure_time' => 'datetime',

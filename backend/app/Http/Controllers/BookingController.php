@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Schedule;
+use App\Services\SeatMapService;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
-    public function __construct(protected SmsGatewayService $smsGatewayService)
-    {
+    public function __construct(
+        protected SmsGatewayService $smsGatewayService,
+        protected SeatMapService $seatMapService
+    ) {
     }
 
     public function store(Request $request)
@@ -23,19 +26,34 @@ class BookingController extends Controller
             'passenger_email' => 'required|email|max:100',
             'seat_numbers' => 'required|string|max:255',
             'payment_method' => 'required|string|max:50',
-            'total_fare' => 'required|numeric|min:0',
-            'status' => 'sometimes|in:PAID,CANCEL_REQUESTED,CANCELLED'
+            'total_fare' => 'nullable|numeric|min:0',
+            'passenger_gender' => 'nullable|in:M,F',
+            'boarding_point' => 'nullable|string|max:150',
+            'dropping_point' => 'nullable|string|max:150',
+            'status' => 'sometimes|in:PAID,CANCEL_REQUESTED,CANCELLED',
         ]);
 
-        $schedule = Schedule::findOrFail($request->input('schedule_id'));
+        $schedule = Schedule::with('bus')->findOrFail($request->input('schedule_id'));
+        $seats = array_filter(array_map('trim', explode(',', $request->input('seat_numbers'))));
+        $seatCount = max(1, count($seats));
+        $applyGateway = strtolower($request->input('payment_method')) !== 'cash';
+        $pricing = $this->seatMapService->pricingBreakdown($seatCount, (float) $schedule->fare, $applyGateway);
+        $totalFare = $request->input('total_fare', $pricing['total']);
+
+        $boardingPoints = $this->seatMapService->boardingPoints($schedule);
+        $droppingPoints = $this->seatMapService->droppingPoints($schedule);
 
         $booking = Booking::create([
             'schedule_id' => $schedule->id,
             'passenger_name' => $request->input('passenger_name'),
             'passenger_phone' => $request->input('passenger_phone'),
             'passenger_email' => $request->input('passenger_email'),
+            'passenger_gender' => $request->input('passenger_gender', 'M'),
+            'boarding_point' => $request->input('boarding_point', $boardingPoints[0]['value'] ?? null),
+            'dropping_point' => $request->input('dropping_point', $droppingPoints[0]['value'] ?? null),
+            'seat_class' => $this->seatMapService->seatClassForCoach($schedule->bus->coach_type ?? null),
             'seat_numbers' => $request->input('seat_numbers'),
-            'total_fare' => $request->input('total_fare'),
+            'total_fare' => $totalFare,
             'payment_method' => $request->input('payment_method'),
             'status' => $request->input('status', 'PAID'),
         ]);

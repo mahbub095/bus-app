@@ -15,10 +15,14 @@ class Booking extends Model
         'passenger_name',
         'passenger_phone',
         'passenger_email',
+        'passenger_gender',
+        'boarding_point',
+        'dropping_point',
+        'seat_class',
         'seat_numbers',
         'total_fare',
         'payment_method',
-        'status'
+        'status',
     ];
 
     protected $casts = [

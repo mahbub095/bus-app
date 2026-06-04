@@ -59,63 +59,6 @@
         Search by route and date to view available coach services with a live seat map. Booked seats can be cancelled directly from the layout.
     </div>
 
-    <div id="cs-booking-modal" style="display:none; position: fixed; inset: 0; z-index: 9999; background: rgba(14,17,34,0.82); align-items: center; justify-content: center; padding: 24px;">
-        <div style="background: var(--bg); border-radius: var(--border-radius-md); width: min(520px, 100%); box-shadow: 0 24px 60px rgba(0,0,0,.25); overflow: hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 22px; border-bottom:1px solid rgba(255,255,255,.08);">
-                <div>
-                    <h3 id="cs-booking-modal-title" style="margin:0; font-size:18px;">Confirm Booking</h3>
-                    <p id="cs-booking-schedule" style="margin:6px 0 0; font-size:13px; color: var(--text-secondary);"></p>
-                </div>
-                <button type="button" id="cs-booking-modal-close" style="background:none; border:none; color:var(--text); font-size:24px; line-height:1; cursor:pointer;">×</button>
-            </div>
-            <form id="cs-booking-form" style="padding:20px; display:grid; gap:16px;" onsubmit="return false;">
-                <input type="hidden" id="cs-booking-schedule-id" name="schedule_id">
-                <input type="hidden" id="cs-booking-seat" name="seat_numbers">
-                <input type="hidden" id="cs-booking-status" name="status" value="PAID">
-
-                <div style="display:grid; gap:12px;">
-                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-                        <div style="flex:1; min-width:130px;">
-                            <label style="font-size:12px; font-weight:600; margin-bottom:8px; display:block;">Seat</label>
-                            <input type="text" id="cs-booking-seat-display" readonly style="width:100%; padding:11px 12px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.04); color:var(--text);">
-                        </div>
-                        <div style="flex:1; min-width:130px;">
-                            <label style="font-size:12px; font-weight:600; margin-bottom:8px; display:block;">Fare</label>
-                            <input type="text" id="cs-booking-fare" readonly style="width:100%; padding:11px 12px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.04); color:var(--text);">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label>Passenger Name</label>
-                    <input type="text" id="cs-booking-passenger-name" class="coupon-input" placeholder="Full name" required>
-                </div>
-                <div class="input-group">
-                    <label>Passenger Phone</label>
-                    <input type="text" id="cs-booking-passenger-phone" class="coupon-input" placeholder="01XXXXXXXXX" required>
-                </div>
-                <div class="input-group">
-                    <label>Passenger Email</label>
-                    <input type="email" id="cs-booking-passenger-email" class="coupon-input" placeholder="email@example.com" required>
-                </div>
-                <div class="input-group">
-                    <label>Payment Method</label>
-                    <select id="cs-booking-payment-method" class="coupon-input" required>
-                        <option value="Cash">Cash</option>
-                        <option value="bKash">bKash</option>
-                        <option value="Nagad">Nagad</option>
-                        <option value="Card">Card</option>
-                    </select>
-                </div>
-                <div id="cs-booking-error" style="color:#ff6b6b; font-size:13px; display:none;"></div>
-                <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-                    <button type="button" class="btn btn-secondary" id="cs-booking-cancel" style="height:42px;">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="cs-booking-submit" style="height:42px;">Confirm Booking</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 </div>
 
 <script>
@@ -125,26 +68,17 @@
     const cancelUrlTemplate = @json(route('admin.bookings.cancel.api', ['id' => '__ID__']));
     const bookUrl = @json(route('admin.bookings.store'));
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    const bookingModalEl = document.getElementById('cs-booking-modal');
-    const bookingFormEl = document.getElementById('cs-booking-form');
-    const bookingSeatDisplay = document.getElementById('cs-booking-seat-display');
-    const bookingFareInput = document.getElementById('cs-booking-fare');
-    const bookingScheduleInput = document.getElementById('cs-booking-schedule-id');
-    const bookingSeatInput = document.getElementById('cs-booking-seat');
-    const bookingScheduleText = document.getElementById('cs-booking-schedule');
-    const bookingNameInput = document.getElementById('cs-booking-passenger-name');
-    const bookingPhoneInput = document.getElementById('cs-booking-passenger-phone');
-    const bookingEmailInput = document.getElementById('cs-booking-passenger-email');
-    const bookingPaymentInput = document.getElementById('cs-booking-payment-method');
-    const bookingErrorEl = document.getElementById('cs-booking-error');
-    let activeBookingSchedule = null;
-
     const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
     let searchParams = { from: '', to: '', date: '', coachType: 'All' };
     let searchResults = [];
     let searchDone = false;
     let expandedScheduleId = null;
     let selectedSeatBooking = null;
+    let adminSelectedSeats = [];
+    let adminBoardingPoint = '';
+    let adminDroppingPoint = '';
+    let adminGender = 'M';
+    let adminPaymentMethod = 'Cash';
     let pollTimer = null;
     let isFetching = false;
 
@@ -169,9 +103,56 @@
         return div.innerHTML;
     }
 
-    function renderSeatMap(schedule) {
+    function formatBdt(amount) {
+        return '৳ ' + Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function getSeatMap(schedule) {
+        if (schedule.seat_map) return schedule.seat_map;
+        const map = {};
         const booked = schedule.booked_seats || [];
-        const seatBookings = schedule.seat_bookings || {};
+        rows.forEach(row => {
+            [1, 2, 3, 4].forEach(n => {
+                const code = row + n;
+                map[code] = booked.includes(code) ? 'sold_m' : 'available';
+            });
+        });
+        return map;
+    }
+
+    function calcPricing(schedule, seatCount, paymentMethod) {
+        const fare = Number(schedule.fare || 0);
+        const p = schedule.pricing || {};
+        const applyGateway = String(paymentMethod).toLowerCase() !== 'cash';
+        const seatFare = fare * seatCount;
+        const serviceCharge = (p.service_charge ?? 20) * seatCount;
+        const gatewayCharge = applyGateway ? (p.gateway_charge ?? 16) * seatCount : 0;
+        const scDiscount = (p.sc_discount ?? 20) * seatCount;
+        const gcDiscount = applyGateway ? (p.gc_discount ?? 16) * seatCount : 0;
+        const total = Math.max(0, seatFare + serviceCharge + gatewayCharge - scDiscount - gcDiscount);
+        return { seatFare, serviceCharge, gatewayCharge, scDiscount, gcDiscount, total };
+    }
+
+    function seatLabel(status) {
+        const labels = {
+            available: 'Available', selected: 'Selected', blocked: 'Blocked',
+            booked_m: 'Booked (M)', booked_f: 'Booked (F)', sold_m: 'Sold (M)', sold_f: 'Sold (F)'
+        };
+        return labels[status] || status;
+    }
+
+    function renderSeatLegend() {
+        const items = [
+            ['booked_m', 'Booked (M)'], ['booked_f', 'Booked (F)'], ['blocked', 'Blocked'],
+            ['available', 'Available'], ['selected', 'Selected'], ['sold_m', 'Sold (M)'], ['sold_f', 'Sold (F)']
+        ];
+        return items.map(([key, label]) =>
+            `<div class="legend-item"><div class="legend-dot status-${key}"></div><span>${label}</span></div>`
+        ).join('');
+    }
+
+    function renderSeatMap(schedule) {
+        const seatMap = getSeatMap(schedule);
 
         let html = `
             <div class="bus-blueprint">
@@ -183,96 +164,112 @@
 
         rows.forEach(row => {
             const seats = [`${row}1`, `${row}2`, `${row}3`, `${row}4`];
-            html += `<div class="seat-row">`;
-            html += `<div class="seat-pair">`;
-            seats.slice(0, 2).forEach(seat => {
-                const isBooked = booked.includes(seat);
-                html += `<div class="seat ${isBooked ? 'booked admin-booked' : ''}"
-                    data-seat="${seat}" data-schedule="${schedule.id}"
-                    title="${isBooked ? 'Click to view booking' : 'Available'}">${seat}</div>`;
-            });
+            html += `<div class="seat-row"><div class="seat-pair">`;
+            seats.slice(0, 2).forEach(seat => { html += renderSeatCell(schedule, seat, seatMap); });
             html += `</div><div class="bus-aisle"></div><div class="seat-pair">`;
-            seats.slice(2, 4).forEach(seat => {
-                const isBooked = booked.includes(seat);
-                html += `<div class="seat ${isBooked ? 'booked admin-booked' : ''}"
-                    data-seat="${seat}" data-schedule="${schedule.id}"
-                    title="${isBooked ? 'Click to view booking' : 'Available'}">${seat}</div>`;
-            });
+            seats.slice(2, 4).forEach(seat => { html += renderSeatCell(schedule, seat, seatMap); });
             html += `</div></div>`;
         });
 
-        html += `
-                </div>
-                <div class="seat-legend">
-                    <div class="legend-item"><div class="legend-dot available"></div><span>Available</span></div>
-                    <div class="legend-item"><div class="legend-dot booked"></div><span>Booked</span></div>
-                </div>
-            </div>`;
-
+        html += `</div><div class="seat-legend">${renderSeatLegend()}</div></div>`;
         return html;
     }
 
+    function renderSeatCell(schedule, seat, seatMap) {
+        const status = seatMap[seat] || 'available';
+        const isPicking = adminSelectedSeats.includes(seat) && status === 'available';
+        const isViewing = selectedSeatBooking?.seat === seat;
+        const cssParts = [];
+        if (isPicking) {
+            cssParts.push('selected');
+        } else {
+            cssParts.push(`status-${status}`);
+        }
+        if (isViewing) cssParts.push('viewing-booking');
+        const selectable = status === 'available' || isPicking || (isViewing && status !== 'available' && status !== 'blocked');
+        const titleStatus = isPicking ? 'selected' : status;
+        return `<div class="seat ${cssParts.join(' ')} ${selectable ? 'selectable' : ''}"
+            data-seat="${seat}" data-schedule="${schedule.id}" data-status="${status}"
+            title="${seatLabel(titleStatus)}">${seat}</div>`;
+    }
+
     function renderBookingSidebar(schedule) {
-        if (!selectedSeatBooking) {
+        if (selectedSeatBooking) {
+            const b = selectedSeatBooking;
             return `
                 <div class="booking-form-sidebar">
                     <h3 class="booking-summary-title">Seat Booking Details</h3>
-                    <p style="color: var(--text-secondary); font-size: 13px;">
-                        Click a <strong style="color: #E53E3E;">booked seat</strong> on the layout to view passenger details and cancel the reservation.
-                    </p>
-                    <div class="summary-row">
-                        <span class="summary-label">Coach</span>
-                        <span class="summary-value">${escapeHtml(schedule.bus.operator_name)} (${escapeHtml(schedule.bus.coach_type)})</span>
-                    </div>
-                    <div class="summary-row">
-                        <span class="summary-label">Available Seats</span>
-                        <span class="summary-value" style="color: var(--success);">${schedule.available_seats_count} / ${schedule.bus.total_seats}</span>
-                    </div>
+                    <div class="summary-row"><span class="summary-label">Seat</span><span class="summary-value"><span class="selected-seats-badge">${escapeHtml(b.seat)}</span></span></div>
+                    <div class="summary-row"><span class="summary-label">PNR</span><span class="summary-value" style="color: var(--primary); font-weight: bold;">${escapeHtml(b.pnr)}</span></div>
+                    <div class="summary-row"><span class="summary-label">Passenger</span><span class="summary-value">${escapeHtml(b.passenger_name)}</span></div>
+                    <div class="summary-row"><span class="summary-label">Phone</span><span class="summary-value">${escapeHtml(b.passenger_phone)}</span></div>
+                    <div class="summary-row"><span class="summary-label">Fare Paid</span><span class="summary-value" style="color: var(--gold);">${formatBdt(b.total_fare)}</span></div>
+                    <button type="button" class="btn btn-danger" id="cs-cancel-booking-btn" style="margin-top: 16px; width: 100%; height: 42px;">Cancel This Booking</button>
+                    <button type="button" class="btn btn-secondary" id="cs-back-to-book-btn" style="margin-top: 8px; width: 100%;">Book New Seat</button>
                 </div>`;
         }
 
-        const b = selectedSeatBooking;
+        const boardingOpts = (schedule.boarding_points || []).map(bp =>
+            `<option value="${escapeHtml(bp.value)}" ${adminBoardingPoint === bp.value ? 'selected' : ''}>${escapeHtml(bp.label)} — Reporting: ${escapeHtml(bp.reporting_time || '—')}, Departure: ${escapeHtml(bp.departure_time || '—')}</option>`
+        ).join('');
+        const droppingOpts = (schedule.dropping_points || []).map(dp =>
+            `<option value="${escapeHtml(dp.value)}" ${adminDroppingPoint === dp.value ? 'selected' : ''}>${escapeHtml(dp.label)} — Arrival: ${escapeHtml(dp.arrival_time || '—')}</option>`
+        ).join('');
+        const selectedBoarding = (schedule.boarding_points || []).find(bp => bp.value === adminBoardingPoint);
+        const selectedDropping = (schedule.dropping_points || []).find(dp => dp.value === adminDroppingPoint);
+        const seatClass = schedule.seat_class || 'E-Class';
+        const pricing = calcPricing(schedule, Math.max(1, adminSelectedSeats.length), adminPaymentMethod);
+        const seatRows = adminSelectedSeats.length
+            ? adminSelectedSeats.map(seat => `<tr><td>${escapeHtml(seat)}</td><td>${escapeHtml(seatClass)}</td><td>${formatBdt(schedule.fare)}</td></tr>`).join('')
+            : `<tr><td colspan="3" style="color:#9ca3af; font-style:italic;">Select seat(s) from the map</td></tr>`;
+
         return `
             <div class="booking-form-sidebar">
-                <h3 class="booking-summary-title">Selected Seat Booking</h3>
-                <div class="summary-row">
-                    <span class="summary-label">Seat</span>
-                    <span class="summary-value"><span class="selected-seats-badge">${escapeHtml(b.seat)}</span></span>
+                <div class="ticket-booking-panel">
+                    <h3>Boarding / Dropping Point</h3>
+                    <label>Boarding Point *</label>
+                    <select id="cs-boarding-point" class="ticket-field-select">${boardingOpts}</select>
+                    <p class="boarding-point-info" id="cs-boarding-info">${selectedBoarding ? `Reporting: ${escapeHtml(selectedBoarding.reporting_time || '—')} · Departure: ${escapeHtml(selectedBoarding.departure_time || '—')}` : 'Select a boarding point'}</p>
+                    <label>Dropping Point *</label>
+                    <select id="cs-dropping-point" class="ticket-field-select">
+                        <option value="">Select dropping point</option>
+                        ${droppingOpts}
+                    </select>
+                    <p class="boarding-point-info" id="cs-dropping-info">${selectedDropping ? `Estimated arrival: ${escapeHtml(selectedDropping.arrival_time || '—')}` : 'Select a dropping point'}</p>
+                    <label>Mobile Number *</label>
+                    <input type="tel" id="cs-booking-phone" placeholder="01XXXXXXXXX">
+                    <label>Passenger Name *</label>
+                    <input type="text" id="cs-booking-name" placeholder="Full name">
+                    <label>Email *</label>
+                    <input type="email" id="cs-booking-email" placeholder="email@example.com">
+                    <label>Gender</label>
+                    <select id="cs-booking-gender">
+                        <option value="M" ${adminGender === 'M' ? 'selected' : ''}>Male</option>
+                        <option value="F" ${adminGender === 'F' ? 'selected' : ''}>Female</option>
+                    </select>
+                    <label>Payment Method</label>
+                    <select id="cs-booking-payment">
+                        <option value="Cash" ${adminPaymentMethod === 'Cash' ? 'selected' : ''}>Cash</option>
+                        <option value="bKash" ${adminPaymentMethod === 'bKash' ? 'selected' : ''}>bKash</option>
+                        <option value="Nagad" ${adminPaymentMethod === 'Nagad' ? 'selected' : ''}>Nagad</option>
+                        <option value="Card" ${adminPaymentMethod === 'Card' ? 'selected' : ''}>Card</option>
+                    </select>
+                    <div id="cs-booking-error" style="color:#dc2626; font-size:13px; display:none; margin-bottom:8px;"></div>
+                    <button type="button" class="btn-ticket-submit" id="cs-booking-submit">Submit</button>
+                    <h4 style="margin-top:20px;">Seat Information</h4>
+                    <table class="seat-info-table">
+                        <thead><tr><th>Seats</th><th>Class</th><th>Fare</th></tr></thead>
+                        <tbody>${seatRows}</tbody>
+                    </table>
+                    <div class="fare-breakdown">
+                        <div class="fare-line"><span>Seat Fare:</span><strong>${formatBdt(pricing.seatFare)}</strong></div>
+                        <div class="fare-line"><span>Service Charge:</span><strong>${formatBdt(pricing.serviceCharge)}</strong></div>
+                        <div class="fare-line"><span>Gateway Charge:</span><strong>${formatBdt(pricing.gatewayCharge)}</strong></div>
+                        <div class="fare-line"><span>SC Discount:</span><strong>${formatBdt(pricing.scDiscount)}</strong></div>
+                        <div class="fare-line"><span>GC Discount:</span><strong>${formatBdt(pricing.gcDiscount)}</strong></div>
+                        <div class="fare-line fare-total"><span>Total:</span><strong>${formatBdt(pricing.total)}</strong></div>
+                    </div>
                 </div>
-                <div class="summary-row">
-                    <span class="summary-label">PNR</span>
-                    <span class="summary-value" style="color: var(--primary); font-weight: bold;">${escapeHtml(b.pnr)}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Passenger</span>
-                    <span class="summary-value">${escapeHtml(b.passenger_name)}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Phone</span>
-                    <span class="summary-value">${escapeHtml(b.passenger_phone)}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Email</span>
-                    <span class="summary-value">${escapeHtml(b.passenger_email)}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">All Seats</span>
-                    <span class="summary-value">${escapeHtml(b.seat_numbers)}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Fare Paid</span>
-                    <span class="summary-value" style="color: var(--gold);">BDT ${Number(b.total_fare).toLocaleString()}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Payment</span>
-                    <span class="summary-value">${escapeHtml(b.payment_method)}</span>
-                </div>
-                <button type="button" class="btn btn-danger" id="cs-cancel-booking-btn" style="margin-top: 16px; width: 100%; height: 42px;">
-                    Cancel This Booking
-                </button>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center;">
-                    Cancelling releases all seats in this booking (${escapeHtml(b.seat_numbers)}).
-                </p>
             </div>`;
     }
 
@@ -339,7 +336,7 @@
                             <div class="seat-selection-grid">
                                 <div>
                                     <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
-                                        Bus Seat Layout (Click booked seat to cancel)
+                                        Bus Seat Layout
                                     </h3>
                                     ${renderSeatMap(sched)}
                                 </div>
@@ -362,42 +359,87 @@
                 if (expandedScheduleId === id) {
                     expandedScheduleId = null;
                     selectedSeatBooking = null;
+                    adminSelectedSeats = [];
                 } else {
                     expandedScheduleId = id;
                     selectedSeatBooking = null;
+                    adminSelectedSeats = [];
+                    const sched = searchResults.find(s => s.id === id);
+                    if (sched?.boarding_points?.[0]) adminBoardingPoint = sched.boarding_points[0].value;
+                    if (sched?.dropping_points?.[0]) adminDroppingPoint = '';
                 }
                 renderResults();
             });
         });
 
-        document.querySelectorAll('.seat.admin-booked').forEach(seatEl => {
+        document.querySelectorAll('.seat[data-seat]').forEach(seatEl => {
             seatEl.addEventListener('click', () => {
                 const seat = seatEl.dataset.seat;
-                const scheduleId = parseInt(seatEl.dataset.schedule, 10);
-                const schedule = searchResults.find(s => s.id === scheduleId);
-                if (!schedule || ! schedule.seat_bookings || ! schedule.seat_bookings[seat]) return;
-
-                selectedSeatBooking = { seat, ...schedule.seat_bookings[seat] };
-                expandedScheduleId = scheduleId;
-                renderResults();
-            });
-        });
-
-        document.querySelectorAll('.seat:not(.booked)').forEach(seatEl => {
-            seatEl.addEventListener('click', () => {
-                const seat = seatEl.dataset.seat;
+                const status = seatEl.dataset.status;
                 const scheduleId = parseInt(seatEl.dataset.schedule, 10);
                 const schedule = searchResults.find(s => s.id === scheduleId);
                 if (!schedule) return;
 
-                openBookingModal(scheduleId, seat, schedule);
+                if (status !== 'available' && status !== 'blocked') {
+                    if (schedule.seat_bookings?.[seat]) {
+                        selectedSeatBooking = { seat, ...schedule.seat_bookings[seat] };
+                        adminSelectedSeats = [];
+                        renderResults();
+                    }
+                    return;
+                }
+
+                if (adminSelectedSeats.includes(seat)) {
+                    adminSelectedSeats = adminSelectedSeats.filter(s => s !== seat);
+                } else {
+                    adminSelectedSeats.push(seat);
+                }
+                selectedSeatBooking = null;
+                renderResults();
             });
         });
 
-        const cancelBtn = document.getElementById('cs-cancel-booking-btn');
-        if (cancelBtn && selectedSeatBooking) {
-            cancelBtn.addEventListener('click', () => handleCancelBooking(selectedSeatBooking.booking_id));
-        }
+        document.getElementById('cs-cancel-booking-btn')?.addEventListener('click', () => {
+            if (selectedSeatBooking) handleCancelBooking(selectedSeatBooking.booking_id);
+        });
+        document.getElementById('cs-back-to-book-btn')?.addEventListener('click', () => {
+            selectedSeatBooking = null;
+            renderResults();
+        });
+        document.getElementById('cs-boarding-point')?.addEventListener('change', (e) => {
+            adminBoardingPoint = e.target.value;
+            const schedule = searchResults.find(s => s.id === expandedScheduleId);
+            const bp = schedule?.boarding_points?.find(p => p.value === adminBoardingPoint);
+            const info = document.getElementById('cs-boarding-info');
+            if (info) {
+                info.textContent = bp
+                    ? `Reporting: ${bp.reporting_time || '—'} · Departure: ${bp.departure_time || '—'}`
+                    : 'Select a boarding point';
+            }
+        });
+        document.getElementById('cs-dropping-point')?.addEventListener('change', (e) => {
+            adminDroppingPoint = e.target.value;
+            const schedule = searchResults.find(s => s.id === expandedScheduleId);
+            const dp = schedule?.dropping_points?.find(p => p.value === adminDroppingPoint);
+            const info = document.getElementById('cs-dropping-info');
+            if (info) {
+                info.textContent = dp
+                    ? `Estimated arrival: ${dp.arrival_time || '—'}`
+                    : 'Select a dropping point';
+            }
+        });
+        document.getElementById('cs-booking-gender')?.addEventListener('change', (e) => {
+            adminGender = e.target.value;
+            renderResults();
+        });
+        document.getElementById('cs-booking-payment')?.addEventListener('change', (e) => {
+            adminPaymentMethod = e.target.value;
+            renderResults();
+        });
+        document.getElementById('cs-booking-submit')?.addEventListener('click', () => {
+            const schedule = searchResults.find(s => s.id === expandedScheduleId);
+            if (schedule) handleBookingSubmit(schedule);
+        });
     }
 
     async function fetchCoachServices(silent = false) {
@@ -423,6 +465,18 @@
 
             if (res.ok) {
                 searchResults = await res.json();
+
+                if (adminSelectedSeats.length && expandedScheduleId) {
+                    const sched = searchResults.find(s => s.id === expandedScheduleId);
+                    if (sched) {
+                        const map = getSeatMap(sched);
+                        const stillAvailable = adminSelectedSeats.filter(seat => map[seat] === 'available');
+                        if (stillAvailable.length < adminSelectedSeats.length) {
+                            alert('One or more selected seats were just booked. Selection updated.');
+                        }
+                        adminSelectedSeats = stillAvailable;
+                    }
+                }
 
                 if (selectedSeatBooking && expandedScheduleId) {
                     const schedule = searchResults.find(s => s.id === expandedScheduleId);
@@ -478,6 +532,7 @@
         searchDone = true;
         expandedScheduleId = null;
         selectedSeatBooking = null;
+        adminSelectedSeats = [];
 
         document.getElementById('cs-empty-hint').style.display = 'none';
         document.getElementById('cs-results').style.display = 'block';
@@ -486,93 +541,62 @@
         startPolling();
     }
 
-    function openBookingModal(scheduleId, seat, schedule) {
-        activeBookingSchedule = schedule;
+    async function handleBookingSubmit(schedule) {
+        const errorEl = document.getElementById('cs-booking-error');
+        const name = document.getElementById('cs-booking-name')?.value.trim() || '';
+        const phone = document.getElementById('cs-booking-phone')?.value.trim() || '';
+        const email = document.getElementById('cs-booking-email')?.value.trim() || '';
+        const boarding = document.getElementById('cs-boarding-point')?.value || adminBoardingPoint;
+        const dropping = document.getElementById('cs-dropping-point')?.value || adminDroppingPoint;
+        const gender = document.getElementById('cs-booking-gender')?.value || adminGender;
+        const payment = document.getElementById('cs-booking-payment')?.value || adminPaymentMethod;
 
-        if (bookingScheduleInput) bookingScheduleInput.value = scheduleId;
-        if (bookingSeatInput) bookingSeatInput.value = seat;
-        if (bookingSeatDisplay) bookingSeatDisplay.value = seat;
-        if (bookingFareInput) bookingFareInput.value = `BDT ${Number(schedule.fare).toLocaleString()}`;
-        if (bookingScheduleText) bookingScheduleText.textContent = `${escapeHtml(schedule.route.from)} → ${escapeHtml(schedule.route.to)} • ${formatTime(schedule.departure_time)}`;
-        if (bookingNameInput) bookingNameInput.value = '';
-        if (bookingPhoneInput) bookingPhoneInput.value = '';
-        if (bookingEmailInput) bookingEmailInput.value = '';
-        if (bookingPaymentInput) bookingPaymentInput.value = 'Cash';
-        if (bookingErrorEl) {
-            bookingErrorEl.style.display = 'none';
-            bookingErrorEl.textContent = '';
+        if (!adminSelectedSeats.length) {
+            if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = 'Please select at least one seat.'; }
+            return;
         }
-        if (bookingModalEl) bookingModalEl.style.display = 'flex';
-    }
-
-    function closeBookingModal() {
-        if (bookingModalEl) bookingModalEl.style.display = 'none';
-    }
-
-    async function handleBookingSubmit() {
-        if (!activeBookingSchedule) return;
-        if (!bookingFormEl || !bookingScheduleInput || !bookingSeatInput || !bookingNameInput || !bookingPhoneInput || !bookingEmailInput || !bookingPaymentInput) {
+        if (!name || !phone || !email || !boarding || !dropping) {
+            if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = 'Please fill boarding, dropping, and passenger details.'; }
             return;
         }
 
+        const pricing = calcPricing(schedule, adminSelectedSeats.length, payment);
         const payload = {
-            schedule_id: bookingScheduleInput.value,
-            passenger_name: bookingNameInput.value.trim(),
-            passenger_phone: bookingPhoneInput.value.trim(),
-            passenger_email: bookingEmailInput.value.trim(),
-            seat_numbers: bookingSeatInput.value,
-            payment_method: bookingPaymentInput.value,
-            total_fare: activeBookingSchedule.fare,
-            status: 'PAID'
+            schedule_id: schedule.id,
+            passenger_name: name,
+            passenger_phone: phone,
+            passenger_email: email,
+            passenger_gender: gender,
+            boarding_point: boarding,
+            dropping_point: dropping,
+            seat_numbers: adminSelectedSeats.join(','),
+            payment_method: payment,
+            total_fare: pricing.total,
+            status: 'PAID',
         };
-
-        if (!payload.passenger_name || !payload.passenger_phone || !payload.passenger_email) {
-            if (bookingErrorEl) {
-                bookingErrorEl.style.display = 'block';
-                bookingErrorEl.textContent = 'Please fill in all passenger details before submitting.';
-            }
-            return;
-        }
 
         try {
             const res = await fetch(bookUrl, {
                 method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify(payload),
             });
 
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                closeBookingModal();
+                adminSelectedSeats = [];
                 selectedSeatBooking = null;
                 await fetchCoachServices(true);
-                const smsNote = data.sms?.success
-                    ? ' SMS was sent to the passenger.'
-                    : (data.sms?.message ? ` SMS was not sent: ${data.sms.message}` : '');
-                alert(`Booking created successfully.${smsNote}`);
+                const smsNote = data.sms?.success ? ' SMS sent.' : '';
+                alert('Booking created successfully.' + smsNote);
                 return;
             }
-
             const data = await res.json().catch(() => ({}));
-            if (bookingErrorEl) {
-                bookingErrorEl.style.display = 'block';
-                bookingErrorEl.textContent = data.message || 'Failed to create booking.';
-            }
+            if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = data.message || 'Failed to create booking.'; }
         } catch (err) {
-            if (bookingErrorEl) {
-                bookingErrorEl.style.display = 'block';
-                bookingErrorEl.textContent = 'Network error while submitting the booking.';
-            }
+            if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = 'Network error while submitting.'; }
         }
     }
-
-    document.getElementById('cs-booking-cancel')?.addEventListener('click', closeBookingModal);
-    document.getElementById('cs-booking-modal-close')?.addEventListener('click', closeBookingModal);
-    document.getElementById('cs-booking-submit')?.addEventListener('click', handleBookingSubmit);
 
     async function handleCancelBooking(bookingId) {
         if (!confirm('Cancel this booking and release all seats?')) return;

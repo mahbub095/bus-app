@@ -5,11 +5,16 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Route;
 use App\Models\Schedule;
+use App\Services\SeatMapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class SearchController extends Controller
 {
+    public function __construct(protected SeatMapService $seatMapService)
+    {
+    }
+
     public function search(Request $request)
     {
         $request->validate([
@@ -39,9 +44,12 @@ class SearchController extends Controller
 
         $query = Schedule::where('route_id', $route->id)
             ->whereBetween('departure_time', [$startDate, $endDate])
-            ->with(['bus', 'route.departureStation', 'route.arrivalStation', 'bookings' => function($q) {
-                $q->where('status', 'PAID');
-            }]);
+            ->with([
+                'bus',
+                'route.departureStation',
+                'route.arrivalStation',
+                'bookings' => fn ($q) => SeatMapService::scopePaidBookingsForSeatMap($q),
+            ]);
 
         $schedules = $query->get();
 
@@ -53,9 +61,12 @@ class SearchController extends Controller
         }
 
         // 4. Format the output with seat booking summaries
-        $formattedSchedules = $schedules->map(function($sched) {
-            // Collect all reserved seats efficiently
-            $bookedSeats = $this->extractBookedSeatsFromSchedule($sched);
+        $formattedSchedules = $schedules->map(function ($sched) {
+            $seatPayload = $this->seatMapService->formatSchedulePayload($sched, $sched->bookings);
+            $availableCount = count(array_filter(
+                $seatPayload['seat_map'],
+                fn ($status) => $status === 'available'
+            ));
 
             return [
                 'id' => $sched->id,
@@ -73,26 +84,20 @@ class SearchController extends Controller
                     'id' => $sched->route->id,
                     'distance' => $sched->route->distance,
                     'duration' => $sched->route->duration,
+                    'from' => $sched->route->departureStation->name ?? '',
+                    'to' => $sched->route->arrivalStation->name ?? '',
                 ],
-                'booked_seats' => $bookedSeats,
-                'available_seats_count' => $sched->bus->total_seats - count($bookedSeats)
+                'booked_seats' => $seatPayload['booked_seats'],
+                'seat_map' => $seatPayload['seat_map'],
+                'boarding_points' => $seatPayload['boarding_points'],
+                'dropping_points' => $seatPayload['dropping_points'],
+                'seat_class' => $seatPayload['seat_class'],
+                'pricing' => $seatPayload['pricing'],
+                'available_seats_count' => $availableCount,
             ];
         });
 
         return response()->json($formattedSchedules);
     }
 
-    /**
-     * Extract booked seats from schedule bookings collection.
-     * Optimized for performance with single pass.
-     */
-    protected function extractBookedSeatsFromSchedule($schedule): array
-    {
-        $bookedSeats = [];
-        foreach ($schedule->bookings as $booking) {
-            $seats = array_filter(array_map('trim', explode(',', $booking->seat_numbers)));
-            $bookedSeats = array_merge($bookedSeats, $seats);
-        }
-        return array_values($bookedSeats); // Re-index array
-    }
 }

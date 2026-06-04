@@ -6,14 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Promotion;
+use App\Services\SeatMapService;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
-    public function __construct(protected SmsGatewayService $smsGatewayService)
-    {
+    public function __construct(
+        protected SmsGatewayService $smsGatewayService,
+        protected SeatMapService $seatMapService
+    ) {
     }
 
     /**
@@ -28,6 +31,9 @@ class BookingController extends Controller
             'passenger_email' => 'required|email|max:100',
             'seat_numbers' => 'required|string',
             'payment_method' => 'required|string',
+            'passenger_gender' => 'nullable|in:M,F',
+            'boarding_point' => 'nullable|string|max:150',
+            'dropping_point' => 'nullable|string|max:150',
             'promo_code' => 'nullable|string',
         ]);
 
@@ -43,36 +49,46 @@ class BookingController extends Controller
             ], 422);
         }
 
+        if (count($requestedSeats) > 4) {
+            return response()->json([
+                'message' => 'You can select a maximum of 4 seats per booking.',
+            ], 422);
+        }
+
         $schedule = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->find($scheduleId);
 
         return DB::transaction(function () use ($request, $schedule, $requestedSeats, $promoCode, $user) {
             $activeBookings = Booking::where('schedule_id', $schedule->id)
                 ->where('status', 'PAID')
-                ->get(['seat_numbers']); // Only fetch seats column
+                ->select(SeatMapService::paidBookingColumns())
+                ->lockForUpdate()
+                ->get();
 
-            // Extract booked seats more efficiently
-            $bookedSeats = $this->extractBookedSeats($activeBookings);
+            $seatMap = $this->seatMapService->buildSeatMap($schedule, $activeBookings);
 
             foreach ($requestedSeats as $reqSeat) {
-                if (isset($bookedSeats[$reqSeat])) {
+                $status = $seatMap[$reqSeat] ?? 'available';
+                if (! $this->seatMapService->isSeatSelectable($status)) {
                     return response()->json([
-                        'message' => "Seat {$reqSeat} is already booked. Please select another seat.",
+                        'message' => "Seat {$reqSeat} is not available. Please select another seat.",
                     ], 422);
                 }
             }
 
             $seatCount = count($requestedSeats);
-            $subtotal = floatval($schedule->fare) * $seatCount;
-            $discount = 0.00;
+            $applyGateway = strtolower($request->input('payment_method')) !== 'cash';
+            $pricing = $this->seatMapService->pricingBreakdown($seatCount, (float) $schedule->fare, $applyGateway);
+            $totalFare = $pricing['total'];
 
             if ($promoCode) {
                 $promotion = Promotion::where('code', strtoupper($promoCode))->first();
                 if ($promotion) {
-                    $discount = floatval($promotion->discount_amount);
+                    $totalFare = max(0.00, $totalFare - floatval($promotion->discount_amount));
                 }
             }
 
-            $totalFare = max(0.00, $subtotal - $discount);
+            $boardingPoints = $this->seatMapService->boardingPoints($schedule);
+            $droppingPoints = $this->seatMapService->droppingPoints($schedule);
 
             $booking = Booking::create([
                 'user_id' => $user->id,
@@ -80,6 +96,10 @@ class BookingController extends Controller
                 'passenger_name' => $request->input('passenger_name'),
                 'passenger_phone' => $request->input('passenger_phone'),
                 'passenger_email' => $request->input('passenger_email'),
+                'passenger_gender' => $request->input('passenger_gender', 'M'),
+                'boarding_point' => $request->input('boarding_point', $boardingPoints[0]['value'] ?? null),
+                'dropping_point' => $request->input('dropping_point', $droppingPoints[0]['value'] ?? null),
+                'seat_class' => $this->seatMapService->seatClassForCoach($schedule->bus->coach_type ?? null),
                 'seat_numbers' => implode(',', $requestedSeats),
                 'total_fare' => $totalFare,
                 'payment_method' => $request->input('payment_method'),

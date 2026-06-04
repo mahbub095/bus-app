@@ -9,11 +9,16 @@ use App\Models\Promotion;
 use App\Models\Route;
 use App\Models\Schedule;
 use App\Models\Station;
+use App\Services\SeatMapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class AdminController extends Controller
 {
+    public function __construct(protected SeatMapService $seatMapService)
+    {
+    }
+
     public function dashboard()
     {
         $totalSales = Booking::where('status', 'PAID')->sum('total_fare');
@@ -221,9 +226,12 @@ class AdminController extends Controller
 
         $schedules = Schedule::where('route_id', $route->id)
             ->whereBetween('departure_time', [$startDate, $endDate])
-            ->with(['bus', 'route', 'bookings' => function ($q) {
-                $q->where('status', 'PAID');
-            }])
+            ->with([
+                'bus',
+                'route.departureStation',
+                'route.arrivalStation',
+                'bookings' => fn ($q) => SeatMapService::scopePaidBookingsForSeatMap($q),
+            ])
             ->get();
 
         if ($coachType && $coachType !== 'All') {
@@ -233,31 +241,12 @@ class AdminController extends Controller
         }
 
         $formattedSchedules = $schedules->map(function ($sched) {
-            $bookedSeats = [];
-            $seatBookings = [];
-
-            foreach ($sched->bookings as $booking) {
-                $seats = explode(',', $booking->seat_numbers);
-                foreach ($seats as $seat) {
-                    $seatTrimmed = trim($seat);
-                    if ($seatTrimmed === '') {
-                        continue;
-                    }
-
-                    $bookedSeats[] = $seatTrimmed;
-                    $seatBookings[$seatTrimmed] = [
-                        'booking_id' => $booking->id,
-                        'pnr' => 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
-                        'passenger_name' => $booking->passenger_name,
-                        'passenger_phone' => $booking->passenger_phone,
-                        'passenger_email' => $booking->passenger_email,
-                        'seat_numbers' => $booking->seat_numbers,
-                        'total_fare' => floatval($booking->total_fare),
-                        'payment_method' => $booking->payment_method,
-                        'status' => $booking->status,
-                    ];
-                }
-            }
+            $seatPayload = $this->seatMapService->formatSchedulePayload($sched, $sched->bookings);
+            $seatBookings = $this->seatMapService->seatBookingDetails($sched, $sched->bookings);
+            $availableCount = count(array_filter(
+                $seatPayload['seat_map'],
+                fn ($status) => $status === 'available'
+            ));
 
             return [
                 'id' => $sched->id,
@@ -275,10 +264,17 @@ class AdminController extends Controller
                     'id' => $sched->route->id,
                     'distance' => $sched->route->distance,
                     'duration' => $sched->route->duration,
+                    'from' => $sched->route->departureStation->name ?? '',
+                    'to' => $sched->route->arrivalStation->name ?? '',
                 ],
-                'booked_seats' => $bookedSeats,
+                'booked_seats' => $seatPayload['booked_seats'],
+                'seat_map' => $seatPayload['seat_map'],
                 'seat_bookings' => $seatBookings,
-                'available_seats_count' => $sched->bus->total_seats - count($bookedSeats),
+                'boarding_points' => $seatPayload['boarding_points'],
+                'dropping_points' => $seatPayload['dropping_points'],
+                'seat_class' => $seatPayload['seat_class'],
+                'pricing' => $seatPayload['pricing'],
+                'available_seats_count' => $availableCount,
             ];
         });
 

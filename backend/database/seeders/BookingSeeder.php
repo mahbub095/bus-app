@@ -23,10 +23,11 @@ class BookingSeeder extends Seeder
                 'passenger_name' => 'Fahim Rahman',
                 'passenger_phone' => '01712345678',
                 'passenger_email' => 'fahim@gmail.com',
+                'passenger_gender' => 'M',
                 'seat_numbers' => 'A1,A2',
                 'total_fare' => $sched->fare * 2,
                 'payment_method' => 'bKash',
-                'status' => 'PAID'
+                'status' => 'PAID',
             ]);
 
             Booking::create([
@@ -34,10 +35,11 @@ class BookingSeeder extends Seeder
                 'passenger_name' => 'Tania Islam',
                 'passenger_phone' => '01987654321',
                 'passenger_email' => 'tania@yahoo.com',
+                'passenger_gender' => 'F',
                 'seat_numbers' => 'B3',
                 'total_fare' => $sched->fare,
-                'payment_method' => 'Nagad',
-                'status' => 'PAID'
+                'payment_method' => 'Cash',
+                'status' => 'PAID',
             ]);
 
             Booking::create([

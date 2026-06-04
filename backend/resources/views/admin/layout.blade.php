@@ -887,25 +887,84 @@
             user-select: none;
         }
 
-        .seat.admin-booked {
-            background-color: #2F1E24;
-            border-color: #65232A;
-            color: #E53E3E;
+        .seat.selectable {
             cursor: pointer;
-            opacity: 1;
         }
 
-        .seat.admin-booked:hover {
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+        .seat.selectable:hover {
             transform: scale(1.05);
+        }
+
+        .seat.selected,
+        .seat.status-available.selected,
+        .seat.status-blocked.selected {
+            background-color: var(--primary);
+            border-color: var(--primary-hover);
+            color: #fff;
+            box-shadow: 0 0 10px var(--primary-glow);
+            cursor: pointer;
+        }
+
+        .seat.viewing-booking {
+            outline: 3px solid #6366f1;
+            outline-offset: 2px;
+            z-index: 1;
+        }
+
+        .seat.viewing-booking:not(.selected) {
+            box-shadow: none;
+        }
+
+        .seat.status-available {
+            background-color: #fff;
+            border-color: #d1d5db;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .seat.status-blocked {
+            background-color: #6b7280;
+            border-color: #4b5563;
+            color: #f3f4f6;
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+
+        .seat.status-booked_m {
+            background-color: #fecaca;
+            border-color: #f87171;
+            color: #7f1d1d;
+            cursor: pointer;
+        }
+
+        .seat.status-booked_f {
+            background-color: #e9d5ff;
+            border-color: #c084fc;
+            color: #581c87;
+            cursor: pointer;
+        }
+
+        .seat.status-sold_m {
+            background-color: #ef4444;
+            border-color: #b91c1c;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .seat.status-sold_f {
+            background-color: #ec4899;
+            border-color: #be185d;
+            color: #fff;
+            cursor: pointer;
         }
 
         .seat-legend {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
+            gap: 12px 18px;
             margin-top: 20px;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .legend-item {
@@ -921,13 +980,170 @@
             border: 1px solid #3F3F5F;
         }
 
-        .legend-dot.available {
-            background-color: #161625;
+        .legend-dot.status-available { background-color: #fff; border-color: #d1d5db; }
+        .legend-dot.status-selected { background-color: var(--primary); border-color: var(--primary-hover); }
+        .legend-dot.status-blocked { background-color: #6b7280; border-color: #4b5563; }
+        .legend-dot.status-booked_m { background-color: #fecaca; border-color: #f87171; }
+        .legend-dot.status-booked_f { background-color: #e9d5ff; border-color: #c084fc; }
+        .legend-dot.status-sold_m { background-color: #ef4444; border-color: #b91c1c; }
+        .legend-dot.status-sold_f { background-color: #ec4899; border-color: #be185d; }
+
+        .routes-admin-layout {
+            grid-template-columns: 1.4fr 1fr !important;
         }
 
-        .legend-dot.booked {
-            background-color: #2F1E24;
-            border-color: #65232A;
+        .route-form-sidebar {
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .route-points-section {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .route-points-heading {
+            color: var(--primary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 10px;
+            font-weight: 700;
+        }
+
+        .route-points-table input.coupon-input {
+            margin-bottom: 0;
+            min-width: 0;
+        }
+
+        .route-points-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .ticket-booking-panel {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .ticket-booking-panel h3,
+        .ticket-booking-panel h4 {
+            color: var(--primary);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 12px;
+            font-weight: 700;
+        }
+
+        .ticket-booking-panel label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .ticket-booking-panel select,
+        .ticket-booking-panel input[type="text"],
+        .ticket-booking-panel input[type="tel"],
+        .ticket-booking-panel input[type="email"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            font-size: 14px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            color-scheme: light;
+        }
+
+        .ticket-booking-panel select option {
+            background-color: #ffffff;
+            color: #1f2937;
+        }
+
+        .ticket-booking-panel select option:checked {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+
+        .ticket-booking-panel select:focus,
+        .ticket-booking-panel input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .seat-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 8px 0 12px;
+        }
+
+        .seat-info-table th {
+            text-align: left;
+            color: var(--primary);
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .seat-info-table td {
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .fare-breakdown {
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .fare-breakdown .fare-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .fare-breakdown .fare-total {
+            font-weight: 700;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-ticket-submit {
+            width: 100%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            padding: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-ticket-submit:hover {
+            background: var(--primary-hover);
+        }
+
+        .boarding-point-info {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: -6px 0 12px;
+            line-height: 1.4;
         }
 
         .selected-seats-badge {
@@ -1346,6 +1562,10 @@
                 if (submitBtn) submitBtn.textContent = config.createSubmitLabel;
                 if (cancelBtn) cancelBtn.classList.remove('visible');
                 if (idInput) idInput.value = '';
+
+                if (formId === 'route-form' && typeof window.loadRoutePointsForm === 'function') {
+                    window.loadRoutePointsForm([], []);
+                }
             }
 
             if (formId === 'booking-form') {
@@ -1363,6 +1583,13 @@
                         scheduleSelect.disabled = false;
                     }
                 }
+            }
+
+            if (formId === 'route-form' && typeof window.loadRoutePointsForm === 'function') {
+                window.loadRoutePointsForm(
+                    config.mode === 'edit' ? (config.boarding_points || []) : [],
+                    config.mode === 'edit' ? (config.dropping_points || []) : []
+                );
             }
         }
 

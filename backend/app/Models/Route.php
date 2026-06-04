@@ -9,7 +9,19 @@ class Route extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['departure_station_id', 'arrival_station_id', 'distance', 'duration'];
+    protected $fillable = [
+        'departure_station_id',
+        'arrival_station_id',
+        'distance',
+        'duration',
+        'boarding_points',
+        'dropping_points',
+    ];
+
+    protected $casts = [
+        'boarding_points' => 'array',
+        'dropping_points' => 'array',
+    ];
 
     public function departureStation()
     {

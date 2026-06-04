@@ -54,7 +54,8 @@ class ScheduleSeeder extends Seeder
                         'route_id' => $route->id,
                         'departure_time' => $depDateTime,
                         'arrival_time' => $arrDateTime,
-                        'fare' => $fare
+                        'fare' => $fare,
+                        'blocked_seats' => ($index === 0 && $dayOffset === 0) ? 'D3,D4' : null,
                     ]);
                 }
             }
