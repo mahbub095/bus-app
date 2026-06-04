@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Schedule;
 use App\Models\Promotion;
@@ -11,7 +10,7 @@ use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class BookingController extends Controller
+class BookingController extends BaseController
 {
     public function __construct(
         protected SmsGatewayService $smsGatewayService,

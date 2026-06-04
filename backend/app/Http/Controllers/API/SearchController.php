@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
 use App\Models\Route;
 use App\Models\Schedule;
 use App\Services\SeatMapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
-class SearchController extends Controller
+class SearchController extends BaseController
 {
     public function __construct(protected SeatMapService $seatMapService)
     {

@@ -1,21 +1,32 @@
 <?php
 
-use App\Http\Controllers\API\StationController;
-use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\BookingController;
 use App\Http\Controllers\API\PromotionController;
-use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\SearchController;
+use App\Http\Controllers\API\StationController;
 use App\Http\Controllers\API\UserAuthController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Public customer API (React frontend — /api prefix)
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/stations', [StationController::class, 'index']);
 Route::get('/search', [SearchController::class, 'search']);
 
+Route::get('/promotions', [PromotionController::class, 'index']);
+Route::get('/promotions/check', [PromotionController::class, 'check']);
+
 Route::post('/auth/register', [UserAuthController::class, 'register']);
 Route::post('/auth/login', [UserAuthController::class, 'login']);
 
-Route::get('/promotions', [PromotionController::class, 'index']);
-Route::get('/promotions/check', [PromotionController::class, 'check']);
+/*
+|--------------------------------------------------------------------------
+| Authenticated customer API (Laravel Sanctum)
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [UserAuthController::class, 'logout']);
@@ -26,10 +37,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bookings/mine', [BookingController::class, 'mine']);
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 });
-
-Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
-Route::post('/admin/stations', [AdminController::class, 'storeStation']);
-Route::post('/admin/buses', [AdminController::class, 'storeBus']);
-Route::post('/admin/routes', [AdminController::class, 'storeRoute']);
-Route::post('/admin/schedules', [AdminController::class, 'storeSchedule']);
-Route::post('/admin/promotions', [AdminController::class, 'storePromotion']);

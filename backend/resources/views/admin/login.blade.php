@@ -5,39 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SonyaBus | Admin Login Portal</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    @include('admin.partials.fonts')
+
     <style>
-        :root {
-            --font-sans: 'Inter', system-ui, sans-serif;
-            --font-display: 'Outfit', sans-serif;
-            
-            --bg-main: #0B0B14;
-            --bg-card: #141424;
-            --border-color: rgba(255, 255, 255, 0.08);
-            --border-active: #6366F1;
-            
-            --primary: #6366F1;
-            --primary-hover: #4F46E5;
-            --primary-glow: rgba(99, 102, 241, 0.25);
-            
-            --accent: #A855F7;
-            
-            --text-primary: #F3F4F6;
-            --text-secondary: #9CA3AF;
-            --text-muted: #6B7280;
-            
-            --success: #10B981;
-            --danger: #EF4444;
-            
-            --border-radius: 12px;
-            --border-radius-sm: 8px;
-            --border-radius-lg: 20px;
-            
-            --shadow-lg: 0 16px 40px rgba(0,0,0,0.7);
-            --shadow-neon: 0 0 15px rgba(99, 102, 241, 0.4);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        @include('admin.partials.theme-variables')
 
         * {
             box-sizing: border-box;

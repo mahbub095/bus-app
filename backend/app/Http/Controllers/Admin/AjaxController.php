@@ -1,117 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use App\Models\Bus;
-use App\Models\Promotion;
 use App\Models\Route;
 use App\Models\Schedule;
-use App\Models\Station;
 use App\Services\SeatMapService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
-class AdminController extends Controller
+/**
+ * Session-authenticated JSON endpoints for the admin Blade dashboard (fetch/XHR).
+ */
+class AjaxController extends Controller
 {
     public function __construct(protected SeatMapService $seatMapService)
     {
-    }
-
-    public function dashboard()
-    {
-        $totalSales = Booking::where('status', 'PAID')->sum('total_fare');
-        $activeBookingsCount = Booking::where('status', 'PAID')->count();
-        $cancelledBookingsCount = Booking::where('status', 'CANCELLED')->count();
-        $totalSchedules = Schedule::count();
-
-        $recentBookings = Booking::with([
-            'schedule.bus',
-            'schedule.route.departureStation',
-            'schedule.route.arrivalStation'
-        ])
-        ->orderBy('created_at', 'desc')
-        ->limit(50)
-        ->get();
-
-        $formattedBookings = $recentBookings->map(function ($b) {
-            return [
-                'id' => $b->id,
-                'pnr' => 'SE' . str_pad($b->id, 5, '0', STR_PAD_LEFT),
-                'passenger_name' => $b->passenger_name,
-                'passenger_phone' => $b->passenger_phone,
-                'passenger_email' => $b->passenger_email,
-                'seat_numbers' => $b->seat_numbers,
-                'total_fare' => floatval($b->total_fare),
-                'status' => $b->status,
-                'created_at' => $b->created_at->toIso8601String(),
-                'schedule' => [
-                    'departure_time' => $b->schedule->departure_time->toIso8601String(),
-                    'bus' => [
-                        'operator_name' => $b->schedule->bus->operator_name,
-                        'coach_type' => $b->schedule->bus->coach_type,
-                    ],
-                    'route' => [
-                        'from' => $b->schedule->route->departureStation->name,
-                        'to' => $b->schedule->route->arrivalStation->name,
-                    ]
-                ]
-            ];
-        });
-
-        $stations = Station::orderBy('name', 'asc')->get();
-        $buses = Bus::orderBy('operator_name', 'asc')->get();
-        $routes = Route::with(['departureStation', 'arrivalStation'])
-            ->limit(100)
-            ->get()
-            ->map(function ($r) {
-                return [
-                    'id' => $r->id,
-                    'departure_station_id' => $r->departure_station_id,
-                    'arrival_station_id' => $r->arrival_station_id,
-                    'from' => $r->departureStation->name,
-                    'to' => $r->arrivalStation->name,
-                    'distance' => $r->distance,
-                    'duration' => $r->duration,
-                ];
-            });
-
-        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
-            ->limit(100)
-            ->get()
-            ->map(function ($s) {
-                return [
-                    'id' => $s->id,
-                    'bus_id' => $s->bus_id,
-                    'route_id' => $s->route_id,
-                    'bus_operator' => $s->bus->operator_name,
-                    'coach_number' => $s->bus->coach_number,
-                    'coach_type' => $s->bus->coach_type,
-                    'route_from' => $s->route->departureStation->name,
-                    'route_to' => $s->route->arrivalStation->name,
-                    'departure_time' => $s->departure_time->toIso8601String(),
-                    'arrival_time' => $s->arrival_time->toIso8601String(),
-                    'fare' => floatval($s->fare),
-                ];
-            });
-
-        $promotions = Promotion::orderBy('code', 'asc')->get();
-
-        return response()->json([
-            'metrics' => [
-                'total_sales' => floatval($totalSales),
-                'active_bookings' => $activeBookingsCount,
-                'cancelled_bookings' => $cancelledBookingsCount,
-                'total_schedules' => $totalSchedules,
-            ],
-            'recent_bookings' => $formattedBookings,
-            'stations' => $stations,
-            'buses' => $buses,
-            'routes' => $routes,
-            'schedules' => $schedules,
-            'promotions' => $promotions,
-        ]);
     }
 
     public function bookingLogsApi()
@@ -347,111 +252,5 @@ class AdminController extends Controller
             'booking_id' => $booking->id,
             'status' => 'CANCELLED',
         ]);
-    }
-
-    public function storeStation(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:stations,name',
-            'district' => 'nullable|string|max:100',
-        ]);
-
-        $validated['name'] = strtoupper($validated['name']);
-        $station = Station::create($validated);
-
-        return response()->json(['message' => 'Station successfully created!', 'station' => $station], 201);
-    }
-
-    public function storeBus(Request $request)
-    {
-        $validated = $request->validate([
-            'operator_name' => 'required|string|max:100',
-            'coach_number' => 'required|string|max:50|unique:buses,coach_number',
-            'coach_type' => 'required|in:AC,Non AC',
-            'total_seats' => 'required|integer|min:10|max:100',
-        ]);
-
-        $bus = Bus::create($validated);
-
-        return response()->json(['message' => 'Bus successfully created!', 'bus' => $bus], 201);
-    }
-
-    public function storeRoute(Request $request)
-    {
-        $validated = $request->validate([
-            'departure_station_id' => 'required|exists:stations,id',
-            'arrival_station_id' => 'required|exists:stations,id|different:departure_station_id',
-            'distance' => 'nullable|string|max:50',
-            'duration' => 'nullable|string|max:50',
-        ]);
-
-        $exists = Route::where('departure_station_id', $validated['departure_station_id'])
-            ->where('arrival_station_id', $validated['arrival_station_id'])
-            ->first();
-
-        if ($exists) {
-            return response()->json(['message' => 'A route between these stations already exists.'], 422);
-        }
-
-        $route = Route::create($validated);
-        $routeLoaded = Route::with(['departureStation', 'arrivalStation'])->find($route->id);
-
-        return response()->json([
-            'message' => 'Route successfully created!',
-            'route' => [
-                'id' => $routeLoaded->id,
-                'departure_station_id' => $routeLoaded->departure_station_id,
-                'arrival_station_id' => $routeLoaded->arrival_station_id,
-                'from' => $routeLoaded->departureStation->name,
-                'to' => $routeLoaded->arrivalStation->name,
-                'distance' => $routeLoaded->distance,
-                'duration' => $routeLoaded->duration,
-            ],
-        ], 201);
-    }
-
-    public function storeSchedule(Request $request)
-    {
-        $validated = $request->validate([
-            'bus_id' => 'required|exists:buses,id',
-            'route_id' => 'required|exists:routes,id',
-            'departure_time' => 'required|date|after_or_equal:today',
-            'arrival_time' => 'required|date|after:departure_time',
-            'fare' => 'required|numeric|min:0',
-        ]);
-
-        $schedule = Schedule::create($validated);
-        $scheduleLoaded = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->find($schedule->id);
-
-        return response()->json([
-            'message' => 'Schedule successfully created!',
-            'schedule' => [
-                'id' => $scheduleLoaded->id,
-                'bus_id' => $scheduleLoaded->bus_id,
-                'route_id' => $scheduleLoaded->route_id,
-                'bus_operator' => $scheduleLoaded->bus->operator_name,
-                'coach_number' => $scheduleLoaded->bus->coach_number,
-                'coach_type' => $scheduleLoaded->bus->coach_type,
-                'route_from' => $scheduleLoaded->route->departureStation->name,
-                'route_to' => $scheduleLoaded->route->arrivalStation->name,
-                'departure_time' => $scheduleLoaded->departure_time->toIso8601String(),
-                'arrival_time' => $scheduleLoaded->arrival_time->toIso8601String(),
-                'fare' => floatval($scheduleLoaded->fare),
-            ],
-        ], 201);
-    }
-
-    public function storePromotion(Request $request)
-    {
-        $validated = $request->validate([
-            'code' => 'required|string|max:50|unique:promotions,code',
-            'discount_amount' => 'required|numeric|min:0',
-            'description' => 'required|string|max:255',
-        ]);
-
-        $validated['code'] = strtoupper($validated['code']);
-        $promotion = Promotion::create($validated);
-
-        return response()->json(['message' => 'Promotion code successfully created!', 'promotion' => $promotion], 201);
     }
 }

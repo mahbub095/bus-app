@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Route as RouteModel;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;

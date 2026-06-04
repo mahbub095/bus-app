@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\SmsConfig;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;

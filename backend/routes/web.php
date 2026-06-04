@@ -1,41 +1,57 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AjaxController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BusController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\SmsConfigController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\SystemController;
-use App\Http\Controllers\API\AdminController as AdminApiController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ReportController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Public web
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Admin Authentication Public Routes
+/*
+|--------------------------------------------------------------------------
+| Admin authentication (session)
+|--------------------------------------------------------------------------
+*/
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/admin/login', [AuthController::class, 'login']);
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Protected Admin Console Area (admin role only)
+/*
+|--------------------------------------------------------------------------
+| Admin console (Blade + form CRUD + session AJAX)
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware(['auth', 'admin'])->group(function () {
-    
-    // Dashboard View
+    // Dashboard
     Route::get('/admin', [AdminController::class, 'dashboardView'])->name('admin.dashboard');
     Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
 
-    // Coach Services (realtime search + seat map)
-    Route::get('/admin/api/coach-services/search', [AdminApiController::class, 'searchCoachServices'])->name('admin.coach-services.search');
-    Route::post('/admin/api/schedules/{id}/seats/toggle-block', [AdminApiController::class, 'toggleBlockedSeat'])->name('admin.schedules.seats.toggle-block');
-    Route::post('/admin/api/bookings/{id}/cancel', [AdminApiController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
-    Route::get('/admin/api/bookings/logs', [AdminApiController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
-    Route::get('/admin/api/cancel-requests/logs', [AdminApiController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');
+    // Admin dashboard AJAX (session auth — not public /api routes)
+    Route::prefix('admin/api')->group(function () {
+        Route::get('/coach-services/search', [AjaxController::class, 'searchCoachServices'])->name('admin.coach-services.search');
+        Route::post('/schedules/{id}/seats/toggle-block', [AjaxController::class, 'toggleBlockedSeat'])->name('admin.schedules.seats.toggle-block');
+        Route::post('/bookings/{id}/cancel', [AjaxController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
+        Route::get('/bookings/logs', [AjaxController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
+        Route::get('/cancel-requests/logs', [AjaxController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');
+    });
 
     // Reports
     Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');

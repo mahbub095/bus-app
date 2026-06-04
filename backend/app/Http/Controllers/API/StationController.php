@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
 use App\Models\Station;
 use Illuminate\Http\Request;
 
-class StationController extends Controller
+class StationController extends BaseController
 {
     public function index()
     {
