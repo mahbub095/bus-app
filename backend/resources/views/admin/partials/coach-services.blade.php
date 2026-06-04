@@ -66,6 +66,7 @@
     const stations = @json($stations->map(fn($s) => ['id' => $s->id, 'name' => $s->name]));
     const searchUrl = @json(route('admin.coach-services.search'));
     const cancelUrlTemplate = @json(route('admin.bookings.cancel.api', ['id' => '__ID__']));
+    const toggleBlockUrlTemplate = @json(route('admin.schedules.seats.toggle-block', ['id' => '__ID__']));
     const bookUrl = @json(route('admin.bookings.store'));
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
@@ -77,10 +78,15 @@
     let adminSelectedSeats = [];
     let adminBoardingPoint = '';
     let adminDroppingPoint = '';
+    let adminPassengerPhone = '';
+    let adminPassengerName = '';
+    let adminPassengerEmail = '';
     let adminGender = 'M';
     let adminPaymentMethod = 'Cash';
+    let adminBlockMode = false;
     let pollTimer = null;
     let isFetching = false;
+    let coachListEventsBound = false;
 
     const dateInput = document.getElementById('cs-date');
     if (dateInput && !dateInput.value) {
@@ -151,6 +157,79 @@
         ).join('');
     }
 
+    function captureBookingFormState() {
+        const phone = document.getElementById('cs-booking-phone');
+        const name = document.getElementById('cs-booking-name');
+        const email = document.getElementById('cs-booking-email');
+        if (phone) adminPassengerPhone = phone.value;
+        if (name) adminPassengerName = name.value;
+        if (email) adminPassengerEmail = email.value;
+        const boarding = document.getElementById('cs-boarding-point');
+        const dropping = document.getElementById('cs-dropping-point');
+        if (boarding) adminBoardingPoint = boarding.value;
+        if (dropping) adminDroppingPoint = dropping.value;
+        const gender = document.getElementById('cs-booking-gender');
+        if (gender) adminGender = gender.value;
+    }
+
+    function renderPaymentToggles() {
+        return ['Cash', 'bKash', 'Nagad', 'Card'].map(method => (
+            `<button type="button" class="payment-toggle ${adminPaymentMethod === method ? 'active' : ''}" data-payment="${escapeHtml(method)}">${escapeHtml(method)}</button>`
+        )).join('');
+    }
+
+    function renderBookingExtrasHtml(schedule) {
+        const seatClass = schedule.seat_class || 'E-Class';
+        const pricing = calcPricing(schedule, Math.max(1, adminSelectedSeats.length), adminPaymentMethod);
+        const seatRows = adminSelectedSeats.length
+            ? adminSelectedSeats.map(seat => `<tr><td>${escapeHtml(seat)}</td><td>${escapeHtml(seatClass)}</td><td>${formatBdt(schedule.fare)}</td></tr>`).join('')
+            : `<tr><td colspan="3" style="color:#9ca3af; font-style:italic;">Select seat(s) from the map</td></tr>`;
+
+        return `
+            <h4 style="margin-top:20px;">Seat Information</h4>
+            <table class="seat-info-table">
+                <thead><tr><th>Seats</th><th>Class</th><th>Fare</th></tr></thead>
+                <tbody>${seatRows}</tbody>
+            </table>
+            <div class="fare-breakdown">
+                <div class="fare-line"><span>Seat Fare:</span><strong>${formatBdt(pricing.seatFare)}</strong></div>
+                <div class="fare-line"><span>Service Charge:</span><strong>${formatBdt(pricing.serviceCharge)}</strong></div>
+                <div class="fare-line"><span>Gateway Charge:</span><strong>${formatBdt(pricing.gatewayCharge)}</strong></div>
+                <div class="fare-line"><span>SC Discount:</span><strong>${formatBdt(pricing.scDiscount)}</strong></div>
+                <div class="fare-line"><span>GC Discount:</span><strong>${formatBdt(pricing.gcDiscount)}</strong></div>
+                <div class="fare-line fare-total"><span>Total:</span><strong>${formatBdt(pricing.total)}</strong></div>
+            </div>`;
+    }
+
+    function updateBookingExtras(schedule) {
+        const extrasEl = document.getElementById(`cs-booking-extras-${schedule.id}`);
+        if (extrasEl) {
+            extrasEl.innerHTML = renderBookingExtrasHtml(schedule);
+        }
+    }
+
+    function refreshLiveSeatMapOnly() {
+        if (!expandedScheduleId || selectedSeatBooking) {
+            renderResults();
+            return;
+        }
+
+        const sched = searchResults.find(s => s.id === expandedScheduleId);
+        if (!sched) {
+            renderResults();
+            return;
+        }
+
+        const seatMapEl = document.getElementById(`cs-seat-map-${expandedScheduleId}`);
+        if (!seatMapEl) {
+            renderResults();
+            return;
+        }
+
+        seatMapEl.innerHTML = renderSeatMap(sched);
+        updateBookingExtras(sched);
+    }
+
     function renderSeatMap(schedule) {
         const seatMap = getSeatMap(schedule);
 
@@ -186,8 +265,17 @@
             cssParts.push(`status-${status}`);
         }
         if (isViewing) cssParts.push('viewing-booking');
-        const selectable = status === 'available' || isPicking || (isViewing && status !== 'available' && status !== 'blocked');
-        const titleStatus = isPicking ? 'selected' : status;
+        const canManageBlock = status === 'blocked' || (adminBlockMode && status === 'available');
+        const selectable = isPicking
+            || (status === 'available' && !adminBlockMode)
+            || canManageBlock
+            || (isViewing && status !== 'available' && status !== 'blocked');
+        let titleStatus = isPicking ? 'selected' : status;
+        if (status === 'blocked') {
+            titleStatus = adminBlockMode ? 'Blocked — click to unblock' : 'Blocked';
+        } else if (adminBlockMode && status === 'available') {
+            titleStatus = 'Available — click to block';
+        }
         return `<div class="seat ${cssParts.join(' ')} ${selectable ? 'selectable' : ''}"
             data-seat="${seat}" data-schedule="${schedule.id}" data-status="${status}"
             title="${seatLabel(titleStatus)}">${seat}</div>`;
@@ -217,58 +305,36 @@
         ).join('');
         const selectedBoarding = (schedule.boarding_points || []).find(bp => bp.value === adminBoardingPoint);
         const selectedDropping = (schedule.dropping_points || []).find(dp => dp.value === adminDroppingPoint);
-        const seatClass = schedule.seat_class || 'E-Class';
-        const pricing = calcPricing(schedule, Math.max(1, adminSelectedSeats.length), adminPaymentMethod);
-        const seatRows = adminSelectedSeats.length
-            ? adminSelectedSeats.map(seat => `<tr><td>${escapeHtml(seat)}</td><td>${escapeHtml(seatClass)}</td><td>${formatBdt(schedule.fare)}</td></tr>`).join('')
-            : `<tr><td colspan="3" style="color:#9ca3af; font-style:italic;">Select seat(s) from the map</td></tr>`;
 
         return `
             <div class="booking-form-sidebar">
                 <div class="ticket-booking-panel">
                     <h3>Boarding / Dropping Point</h3>
                     <label>Boarding Point *</label>
-                    <select id="cs-boarding-point" class="ticket-field-select">${boardingOpts}</select>
+                    <select id="cs-boarding-point" class="ticket-field">${boardingOpts}</select>
                     <p class="boarding-point-info" id="cs-boarding-info">${selectedBoarding ? `Reporting: ${escapeHtml(selectedBoarding.reporting_time || '—')} · Departure: ${escapeHtml(selectedBoarding.departure_time || '—')}` : 'Select a boarding point'}</p>
                     <label>Dropping Point *</label>
-                    <select id="cs-dropping-point" class="ticket-field-select">
+                    <select id="cs-dropping-point" class="ticket-field">
                         <option value="">Select dropping point</option>
                         ${droppingOpts}
                     </select>
                     <p class="boarding-point-info" id="cs-dropping-info">${selectedDropping ? `Estimated arrival: ${escapeHtml(selectedDropping.arrival_time || '—')}` : 'Select a dropping point'}</p>
                     <label>Mobile Number *</label>
-                    <input type="tel" id="cs-booking-phone" placeholder="01XXXXXXXXX">
+                    <input type="tel" id="cs-booking-phone" class="ticket-field" placeholder="01XXXXXXXXX" autocomplete="tel" value="${escapeHtml(adminPassengerPhone)}">
                     <label>Passenger Name *</label>
-                    <input type="text" id="cs-booking-name" placeholder="Full name">
+                    <input type="text" id="cs-booking-name" class="ticket-field" placeholder="Full name" autocomplete="name" value="${escapeHtml(adminPassengerName)}">
                     <label>Email *</label>
-                    <input type="email" id="cs-booking-email" placeholder="email@example.com">
+                    <input type="email" id="cs-booking-email" class="ticket-field" placeholder="email@example.com" autocomplete="email" value="${escapeHtml(adminPassengerEmail)}">
                     <label>Gender</label>
-                    <select id="cs-booking-gender">
+                    <select id="cs-booking-gender" class="ticket-field">
                         <option value="M" ${adminGender === 'M' ? 'selected' : ''}>Male</option>
                         <option value="F" ${adminGender === 'F' ? 'selected' : ''}>Female</option>
                     </select>
                     <label>Payment Method</label>
-                    <select id="cs-booking-payment">
-                        <option value="Cash" ${adminPaymentMethod === 'Cash' ? 'selected' : ''}>Cash</option>
-                        <option value="bKash" ${adminPaymentMethod === 'bKash' ? 'selected' : ''}>bKash</option>
-                        <option value="Nagad" ${adminPaymentMethod === 'Nagad' ? 'selected' : ''}>Nagad</option>
-                        <option value="Card" ${adminPaymentMethod === 'Card' ? 'selected' : ''}>Card</option>
-                    </select>
+                    <div class="payment-toggle-group" id="cs-payment-toggles">${renderPaymentToggles()}</div>
                     <div id="cs-booking-error" style="color:#dc2626; font-size:13px; display:none; margin-bottom:8px;"></div>
                     <button type="button" class="btn-ticket-submit" id="cs-booking-submit">Submit</button>
-                    <h4 style="margin-top:20px;">Seat Information</h4>
-                    <table class="seat-info-table">
-                        <thead><tr><th>Seats</th><th>Class</th><th>Fare</th></tr></thead>
-                        <tbody>${seatRows}</tbody>
-                    </table>
-                    <div class="fare-breakdown">
-                        <div class="fare-line"><span>Seat Fare:</span><strong>${formatBdt(pricing.seatFare)}</strong></div>
-                        <div class="fare-line"><span>Service Charge:</span><strong>${formatBdt(pricing.serviceCharge)}</strong></div>
-                        <div class="fare-line"><span>Gateway Charge:</span><strong>${formatBdt(pricing.gatewayCharge)}</strong></div>
-                        <div class="fare-line"><span>SC Discount:</span><strong>${formatBdt(pricing.scDiscount)}</strong></div>
-                        <div class="fare-line"><span>GC Discount:</span><strong>${formatBdt(pricing.gcDiscount)}</strong></div>
-                        <div class="fare-line fare-total"><span>Total:</span><strong>${formatBdt(pricing.total)}</strong></div>
-                    </div>
+                    <div id="cs-booking-extras-${schedule.id}">${renderBookingExtrasHtml(schedule)}</div>
                 </div>
             </div>`;
     }
@@ -335,10 +401,21 @@
                         <div class="seats-selector-container">
                             <div class="seat-selection-grid">
                                 <div>
-                                    <h3 style="font-size: 14px; margin-bottom: 15px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
+                                    <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
                                         Bus Seat Layout
                                     </h3>
-                                    ${renderSeatMap(sched)}
+                                    <div class="seat-map-toolbar">
+                                        <button type="button" class="btn btn-secondary cs-block-mode-toggle ${adminBlockMode ? 'active' : ''}"
+                                            data-schedule-id="${sched.id}" style="padding: 6px 12px; font-size: 12px;">
+                                            ${adminBlockMode ? 'Done blocking' : 'Manage blocked seats'}
+                                        </button>
+                                        <span class="seat-map-toolbar-hint">
+                                            ${adminBlockMode
+                                                ? 'Click an available seat to block it, or a grey blocked seat to unblock.'
+                                                : 'Only admins can block seats. Customers cannot book blocked seats.'}
+                                        </span>
+                                    </div>
+                                    <div id="cs-seat-map-${sched.id}">${renderSeatMap(sched)}</div>
                                 </div>
                                 <div id="cs-sidebar-${sched.id}">
                                     ${renderBookingSidebar(sched)}
@@ -349,97 +426,188 @@
                 </div>`;
         }).join('');
 
-        bindResultEvents();
+        bindCoachListEvents();
     }
 
-    function bindResultEvents() {
-        document.querySelectorAll('.cs-toggle-map').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.id, 10);
+    function bindCoachListEvents() {
+        const listEl = document.getElementById('cs-bus-list');
+        if (!listEl || coachListEventsBound) return;
+        coachListEventsBound = true;
+
+        listEl.addEventListener('click', (e) => {
+            const toggleBtn = e.target.closest('.cs-toggle-map');
+            if (toggleBtn) {
+                captureBookingFormState();
+                const id = parseInt(toggleBtn.dataset.id, 10);
                 if (expandedScheduleId === id) {
                     expandedScheduleId = null;
                     selectedSeatBooking = null;
                     adminSelectedSeats = [];
+                    adminBlockMode = false;
                 } else {
                     expandedScheduleId = id;
                     selectedSeatBooking = null;
                     adminSelectedSeats = [];
+                    adminBlockMode = false;
+                    adminPassengerPhone = '';
+                    adminPassengerName = '';
+                    adminPassengerEmail = '';
                     const sched = searchResults.find(s => s.id === id);
                     if (sched?.boarding_points?.[0]) adminBoardingPoint = sched.boarding_points[0].value;
-                    if (sched?.dropping_points?.[0]) adminDroppingPoint = '';
+                    adminDroppingPoint = '';
                 }
                 renderResults();
-            });
-        });
+                return;
+            }
 
-        document.querySelectorAll('.seat[data-seat]').forEach(seatEl => {
-            seatEl.addEventListener('click', () => {
-                const seat = seatEl.dataset.seat;
-                const status = seatEl.dataset.status;
-                const scheduleId = parseInt(seatEl.dataset.schedule, 10);
-                const schedule = searchResults.find(s => s.id === scheduleId);
-                if (!schedule) return;
+            const paymentBtn = e.target.closest('.payment-toggle[data-payment]');
+            if (paymentBtn) {
+                captureBookingFormState();
+                adminPaymentMethod = paymentBtn.dataset.payment;
+                document.querySelectorAll('#cs-payment-toggles .payment-toggle').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.payment === adminPaymentMethod);
+                });
+                const schedule = searchResults.find(s => s.id === expandedScheduleId);
+                if (schedule) updateBookingExtras(schedule);
+                return;
+            }
 
-                if (status !== 'available' && status !== 'blocked') {
-                    if (schedule.seat_bookings?.[seat]) {
-                        selectedSeatBooking = { seat, ...schedule.seat_bookings[seat] };
-                        adminSelectedSeats = [];
-                        renderResults();
-                    }
-                    return;
-                }
+            if (e.target.id === 'cs-booking-submit') {
+                const schedule = searchResults.find(s => s.id === expandedScheduleId);
+                if (schedule) handleBookingSubmit(schedule);
+                return;
+            }
 
-                if (adminSelectedSeats.includes(seat)) {
-                    adminSelectedSeats = adminSelectedSeats.filter(s => s !== seat);
-                } else {
-                    adminSelectedSeats.push(seat);
-                }
+            if (e.target.id === 'cs-cancel-booking-btn' && selectedSeatBooking) {
+                handleCancelBooking(selectedSeatBooking.booking_id);
+                return;
+            }
+
+            if (e.target.id === 'cs-back-to-book-btn') {
                 selectedSeatBooking = null;
                 renderResults();
-            });
+                return;
+            }
+
+            const blockModeBtn = e.target.closest('.cs-block-mode-toggle');
+            if (blockModeBtn) {
+                const schedId = parseInt(blockModeBtn.dataset.scheduleId, 10);
+                if (expandedScheduleId === schedId) {
+                    adminBlockMode = !adminBlockMode;
+                    if (adminBlockMode) {
+                        adminSelectedSeats = [];
+                    }
+                    renderResults();
+                }
+                return;
+            }
+
+            const seatEl = e.target.closest('.seat[data-seat]');
+            if (!seatEl) return;
+
+            captureBookingFormState();
+            const seat = seatEl.dataset.seat;
+            const status = seatEl.dataset.status;
+            const scheduleId = parseInt(seatEl.dataset.schedule, 10);
+            const schedule = searchResults.find(s => s.id === scheduleId);
+            if (!schedule) return;
+
+            if (status === 'blocked' || (adminBlockMode && status === 'available')) {
+                if (!adminBlockMode && status === 'blocked') {
+                    alert('Turn on "Manage blocked seats" to unblock this seat.');
+                    return;
+                }
+                toggleSeatBlock(scheduleId, seat);
+                return;
+            }
+
+            if (status !== 'available') {
+                if (schedule.seat_bookings?.[seat]) {
+                    selectedSeatBooking = { seat, ...schedule.seat_bookings[seat] };
+                    adminSelectedSeats = [];
+                    renderResults();
+                }
+                return;
+            }
+
+            if (adminSelectedSeats.includes(seat)) {
+                adminSelectedSeats = adminSelectedSeats.filter(s => s !== seat);
+            } else {
+                adminSelectedSeats.push(seat);
+            }
+            selectedSeatBooking = null;
+            refreshLiveSeatMapOnly();
         });
 
-        document.getElementById('cs-cancel-booking-btn')?.addEventListener('click', () => {
-            if (selectedSeatBooking) handleCancelBooking(selectedSeatBooking.booking_id);
+        listEl.addEventListener('input', (e) => {
+            if (e.target.id === 'cs-booking-phone') adminPassengerPhone = e.target.value;
+            if (e.target.id === 'cs-booking-name') adminPassengerName = e.target.value;
+            if (e.target.id === 'cs-booking-email') adminPassengerEmail = e.target.value;
         });
-        document.getElementById('cs-back-to-book-btn')?.addEventListener('click', () => {
-            selectedSeatBooking = null;
-            renderResults();
-        });
-        document.getElementById('cs-boarding-point')?.addEventListener('change', (e) => {
-            adminBoardingPoint = e.target.value;
-            const schedule = searchResults.find(s => s.id === expandedScheduleId);
-            const bp = schedule?.boarding_points?.find(p => p.value === adminBoardingPoint);
-            const info = document.getElementById('cs-boarding-info');
-            if (info) {
-                info.textContent = bp
-                    ? `Reporting: ${bp.reporting_time || '—'} · Departure: ${bp.departure_time || '—'}`
-                    : 'Select a boarding point';
+
+        listEl.addEventListener('change', (e) => {
+            if (e.target.id === 'cs-boarding-point') {
+                adminBoardingPoint = e.target.value;
+                const schedule = searchResults.find(s => s.id === expandedScheduleId);
+                const bp = schedule?.boarding_points?.find(p => p.value === adminBoardingPoint);
+                const info = document.getElementById('cs-boarding-info');
+                if (info) {
+                    info.textContent = bp
+                        ? `Reporting: ${bp.reporting_time || '—'} · Departure: ${bp.departure_time || '—'}`
+                        : 'Select a boarding point';
+                }
+            }
+            if (e.target.id === 'cs-dropping-point') {
+                adminDroppingPoint = e.target.value;
+                const schedule = searchResults.find(s => s.id === expandedScheduleId);
+                const dp = schedule?.dropping_points?.find(p => p.value === adminDroppingPoint);
+                const info = document.getElementById('cs-dropping-info');
+                if (info) {
+                    info.textContent = dp
+                        ? `Estimated arrival: ${dp.arrival_time || '—'}`
+                        : 'Select a dropping point';
+                }
+            }
+            if (e.target.id === 'cs-booking-gender') {
+                adminGender = e.target.value;
             }
         });
-        document.getElementById('cs-dropping-point')?.addEventListener('change', (e) => {
-            adminDroppingPoint = e.target.value;
-            const schedule = searchResults.find(s => s.id === expandedScheduleId);
-            const dp = schedule?.dropping_points?.find(p => p.value === adminDroppingPoint);
-            const info = document.getElementById('cs-dropping-info');
-            if (info) {
-                info.textContent = dp
-                    ? `Estimated arrival: ${dp.arrival_time || '—'}`
-                    : 'Select a dropping point';
+    }
+
+    async function toggleSeatBlock(scheduleId, seat) {
+        const url = toggleBlockUrlTemplate.replace('__ID__', String(scheduleId));
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ seat }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                alert(data.message || 'Could not update blocked seat.');
+                return;
             }
-        });
-        document.getElementById('cs-booking-gender')?.addEventListener('change', (e) => {
-            adminGender = e.target.value;
+
+            const sched = searchResults.find(s => s.id === scheduleId);
+            if (sched && data.seat_map) {
+                sched.seat_map = data.seat_map;
+                sched.booked_seats = data.booked_seats || sched.booked_seats;
+                sched.available_seats_count = data.available_seats_count ?? sched.available_seats_count;
+                adminSelectedSeats = adminSelectedSeats.filter(s => (data.seat_map[s] || 'available') === 'available');
+            }
+
+            captureBookingFormState();
             renderResults();
-        });
-        document.getElementById('cs-booking-payment')?.addEventListener('change', (e) => {
-            adminPaymentMethod = e.target.value;
-            renderResults();
-        });
-        document.getElementById('cs-booking-submit')?.addEventListener('click', () => {
-            const schedule = searchResults.find(s => s.id === expandedScheduleId);
-            if (schedule) handleBookingSubmit(schedule);
-        });
+        } catch (err) {
+            alert('Network error while updating blocked seat.');
+        }
     }
 
     async function fetchCoachServices(silent = false) {
@@ -490,7 +658,12 @@
                     }
                 }
 
-                renderResults();
+                if (silent && expandedScheduleId && !selectedSeatBooking) {
+                    refreshLiveSeatMapOnly();
+                } else {
+                    captureBookingFormState();
+                    renderResults();
+                }
                 updateLiveStatus();
             }
         } catch (err) {
@@ -533,6 +706,10 @@
         expandedScheduleId = null;
         selectedSeatBooking = null;
         adminSelectedSeats = [];
+        adminPassengerPhone = '';
+        adminPassengerName = '';
+        adminPassengerEmail = '';
+        adminDroppingPoint = '';
 
         document.getElementById('cs-empty-hint').style.display = 'none';
         document.getElementById('cs-results').style.display = 'block';
@@ -542,14 +719,15 @@
     }
 
     async function handleBookingSubmit(schedule) {
+        captureBookingFormState();
         const errorEl = document.getElementById('cs-booking-error');
-        const name = document.getElementById('cs-booking-name')?.value.trim() || '';
-        const phone = document.getElementById('cs-booking-phone')?.value.trim() || '';
-        const email = document.getElementById('cs-booking-email')?.value.trim() || '';
-        const boarding = document.getElementById('cs-boarding-point')?.value || adminBoardingPoint;
-        const dropping = document.getElementById('cs-dropping-point')?.value || adminDroppingPoint;
-        const gender = document.getElementById('cs-booking-gender')?.value || adminGender;
-        const payment = document.getElementById('cs-booking-payment')?.value || adminPaymentMethod;
+        const name = adminPassengerName.trim();
+        const phone = adminPassengerPhone.trim();
+        const email = adminPassengerEmail.trim();
+        const boarding = adminBoardingPoint;
+        const dropping = adminDroppingPoint;
+        const gender = adminGender;
+        const payment = adminPaymentMethod;
 
         if (!adminSelectedSeats.length) {
             if (errorEl) { errorEl.style.display = 'block'; errorEl.textContent = 'Please select at least one seat.'; }
@@ -586,6 +764,9 @@
                 const data = await res.json().catch(() => ({}));
                 adminSelectedSeats = [];
                 selectedSeatBooking = null;
+                adminPassengerPhone = '';
+                adminPassengerName = '';
+                adminPassengerEmail = '';
                 await fetchCoachServices(true);
                 const smsNote = data.sms?.success ? ' SMS sent.' : '';
                 alert('Booking created successfully.' + smsNote);
@@ -644,6 +825,7 @@
     }
 
     document.getElementById('cs-search-btn')?.addEventListener('click', handleSearch);
+    bindCoachListEvents();
 
     window.coachServicesModule = { startPolling, stopPolling };
 })();

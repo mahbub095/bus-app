@@ -32,6 +32,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     // Coach Services (realtime search + seat map)
     Route::get('/admin/api/coach-services/search', [AdminApiController::class, 'searchCoachServices'])->name('admin.coach-services.search');
+    Route::post('/admin/api/schedules/{id}/seats/toggle-block', [AdminApiController::class, 'toggleBlockedSeat'])->name('admin.schedules.seats.toggle-block');
     Route::post('/admin/api/bookings/{id}/cancel', [AdminApiController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
     Route::get('/admin/api/bookings/logs', [AdminApiController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
     Route::get('/admin/api/cancel-requests/logs', [AdminApiController::class, 'cancelRequestsLogsApi'])->name('admin.cancel-requests.logs.api');

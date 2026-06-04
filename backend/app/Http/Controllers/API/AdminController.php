@@ -281,6 +281,53 @@ class AdminController extends Controller
         return response()->json($formattedSchedules);
     }
 
+    public function toggleBlockedSeat(Request $request, int $id)
+    {
+        $request->validate([
+            'seat' => ['required', 'string', 'regex:/^[A-I][1-4]$/i'],
+        ]);
+
+        $schedule = Schedule::find($id);
+
+        if (! $schedule) {
+            return response()->json(['message' => 'Schedule not found.'], 404);
+        }
+
+        $seat = strtoupper($request->input('seat'));
+
+        $bookings = $schedule->bookings()
+            ->where('status', 'PAID')
+            ->select(SeatMapService::paidBookingColumns())
+            ->get();
+
+        try {
+            $result = $this->seatMapService->toggleBlockedSeat($schedule, $seat, $bookings);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $schedule->refresh();
+        $bookings = $schedule->bookings()
+            ->where('status', 'PAID')
+            ->select(SeatMapService::paidBookingColumns())
+            ->get();
+
+        $seatPayload = $this->seatMapService->formatSchedulePayload($schedule, $bookings);
+
+        return response()->json([
+            'message' => $result['blocked'] ? "Seat {$seat} blocked." : "Seat {$seat} unblocked.",
+            'seat' => $result['seat'],
+            'blocked' => $result['blocked'],
+            'blocked_seats' => $result['blocked_seats'],
+            'seat_map' => $seatPayload['seat_map'],
+            'booked_seats' => $seatPayload['booked_seats'],
+            'available_seats_count' => count(array_filter(
+                $seatPayload['seat_map'],
+                fn ($status) => $status === 'available'
+            )),
+        ]);
+    }
+
     public function cancelBookingApi($id)
     {
         $booking = Booking::find($id);

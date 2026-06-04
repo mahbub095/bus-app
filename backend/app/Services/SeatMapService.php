@@ -277,6 +277,66 @@ class SeatMapService
         return $status === 'available';
     }
 
+    public function isValidSeatCode(string $seat): bool
+    {
+        $seat = strtoupper(trim($seat));
+
+        return in_array($seat, $this->allSeatCodes(), true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function blockedSeatList(Schedule $schedule): array
+    {
+        return $this->parseSeatList($schedule->blocked_seats ?? '');
+    }
+
+    /**
+     * @return array{seat: string, blocked: bool, blocked_seats: list<string>}
+     */
+    public function toggleBlockedSeat(Schedule $schedule, string $seat, iterable $bookings): array
+    {
+        $seat = strtoupper(trim($seat));
+
+        if (! $this->isValidSeatCode($seat)) {
+            throw new \InvalidArgumentException('Invalid seat code.');
+        }
+
+        $seatMap = $this->buildSeatMap($schedule, $bookings);
+        $status = $seatMap[$seat] ?? 'available';
+        $blocked = $this->blockedSeatList($schedule);
+        $index = array_search($seat, $blocked, true);
+
+        if ($index !== false) {
+            unset($blocked[$index]);
+            $blocked = array_values($blocked);
+            $schedule->blocked_seats = $blocked === [] ? null : implode(',', $blocked);
+            $schedule->save();
+
+            return [
+                'seat' => $seat,
+                'blocked' => false,
+                'blocked_seats' => $blocked,
+            ];
+        }
+
+        if ($status !== 'available') {
+            throw new \InvalidArgumentException('Only available seats can be blocked.');
+        }
+
+        $blocked[] = $seat;
+        sort($blocked);
+        $schedule->blocked_seats = implode(',', $blocked);
+        $schedule->save();
+
+        return [
+            'seat' => $seat,
+            'blocked' => true,
+            'blocked_seats' => $blocked,
+        ];
+    }
+
     protected function parseSeatList(?string $value): array
     {
         if (! $value) {

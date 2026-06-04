@@ -442,9 +442,9 @@
             color: #818CF8;
         }
 
-        /* Sidebar input forms details */
+        /* Sidebar input forms details (match frontend booking panel) */
         .booking-form-sidebar {
-            background-color: #121223;
+            background-color: #18182E;
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 24px;
@@ -895,13 +895,11 @@
             transform: scale(1.05);
         }
 
-        .seat.selected,
-        .seat.status-available.selected,
-        .seat.status-blocked.selected {
-            background-color: var(--primary);
-            border-color: var(--primary-hover);
+        .seat.selected {
+            background-color: #22c55e;
+            border-color: #16a34a;
             color: #fff;
-            box-shadow: 0 0 10px var(--primary-glow);
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
             cursor: pointer;
         }
 
@@ -938,9 +936,9 @@
         }
 
         .seat.status-booked_f {
-            background-color: #e9d5ff;
-            border-color: #c084fc;
-            color: #581c87;
+            background-color: #fdf4ff;
+            border-color: #f0abfc;
+            color: #a21caf;
             cursor: pointer;
         }
 
@@ -981,10 +979,30 @@
         }
 
         .legend-dot.status-available { background-color: #fff; border-color: #d1d5db; }
-        .legend-dot.status-selected { background-color: var(--primary); border-color: var(--primary-hover); }
+        .legend-dot.status-selected { background-color: #22c55e; border-color: #16a34a; }
         .legend-dot.status-blocked { background-color: #6b7280; border-color: #4b5563; }
         .legend-dot.status-booked_m { background-color: #fecaca; border-color: #f87171; }
-        .legend-dot.status-booked_f { background-color: #e9d5ff; border-color: #c084fc; }
+        .legend-dot.status-booked_f { background-color: #fdf4ff; border-color: #f0abfc; }
+
+        .seat-map-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            margin-bottom: 12px;
+        }
+
+        .seat-map-toolbar-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .cs-block-mode-toggle.active {
+            border-color: var(--warning);
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
         .legend-dot.status-sold_m { background-color: #ef4444; border-color: #b91c1c; }
         .legend-dot.status-sold_f { background-color: #ec4899; border-color: #be185d; }
 
@@ -1050,6 +1068,7 @@
             margin-bottom: 6px;
         }
 
+        .ticket-booking-panel .ticket-field,
         .ticket-booking-panel select,
         .ticket-booking-panel input[type="text"],
         .ticket-booking-panel input[type="tel"],
@@ -1059,10 +1078,23 @@
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-sm);
             font-size: 14px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             background: rgba(255, 255, 255, 0.04);
             color: var(--text-primary);
+            box-sizing: border-box;
+        }
+
+        .ticket-booking-panel select.ticket-field {
             color-scheme: light;
+            margin-bottom: 8px;
+        }
+
+        .ticket-booking-panel input[type="text"]::placeholder,
+        .ticket-booking-panel input[type="tel"]::placeholder,
+        .ticket-booking-panel input[type="email"]::placeholder,
+        .ticket-booking-panel .ticket-field::placeholder {
+            color: #9ca3af;
+            opacity: 1;
         }
 
         .ticket-booking-panel select option {
@@ -1076,10 +1108,51 @@
         }
 
         .ticket-booking-panel select:focus,
+        .ticket-booking-panel .ticket-field:focus,
         .ticket-booking-panel input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .ticket-booking-panel input.ticket-field:-webkit-autofill,
+        .ticket-booking-panel input.ticket-field:-webkit-autofill:hover,
+        .ticket-booking-panel input.ticket-field:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0 1000px #1c1c34 inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        .payment-toggle-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .payment-toggle {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: #1F1F38;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .payment-toggle:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .payment-toggle.active {
+            border-color: var(--primary);
+            background-color: rgba(99, 102, 241, 0.08);
+            color: #fff;
         }
 
         .seat-info-table {
@@ -1142,8 +1215,8 @@
         .boarding-point-info {
             font-size: 11px;
             color: var(--text-muted);
-            margin: -6px 0 12px;
-            line-height: 1.4;
+            margin: -4px 0 12px;
+            line-height: 1.45;
         }
 
         .selected-seats-badge {
