@@ -1,5 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
+import {
+  SEAT_ROWS,
+  SEAT_STATUS_LABELS,
+  calcPricing,
+  formatBdt,
+  getSeatMap,
+  isSeatSelectable,
+} from './bookingUtils';
 
 const API_BASE = 'http://localhost:8000/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
@@ -32,6 +40,10 @@ function App() {
     email: '',
     paymentMethod: 'bKash'
   });
+  const [boardingPoint, setBoardingPoint] = useState('');
+  const [droppingPoint, setDroppingPoint] = useState('');
+  const [passengerGender, setPassengerGender] = useState('M');
+  const [seatMapLastSync, setSeatMapLastSync] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(null);
 
@@ -45,6 +57,7 @@ function App() {
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const toastTimeoutRef = useRef(null);
 
   // Auth States
   const [authUser, setAuthUser] = useState(null);
@@ -69,13 +82,23 @@ function App() {
   // Min Date constraint for safety
   const minDateStr = new Date().toISOString().split('T')[0];
 
-  // Show Toast Helper
-  const showToast = (message, type = 'success') => {
+  // Show Toast Helper (durationMs defaults to 4.5s; booking success uses 1s)
+  const showToast = (message, type = 'success', durationMs = 4500) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToast({ show: true, message, type });
-    setTimeout(() => {
+    toastTimeoutRef.current = setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
-    }, 4500);
+      toastTimeoutRef.current = null;
+    }, durationMs);
   };
+
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+  }, []);
 
   const authHeaders = (extra = {}) => {
     const headers = { 'Accept': 'application/json', ...extra };
@@ -370,15 +393,71 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    const boardingPoints = selectedSchedule?.boarding_points || [];
+    const droppingPoints = selectedSchedule?.dropping_points || [];
+
+    setBoardingPoint((prev) => {
+      if (prev && boardingPoints.some((bp) => bp.value === prev)) return prev;
+      return boardingPoints[0]?.value || '';
+    });
+    setDroppingPoint((prev) => {
+      if (prev && droppingPoints.some((dp) => dp.value === prev)) return prev;
+      return '';
+    });
+  }, [selectedSchedule?.id]);
+
+  useEffect(() => {
+    if (!searchDone || !selectedSchedule) {
+      return undefined;
+    }
+
+    const refreshSeatMap = async () => {
+      try {
+        const params = new URLSearchParams({
+          from: searchParams.from,
+          to: searchParams.to,
+          date: searchParams.date,
+          coach_type: searchParams.coachType,
+        });
+        const res = await fetch(`${API_BASE}/search?${params.toString()}`);
+        if (!res.ok) return;
+
+        const fresh = await res.json();
+        setSearchResults(fresh);
+
+        const updated = fresh.find(s => s.id === selectedSchedule.id);
+        if (!updated) return;
+
+        setSelectedSchedule(updated);
+        setSelectedSeats(prev => {
+          const map = getSeatMap(updated);
+          const next = prev.filter(seat => isSeatSelectable(map[seat]));
+          if (next.length < prev.length) {
+            window.alert('One or more selected seats were just booked by another user. Please choose again.');
+          }
+          return next;
+        });
+        setSeatMapLastSync(new Date());
+      } catch {
+        // ignore transient network errors during polling
+      }
+    };
+
+    refreshSeatMap();
+    const timer = setInterval(refreshSeatMap, 5000);
+    return () => clearInterval(timer);
+  }, [searchDone, selectedSchedule?.id, searchParams.from, searchParams.to, searchParams.date, searchParams.coachType]);
+
   // Handle seat click
-  const handleSeatClick = (seatCode, isBooked) => {
-    if (isBooked) return;
+  const handleSeatClick = (seatCode, status) => {
+    if (!isSeatSelectable(status)) return;
 
     if (selectedSeats.includes(seatCode)) {
       setSelectedSeats(prev => prev.filter(s => s !== seatCode));
     } else {
       if (selectedSeats.length >= 4) {
-        showToast('You can select a maximum of 4 seats per booking.', 'error');
+        window.alert('You can select a maximum of 4 seats per booking.');
         return;
       }
       setSelectedSeats(prev => [...prev, seatCode]);
@@ -429,6 +508,10 @@ function App() {
       showToast('Passenger email is required.', 'error');
       return;
     }
+    if (!boardingPoint || !droppingPoint) {
+      showToast('Please select boarding and dropping points.', 'error');
+      return;
+    }
 
     setIsBooking(true);
     try {
@@ -440,6 +523,9 @@ function App() {
           passenger_name: passengerDetails.name,
           passenger_phone: passengerDetails.phone,
           passenger_email: passengerDetails.email,
+          passenger_gender: passengerGender,
+          boarding_point: boardingPoint,
+          dropping_point: droppingPoint,
           seat_numbers: selectedSeats.join(','),
           payment_method: passengerDetails.paymentMethod,
           promo_code: appliedPromo ? appliedPromo.code : null
@@ -455,7 +541,7 @@ function App() {
       }
       if (res.ok) {
         setBookingSuccess(data.booking);
-        showToast('Ticket reserved successfully!', 'success');
+        showToast('Ticket reserved successfully!', 'success', 1000);
         // Reset inputs
         setSelectedSeats([]);
         setAppliedPromo(null);
@@ -545,11 +631,28 @@ function App() {
     showToast(`Coupon code "${code}" copied to clipboard!`, 'success');
   };
 
+  const renderSeatCell = (schedule, seat, seatMap) => {
+    const status = seatMap[seat] || 'available';
+    const isSelected = selectedSeats.includes(seat);
+    const displayClass = isSelected ? 'selected' : `status-${status}`;
+    const canSelect = isSeatSelectable(status);
+
+    return (
+      <div
+        key={seat}
+        className={`seat ${displayClass} ${canSelect || isSelected ? 'selectable' : ''}`}
+        title={isSelected ? SEAT_STATUS_LABELS.selected : (SEAT_STATUS_LABELS[status] || status)}
+        onClick={() => handleSeatClick(seat, status)}
+      >
+        {seat}
+      </div>
+    );
+  };
+
   // Render Seat Grid helper
   const renderSeatMap = (schedule) => {
-    const booked = schedule.booked_seats || [];
-    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-    
+    const seatMap = getSeatMap(schedule);
+
     return (
       <div className="bus-blueprint">
         <div className="bus-head">
@@ -562,75 +665,30 @@ function App() {
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>ENTRANCE</span>
         </div>
-        
+
         <div className="bus-body-seats">
-          {rows.map(row => {
-            const s1 = `${row}1`;
-            const s2 = `${row}2`;
-            const s3 = `${row}3`;
-            const s4 = `${row}4`;
-
-            const s1Booked = booked.includes(s1);
-            const s2Booked = booked.includes(s2);
-            const s3Booked = booked.includes(s3);
-            const s4Booked = booked.includes(s4);
-
-            const s1Selected = selectedSeats.includes(s1);
-            const s2Selected = selectedSeats.includes(s2);
-            const s3Selected = selectedSeats.includes(s3);
-            const s4Selected = selectedSeats.includes(s4);
-
-            return (
-              <div className="seat-row" key={row}>
-                <div className="seat-pair">
-                  <div 
-                    className={`seat ${s1Booked ? 'booked' : ''} ${s1Selected ? 'selected' : ''}`}
-                    onClick={() => handleSeatClick(s1, s1Booked)}
-                  >
-                    {s1}
-                  </div>
-                  <div 
-                    className={`seat ${s2Booked ? 'booked' : ''} ${s2Selected ? 'selected' : ''}`}
-                    onClick={() => handleSeatClick(s2, s2Booked)}
-                  >
-                    {s2}
-                  </div>
-                </div>
-                
-                <div className="bus-aisle"></div>
-                
-                <div className="seat-pair">
-                  <div 
-                    className={`seat ${s3Booked ? 'booked' : ''} ${s3Selected ? 'selected' : ''}`}
-                    onClick={() => handleSeatClick(s3, s3Booked)}
-                  >
-                    {s3}
-                  </div>
-                  <div 
-                    className={`seat ${s4Booked ? 'booked' : ''} ${s4Selected ? 'selected' : ''}`}
-                    onClick={() => handleSeatClick(s4, s4Booked)}
-                  >
-                    {s4}
-                  </div>
-                </div>
+          {SEAT_ROWS.map(row => (
+            <div className="seat-row" key={row}>
+              <div className="seat-pair">
+                {renderSeatCell(schedule, `${row}1`, seatMap)}
+                {renderSeatCell(schedule, `${row}2`, seatMap)}
               </div>
-            );
-          })}
+              <div className="bus-aisle"></div>
+              <div className="seat-pair">
+                {renderSeatCell(schedule, `${row}3`, seatMap)}
+                {renderSeatCell(schedule, `${row}4`, seatMap)}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="seat-legend">
-          <div className="legend-item">
-            <div className="legend-dot available"></div>
-            <span>Available</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot selected"></div>
-            <span>Selected</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-dot booked"></div>
-            <span>Booked</span>
-          </div>
+          {['booked_m', 'booked_f', 'blocked', 'available', 'selected', 'sold_m', 'sold_f'].map(key => (
+            <div className="legend-item" key={key}>
+              <div className={`legend-dot status-${key}`}></div>
+              <span>{SEAT_STATUS_LABELS[key]}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -1120,154 +1178,172 @@ function App() {
                                   <div className="seat-selection-grid">
                                     
                                     <div>
-                                      <h3 style={{ fontSize: '14px', marginBottom: '15px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                        Bus Seat Layout Grid (Select Up To 4)
+                                      <h3 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        Bus Seat Layout (Select Up To 4)
                                       </h3>
+                                      {seatMapLastSync && (
+                                        <div className="seat-map-live-status">
+                                          <span className="live-dot"></span>
+                                          <span>
+                                            Live — updated {seatMapLastSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} (every 5s)
+                                          </span>
+                                        </div>
+                                      )}
                                       {renderSeatMap(sched)}
                                     </div>
 
                                     <div className="booking-form-sidebar">
-                                      <h3 className="booking-summary-title">Reservation Summary</h3>
-                                      
-                                      <div className="summary-row">
-                                        <span className="summary-label">Route</span>
-                                        <span className="summary-value">
-                                          {stations.find(s => s.id === parseInt(searchParams.from))?.name} ➔ {stations.find(s => s.id === parseInt(searchParams.to))?.name}
-                                        </span>
-                                      </div>
-
-                                      <div className="summary-row">
-                                        <span className="summary-label">Coach</span>
-                                        <span className="summary-value">
-                                          {sched.bus.operator_name} ({sched.bus.coach_type})
-                                        </span>
-                                      </div>
-
-                                      <div className="summary-row">
-                                        <span className="summary-label">Selected Seats</span>
-                                        <span className="summary-value">
-                                          {selectedSeats.length > 0 ? (
-                                            selectedSeats.map(seat => (
-                                              <span key={seat} className="selected-seats-badge">{seat}</span>
-                                            ))
-                                          ) : (
-                                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None selected</span>
-                                          )}
-                                        </span>
-                                      </div>
-
-                                      <div className="summary-row">
-                                        <span className="summary-label">Ticket Subtotal</span>
-                                        <span className="summary-value">
-                                          BDT {(sched.fare * selectedSeats.length).toLocaleString()}
-                                        </span>
-                                      </div>
-
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <span className="summary-label">Promo Coupon Discount</span>
-                                        <form className="coupon-field" onSubmit={handleApplyPromo}>
-                                          <input 
-                                            type="text" 
-                                            placeholder="Enter promo (e.g. SONYANEW)" 
-                                            className="coupon-input"
-                                            value={promoInput}
-                                            onChange={(e) => setPromoInput(e.target.value)}
-                                            disabled={selectedSeats.length === 0}
-                                          />
-                                          <button 
-                                            className="btn btn-secondary btn-coupon-apply" 
-                                            type="submit"
-                                            disabled={selectedSeats.length === 0}
-                                          >
-                                            Apply
-                                          </button>
-                                        </form>
-                                        {appliedPromo && (
-                                          <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '600' }}>
-                                            Discount Coupon Applied: -BDT {appliedPromo.discount_amount} ({appliedPromo.description})
-                                          </span>
-                                        )}
-                                      </div>
-
-                                      <div className="summary-row" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
-                                        <span className="summary-label" style={{ fontSize: '15px', fontWeight: 'bold', color: '#fff' }}>Total Payable Fare</span>
-                                        <span className="summary-value" style={{ fontSize: '20px', color: 'var(--gold)' }}>
-                                          BDT {Math.max(0, (sched.fare * selectedSeats.length) - (appliedPromo ? appliedPromo.discount_amount : 0)).toLocaleString()}
-                                        </span>
-                                      </div>
-
-                                      <div className="booking-form-fields">
-                                        <h4 style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '10px' }}>
-                                          Passenger Credentials
-                                        </h4>
-                                        
-                                        <div className="input-group">
-                                          <input 
-                                            type="text" 
-                                            placeholder="Passenger Full Name" 
-                                            className="coupon-input"
-                                            value={passengerDetails.name}
-                                            onChange={(e) => setPassengerDetails(prev => ({ ...prev, name: e.target.value }))}
-                                            disabled={selectedSeats.length === 0}
-                                          />
-                                        </div>
-
-                                        <div className="input-group">
-                                          <input 
-                                            type="tel" 
-                                            placeholder="Mobile Number (e.g. 017xxxxxxxx)" 
-                                            className="coupon-input"
-                                            value={passengerDetails.phone}
-                                            onChange={(e) => setPassengerDetails(prev => ({ ...prev, phone: e.target.value }))}
-                                            disabled={selectedSeats.length === 0}
-                                          />
-                                        </div>
-
-                                        <div className="input-group">
-                                          <input 
-                                            type="email" 
-                                            placeholder="Email Address" 
-                                            className="coupon-input"
-                                            value={passengerDetails.email}
-                                            onChange={(e) => setPassengerDetails(prev => ({ ...prev, email: e.target.value }))}
-                                            disabled={selectedSeats.length === 0}
-                                          />
-                                        </div>
-
-                                        <div className="input-group">
-                                          <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Payment gateway channel</label>
-                                          <div className="payment-toggle-group">
-                                            <div 
-                                              className={`payment-toggle ${passengerDetails.paymentMethod === 'bKash' ? 'active' : ''}`}
-                                              onClick={() => selectedSeats.length > 0 && setPassengerDetails(prev => ({ ...prev, paymentMethod: 'bKash' }))}
+                                      {(() => {
+                                        const pricing = calcPricing(sched, Math.max(selectedSeats.length, 1), passengerDetails.paymentMethod);
+                                        const seatClass = sched.seat_class || 'E-Class';
+                                        const promoDiscount = appliedPromo ? Number(appliedPromo.discount_amount) : 0;
+                                        const grandTotal = Math.max(0, pricing.total - promoDiscount);
+                                        const activeBoarding = (sched.boarding_points || []).find(bp => bp.value === boardingPoint);
+                                        const activeDropping = (sched.dropping_points || []).find(dp => dp.value === droppingPoint);
+                                        return (
+                                          <div className="ticket-booking-panel">
+                                            <h3>Boarding / Dropping Point</h3>
+                                            <label>Boarding Point *</label>
+                                            <select
+                                              className="ticket-field"
+                                              value={boardingPoint}
+                                              onChange={(e) => setBoardingPoint(e.target.value)}
+                                              disabled={selectedSeats.length === 0}
                                             >
-                                              bKash
+                                              {(sched.boarding_points || []).map(bp => (
+                                                <option key={bp.id} value={bp.value}>
+                                                  {bp.label} — Reporting: {bp.reporting_time || '—'}, Departure: {bp.departure_time || '—'}
+                                                </option>
+                                              ))}
+                                            </select>
+                                            <p className="boarding-point-info">
+                                              {activeBoarding
+                                                ? `Reporting: ${activeBoarding.reporting_time || '—'} · Departure: ${activeBoarding.departure_time || '—'}`
+                                                : 'Select a boarding point'}
+                                            </p>
+                                            <label>Dropping Point *</label>
+                                            <select
+                                              className="ticket-field"
+                                              value={droppingPoint}
+                                              onChange={(e) => setDroppingPoint(e.target.value)}
+                                              disabled={selectedSeats.length === 0}
+                                            >
+                                              <option value="">Select dropping point</option>
+                                              {(sched.dropping_points || []).map(dp => (
+                                                <option key={dp.id} value={dp.value}>
+                                                  {dp.label} — Arrival: {dp.arrival_time || '—'}
+                                                </option>
+                                              ))}
+                                            </select>
+                                            <p className="boarding-point-info">
+                                              {activeDropping
+                                                ? `Estimated arrival: ${activeDropping.arrival_time || '—'}`
+                                                : 'Select a dropping point'}
+                                            </p>
+                                            <label>Mobile Number *</label>
+                                            <input
+                                              type="tel"
+                                              className="ticket-field"
+                                              placeholder="01XXXXXXXXX"
+                                              value={passengerDetails.phone}
+                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, phone: e.target.value }))}
+                                              disabled={selectedSeats.length === 0}
+                                            />
+                                            <label>Passenger Name *</label>
+                                            <input
+                                              type="text"
+                                              className="ticket-field"
+                                              placeholder="Full name"
+                                              value={passengerDetails.name}
+                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, name: e.target.value }))}
+                                              disabled={selectedSeats.length === 0}
+                                            />
+                                            <label>Email *</label>
+                                            <input
+                                              type="email"
+                                              className="ticket-field"
+                                              placeholder="email@example.com"
+                                              value={passengerDetails.email}
+                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, email: e.target.value }))}
+                                              disabled={selectedSeats.length === 0}
+                                            />
+                                            <label>Gender</label>
+                                            <select
+                                              className="ticket-field"
+                                              value={passengerGender}
+                                              onChange={(e) => setPassengerGender(e.target.value)}
+                                              disabled={selectedSeats.length === 0}
+                                            >
+                                              <option value="M">Male</option>
+                                              <option value="F">Female</option>
+                                            </select>
+                                            <label>Payment Method</label>
+                                            <div className="payment-toggle-group" style={{ marginBottom: '12px' }}>
+                                              {['bKash', 'Nagad', 'Card'].map(method => (
+                                                <div
+                                                  key={method}
+                                                  className={`payment-toggle ${passengerDetails.paymentMethod === method ? 'active' : ''}`}
+                                                  onClick={() => selectedSeats.length > 0 && setPassengerDetails(prev => ({ ...prev, paymentMethod: method }))}
+                                                >
+                                                  {method}
+                                                </div>
+                                              ))}
                                             </div>
-                                            <div 
-                                              className={`payment-toggle ${passengerDetails.paymentMethod === 'Nagad' ? 'active' : ''}`}
-                                              onClick={() => selectedSeats.length > 0 && setPassengerDetails(prev => ({ ...prev, paymentMethod: 'Nagad' }))}
+                                            <form className="coupon-field" onSubmit={handleApplyPromo} style={{ marginBottom: '8px' }}>
+                                              <input
+                                                type="text"
+                                                placeholder="Promo code"
+                                                className="coupon-input"
+                                                value={promoInput}
+                                                onChange={(e) => setPromoInput(e.target.value)}
+                                                disabled={selectedSeats.length === 0}
+                                              />
+                                              <button className="btn btn-secondary btn-coupon-apply" type="submit" disabled={selectedSeats.length === 0}>Apply</button>
+                                            </form>
+                                            {appliedPromo && (
+                                              <p style={{ fontSize: '11px', color: 'var(--success)', marginBottom: '8px' }}>
+                                                Promo: -{formatBdt(appliedPromo.discount_amount)}
+                                              </p>
+                                            )}
+                                            <button
+                                              type="button"
+                                              className="btn-ticket-submit"
+                                              onClick={handleConfirmBooking}
+                                              disabled={selectedSeats.length === 0 || isBooking}
                                             >
-                                              Nagad
-                                            </div>
-                                            <div 
-                                              className={`payment-toggle ${passengerDetails.paymentMethod === 'Card' ? 'active' : ''}`}
-                                              onClick={() => selectedSeats.length > 0 && setPassengerDetails(prev => ({ ...prev, paymentMethod: 'Card' }))}
-                                            >
-                                              Card
+                                              {isBooking ? 'Processing...' : 'Submit'}
+                                            </button>
+                                            <h4>Seat Information</h4>
+                                            <table className="seat-info-table">
+                                              <thead>
+                                                <tr><th>Seats</th><th>Class</th><th>Fare</th></tr>
+                                              </thead>
+                                              <tbody>
+                                                {selectedSeats.length > 0 ? selectedSeats.map(seat => (
+                                                  <tr key={seat}>
+                                                    <td>{seat}</td>
+                                                    <td>{seatClass}</td>
+                                                    <td>{formatBdt(sched.fare)}</td>
+                                                  </tr>
+                                                )) : (
+                                                  <tr><td colSpan={3} style={{ fontStyle: 'italic', color: '#9ca3af' }}>Select seat(s) from the map</td></tr>
+                                                )}
+                                              </tbody>
+                                            </table>
+                                            <div className="fare-breakdown">
+                                              <div className="fare-line"><span>Seat Fare:</span><strong>{formatBdt(pricing.seatFare)}</strong></div>
+                                              <div className="fare-line"><span>Service Charge:</span><strong>{formatBdt(pricing.serviceCharge)}</strong></div>
+                                              <div className="fare-line"><span>Gateway Charge:</span><strong>{formatBdt(pricing.gatewayCharge)}</strong></div>
+                                              <div className="fare-line"><span>SC Discount:</span><strong>{formatBdt(pricing.scDiscount)}</strong></div>
+                                              <div className="fare-line"><span>GC Discount:</span><strong>{formatBdt(pricing.gcDiscount)}</strong></div>
+                                              {promoDiscount > 0 && (
+                                                <div className="fare-line"><span>Promo Discount:</span><strong>-{formatBdt(promoDiscount)}</strong></div>
+                                              )}
+                                              <div className="fare-line fare-total"><span>Total Payable:</span><strong>{formatBdt(grandTotal)}</strong></div>
                                             </div>
                                           </div>
-                                        </div>
-
-                                        <button 
-                                          className="btn btn-primary" 
-                                          style={{ marginTop: '10px', height: '45px', fontWeight: 'bold' }}
-                                          onClick={handleConfirmBooking}
-                                          disabled={selectedSeats.length === 0 || isBooking}
-                                        >
-                                          {isBooking ? 'Processing Reservation...' : 'Confirm Ticket Reservation'}
-                                        </button>
-                                      </div>
-
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
