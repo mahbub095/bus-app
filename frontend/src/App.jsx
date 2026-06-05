@@ -718,7 +718,9 @@ function App() {
         { type: 'empty' },
         { type: 'driver', label: 'Driver' }
       ]);
-      let lowerRows = Math.ceil(lowerCount / 3);
+      let remainingSeats = lowerCount - 4;
+      let lowerRows = Math.ceil(remainingSeats / 3);
+      if (lowerRows < 0) lowerRows = 0;
       let rIndex = 0;
       for (let r = 0; r < lowerRows; r++) {
         const rowLetter = rowLetters[rIndex++];
@@ -729,6 +731,12 @@ function App() {
         row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
         lowerGrid.push(row);
       }
+      const lastRowLetter = rowLetters[rIndex++];
+      const lastRow = [];
+      for (let num = 1; num <= 4; num++) {
+        lastRow.push({ type: 'seat', label: 'L-' + lastRowLetter + num });
+      }
+      lowerGrid.push(lastRow);
 
       const upperGrid = [];
       upperGrid.push([
@@ -737,7 +745,9 @@ function App() {
         { type: 'empty' },
         { type: 'empty' }
       ]);
-      let upperRows = Math.ceil(upperCount / 3);
+      let remainingSeatsU = upperCount - 4;
+      let upperRows = Math.ceil(remainingSeatsU / 3);
+      if (upperRows < 0) upperRows = 0;
       rIndex = 0;
       for (let r = 0; r < upperRows; r++) {
         const rowLetter = rowLetters[rIndex++];
@@ -748,6 +758,12 @@ function App() {
         row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
         upperGrid.push(row);
       }
+      const lastRowLetterU = rowLetters[rIndex++];
+      const lastRowU = [];
+      for (let num = 1; num <= 4; num++) {
+        lastRowU.push({ type: 'seat', label: 'U-' + lastRowLetterU + num });
+      }
+      upperGrid.push(lastRowU);
 
       return { lower: lowerGrid, upper: upperGrid };
     }
@@ -796,43 +812,65 @@ function App() {
     const isSleeper = grid.lower !== undefined;
 
     const renderDeckHtml = (deckGrid, hasDriver = false) => {
+      let driverCell = null;
+      let engineCell = null;
+
+      if (hasDriver) {
+        deckGrid.forEach(row => {
+          row.forEach(cell => {
+            if (cell.type === 'driver') driverCell = cell;
+            if (cell.type === 'engine') engineCell = cell;
+          });
+        });
+      }
+
       return (
         <div className="bus-blueprint">
-          <div className="bus-head">
-            <div className="driver-wheel" title="Driver Cabin"></div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>ENTRANCE</span>
+          <div className="bus-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '2px dashed #2A2A44', marginBottom: '20px' }}>
+            {engineCell ? (
+              <div className="seat status-engine" title="Engine cover" style={{ cursor: 'not-allowed', backgroundColor: '#374151', borderColor: '#1f2937', color: '#9ca3af', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px' }}>
+                ENG
+              </div>
+            ) : (
+              <div style={{ width: '36px' }}></div>
+            )}
+            
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>
+              {hasDriver ? 'ENTRANCE' : 'UPPER DECK FRONT'}
+            </span>
+            
+            {driverCell ? (
+              <div className="seat status-driver" title="Driver Seat" style={{ cursor: 'not-allowed', backgroundColor: '#10B981', borderColor: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  <path d="M2 12h20" />
+                </svg>
+              </div>
+            ) : (
+              <div style={{ width: '36px' }}></div>
+            )}
           </div>
 
           <div className="bus-body-seats">
-            {deckGrid.map((row, rIdx) => (
-              <div className="seat-row" key={rIdx}>
-                {row.map((cell, cIdx) => {
-                  if (cell.type === 'seat') {
-                    return renderSeatCell(schedule, cell.label, seatMap);
-                  } else if (cell.type === 'driver') {
-                    return (
-                      <div className="seat status-driver" key={`driver-${cIdx}`} title="Driver Seat (Right Side)" style={{ cursor: 'not-allowed', backgroundColor: '#10B981', borderColor: '#059669', color: '#fff', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                          <path d="M2 12h20" />
-                        </svg>
-                      </div>
-                    );
-                  } else if (cell.type === 'engine') {
-                    return (
-                      <div className="seat status-engine" key={`engine-${cIdx}`} title="Engine cover" style={{ cursor: 'not-allowed', backgroundColor: '#374151', borderColor: '#1f2937', color: '#9ca3af', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        ENG
-                      </div>
-                    );
-                  } else if (cell.type === 'aisle') {
-                    return <div className="bus-aisle" key={`aisle-${cIdx}`}></div>;
-                  } else {
-                    return <div className="seat seat-placeholder" key={`empty-${cIdx}`}></div>;
-                  }
-                })}
-              </div>
-            ))}
+            {deckGrid.map((row, rIdx) => {
+              if (row.some(cell => cell.type === 'driver' || cell.type === 'engine')) {
+                return null;
+              }
+              return (
+                <div className="seat-row" key={rIdx}>
+                  {row.map((cell, cIdx) => {
+                    if (cell.type === 'seat') {
+                      return renderSeatCell(schedule, cell.label, seatMap);
+                    } else if (cell.type === 'aisle') {
+                      return <div className="bus-aisle" key={`aisle-${cIdx}`}></div>;
+                    } else {
+                      return <div className="seat seat-placeholder" key={`empty-${cIdx}`}></div>;
+                    }
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       );

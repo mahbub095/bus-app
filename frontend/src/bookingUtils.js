@@ -101,27 +101,35 @@ export function getSeatMap(schedule) {
     let upperCount = totalSeats - lowerCount;
 
     // Lower deck
-    let seatsCount = 0;
-    for (let r = 0; r < rowLetters.length; r++) {
-      let row = rowLetters[r];
+    let remainingSeats = lowerCount - 4;
+    let normalRows = Math.ceil(remainingSeats / 3);
+    if (normalRows < 0) normalRows = 0;
+    let rIndex = 0;
+    for (let r = 0; r < normalRows; r++) {
+      let row = rowLetters[rIndex++];
       for (let num = 1; num <= 3; num++) {
-        if (seatsCount >= lowerCount) break;
         seatCodes.push('L-' + row + num);
-        seatsCount++;
       }
-      if (seatsCount >= lowerCount) break;
+    }
+    let lastRowLetter = rowLetters[rIndex++];
+    for (let num = 1; num <= 4; num++) {
+      seatCodes.push('L-' + lastRowLetter + num);
     }
 
     // Upper deck
-    seatsCount = 0;
-    for (let r = 0; r < rowLetters.length; r++) {
-      let row = rowLetters[r];
+    let remainingSeatsU = upperCount - 4;
+    let normalRowsU = Math.ceil(remainingSeatsU / 3);
+    if (normalRowsU < 0) normalRowsU = 0;
+    rIndex = 0;
+    for (let r = 0; r < normalRowsU; r++) {
+      let row = rowLetters[rIndex++];
       for (let num = 1; num <= 3; num++) {
-        if (seatsCount >= upperCount) break;
         seatCodes.push('U-' + row + num);
-        seatsCount++;
       }
-      if (seatsCount >= upperCount) break;
+    }
+    let lastRowLetterU = rowLetters[rIndex++];
+    for (let num = 1; num <= 4; num++) {
+      seatCodes.push('U-' + lastRowLetterU + num);
     }
   } else if (layout === '2+2_last5') {
     let seatsCount = 0;

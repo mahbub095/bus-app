@@ -138,7 +138,7 @@
                     </div>
                 </div>
                 <div class="designer-controls">
-                    <div class="control-section">
+                    <div class="control-section" id="grid-adjustments-container">
                         <h4>Grid Adjustments</h4>
                         <div class="grid-actions">
                             <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerRow()">➕ Add Row</button>
@@ -416,6 +416,7 @@ function openLayoutDesigner() {
     
     document.getElementById('layout-designer-modal').style.display = 'flex';
     renderEditorGrid();
+    renderGridAdjustmentsControls(currentGridState.lower !== undefined);
 }
 
 function closeLayoutDesigner() {
@@ -491,7 +492,9 @@ function generateDefaultGrid(layout, totalSeats) {
             { type: 'empty' },
             { type: 'driver', label: 'Driver' }
         ]);
-        let lowerRows = Math.ceil(lowerCount / 3);
+        let remainingSeats = lowerCount - 4;
+        let lowerRows = Math.ceil(remainingSeats / 3);
+        if (lowerRows < 0) lowerRows = 0;
         let rIndex = 0;
         for (let r = 0; r < lowerRows; r++) {
             const rowLetter = rowLetters[rIndex++];
@@ -502,6 +505,12 @@ function generateDefaultGrid(layout, totalSeats) {
             row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
             lowerGrid.push(row);
         }
+        const lastRowLetter = rowLetters[rIndex++];
+        const lastRow = [];
+        for (let num = 1; num <= 4; num++) {
+            lastRow.push({ type: 'seat', label: 'L-' + lastRowLetter + num });
+        }
+        lowerGrid.push(lastRow);
 
         const upperGrid = [];
         upperGrid.push([
@@ -510,7 +519,9 @@ function generateDefaultGrid(layout, totalSeats) {
             { type: 'empty' },
             { type: 'empty' }
         ]);
-        let upperRows = Math.ceil(upperCount / 3);
+        let remainingSeatsU = upperCount - 4;
+        let upperRows = Math.ceil(remainingSeatsU / 3);
+        if (upperRows < 0) upperRows = 0;
         rIndex = 0;
         for (let r = 0; r < upperRows; r++) {
             const rowLetter = rowLetters[rIndex++];
@@ -521,6 +532,12 @@ function generateDefaultGrid(layout, totalSeats) {
             row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
             upperGrid.push(row);
         }
+        const lastRowLetterU = rowLetters[rIndex++];
+        const lastRowU = [];
+        for (let num = 1; num <= 4; num++) {
+            lastRowU.push({ type: 'seat', label: 'U-' + lastRowLetterU + num });
+        }
+        upperGrid.push(lastRowU);
 
         return { lower: lowerGrid, upper: upperGrid };
     }
@@ -597,7 +614,13 @@ function createDeckDesignerGrid(grid, deckKey, title) {
                 cellDiv.textContent = cell.label;
             } else if (cell.type === 'driver') {
                 cellDiv.classList.add('cell-driver');
-                cellDiv.textContent = 'Driver';
+                cellDiv.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        <path d="M2 12h20" />
+                    </svg>
+                `;
             } else if (cell.type === 'engine') {
                 cellDiv.classList.add('cell-engine');
                 cellDiv.textContent = 'Engine';
@@ -767,17 +790,19 @@ function updateSelectedCellLabel(label) {
     }
 }
 
-function addDesignerRow() {
+function addDesignerRow(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
     if (isSleeper) {
-        const colCountL = currentGridState.lower[0].length;
-        const colCountU = currentGridState.upper[0].length;
-        
-        const newRowL = Array.from({ length: colCountL }, () => ({ type: 'empty' }));
-        const newRowU = Array.from({ length: colCountU }, () => ({ type: 'empty' }));
-        
-        currentGridState.lower.push(newRowL);
-        currentGridState.upper.push(newRowU);
+        if (deck) {
+            const colCount = currentGridState[deck][0].length;
+            const newRow = Array.from({ length: colCount }, () => ({ type: 'empty' }));
+            currentGridState[deck].push(newRow);
+        } else {
+            const colCountL = currentGridState.lower[0].length;
+            const colCountU = currentGridState.upper[0].length;
+            currentGridState.lower.push(Array.from({ length: colCountL }, () => ({ type: 'empty' })));
+            currentGridState.upper.push(Array.from({ length: colCountU }, () => ({ type: 'empty' })));
+        }
     } else {
         const colCount = currentGridState[0].length;
         const newRow = Array.from({ length: colCount }, () => ({ type: 'empty' }));
@@ -786,12 +811,18 @@ function addDesignerRow() {
     renderEditorGrid();
 }
 
-function removeDesignerRow() {
+function removeDesignerRow(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
     if (isSleeper) {
-        if (currentGridState.lower.length > 2) {
-            currentGridState.lower.pop();
-            currentGridState.upper.pop();
+        if (deck) {
+            if (currentGridState[deck].length > 1) {
+                currentGridState[deck].pop();
+            }
+        } else {
+            if (currentGridState.lower.length > 2) {
+                currentGridState.lower.pop();
+                currentGridState.upper.pop();
+            }
         }
     } else {
         if (currentGridState.length > 2) {
@@ -803,23 +834,33 @@ function removeDesignerRow() {
     renderEditorGrid();
 }
 
-function addDesignerColumn() {
+function addDesignerColumn(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
     if (isSleeper) {
-        currentGridState.lower.forEach(row => row.push({ type: 'empty' }));
-        currentGridState.upper.forEach(row => row.push({ type: 'empty' }));
+        if (deck) {
+            currentGridState[deck].forEach(row => row.push({ type: 'empty' }));
+        } else {
+            currentGridState.lower.forEach(row => row.push({ type: 'empty' }));
+            currentGridState.upper.forEach(row => row.push({ type: 'empty' }));
+        }
     } else {
         currentGridState.forEach(row => row.push({ type: 'empty' }));
     }
     renderEditorGrid();
 }
 
-function removeDesignerColumn() {
+function removeDesignerColumn(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
     if (isSleeper) {
-        if (currentGridState.lower[0].length > 2) {
-            currentGridState.lower.forEach(row => row.pop());
-            currentGridState.upper.forEach(row => row.pop());
+        if (deck) {
+            if (currentGridState[deck][0].length > 1) {
+                currentGridState[deck].forEach(row => row.pop());
+            }
+        } else {
+            if (currentGridState.lower[0].length > 2) {
+                currentGridState.lower.forEach(row => row.pop());
+                currentGridState.upper.forEach(row => row.pop());
+            }
         }
     } else {
         if (currentGridState[0].length > 2) {
@@ -829,6 +870,45 @@ function removeDesignerColumn() {
     selectedCellCoords = null;
     document.getElementById('cell-editor-card').style.display = 'none';
     renderEditorGrid();
+}
+
+function renderGridAdjustmentsControls(isSleeper) {
+    const container = document.getElementById('grid-adjustments-container');
+    if (!container) return;
+    
+    if (isSleeper) {
+        container.innerHTML = `
+            <h4>Grid Adjustments</h4>
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 6px;">Lower Deck</div>
+                <div class="grid-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerRow('lower')">➕ Add Row</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerRow('lower')">➖ Remove Row</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerColumn('lower')">➕ Add Col</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerColumn('lower')">➖ Remove Col</button>
+                </div>
+            </div>
+            <div>
+                <div style="font-size: 11px; font-weight: bold; color: var(--primary); text-transform: uppercase; margin-bottom: 6px;">Upper Deck</div>
+                <div class="grid-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerRow('upper')">➕ Add Row</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerRow('upper')">➖ Remove Row</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerColumn('upper')">➕ Add Col</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerColumn('upper')">➖ Remove Col</button>
+                </div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <h4>Grid Adjustments</h4>
+            <div class="grid-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerRow()">➕ Add Row</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerRow()">➖ Remove Row</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addDesignerColumn()">➕ Add Col</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="removeDesignerColumn()">➖ Remove Col</button>
+            </div>
+        `;
+    }
 }
 
 function saveLayoutDesign() {

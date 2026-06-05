@@ -113,29 +113,35 @@ class SeatMapService
             $upperCount = $totalSeats - $lowerCount;
 
             // Lower deck seats:
-            $seatsCount = 0;
-            for ($r = 0; $r < count($rowLetters); $r++) {
-                $row = $rowLetters[$r];
+            $remainingSeats = $lowerCount - 4;
+            $normalRows = (int) ceil($remainingSeats / 3);
+            if ($normalRows < 0) $normalRows = 0;
+            $rIndex = 0;
+            for ($r = 0; $r < $normalRows; $r++) {
+                $row = $rowLetters[$rIndex++];
                 for ($num = 1; $num <= 3; $num++) {
-                    if ($seatsCount >= $lowerCount) {
-                        break 2;
-                    }
                     $seats[] = 'L-' . $row . $num;
-                    $seatsCount++;
                 }
+            }
+            $lastRow = $rowLetters[$rIndex++];
+            for ($num = 1; $num <= 4; $num++) {
+                $seats[] = 'L-' . $lastRow . $num;
             }
 
             // Upper deck seats:
-            $seatsCount = 0;
-            for ($r = 0; $r < count($rowLetters); $r++) {
-                $row = $rowLetters[$r];
+            $remainingSeatsU = $upperCount - 4;
+            $normalRowsU = (int) ceil($remainingSeatsU / 3);
+            if ($normalRowsU < 0) $normalRowsU = 0;
+            $rIndex = 0;
+            for ($r = 0; $r < $normalRowsU; $r++) {
+                $row = $rowLetters[$rIndex++];
                 for ($num = 1; $num <= 3; $num++) {
-                    if ($seatsCount >= $upperCount) {
-                        break 2;
-                    }
                     $seats[] = 'U-' . $row . $num;
-                    $seatsCount++;
                 }
+            }
+            $lastRowU = $rowLetters[$rIndex++];
+            for ($num = 1; $num <= 4; $num++) {
+                $seats[] = 'U-' . $lastRowU . $num;
             }
         } elseif ($layout === '2+2_last5') {
             $seatsCount = 0;

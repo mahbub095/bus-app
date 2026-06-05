@@ -354,7 +354,9 @@
                 { type: 'empty' },
                 { type: 'driver', label: 'Driver' }
             ]);
-            let lowerRows = Math.ceil(lowerCount / 3);
+            let remainingSeats = lowerCount - 4;
+            let lowerRows = Math.ceil(remainingSeats / 3);
+            if (lowerRows < 0) lowerRows = 0;
             let rIndex = 0;
             for (let r = 0; r < lowerRows; r++) {
                 const rowLetter = rowLetters[rIndex++];
@@ -365,6 +367,12 @@
                 row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
                 lowerGrid.push(row);
             }
+            const lastRowLetter = rowLetters[rIndex++];
+            const lastRow = [];
+            for (let num = 1; num <= 4; num++) {
+                lastRow.push({ type: 'seat', label: 'L-' + lastRowLetter + num });
+            }
+            lowerGrid.push(lastRow);
 
             const upperGrid = [];
             upperGrid.push([
@@ -373,7 +381,9 @@
                 { type: 'empty' },
                 { type: 'empty' }
             ]);
-            let upperRows = Math.ceil(upperCount / 3);
+            let remainingSeatsU = upperCount - 4;
+            let upperRows = Math.ceil(remainingSeatsU / 3);
+            if (upperRows < 0) upperRows = 0;
             rIndex = 0;
             for (let r = 0; r < upperRows; r++) {
                 const rowLetter = rowLetters[rIndex++];
@@ -384,6 +394,12 @@
                 row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
                 upperGrid.push(row);
             }
+            const lastRowLetterU = rowLetters[rIndex++];
+            const lastRowU = [];
+            for (let num = 1; num <= 4; num++) {
+                lastRowU.push({ type: 'seat', label: 'U-' + lastRowLetterU + num });
+            }
+            upperGrid.push(lastRowU);
 
             return { lower: lowerGrid, upper: upperGrid };
         }
@@ -432,30 +448,46 @@
         const isSleeper = grid.lower !== undefined;
 
         function renderDeckHtml(deckGrid, hasDriver = false) {
+            let driverCell = null;
+            let engineCell = null;
+
+            if (hasDriver) {
+                deckGrid.forEach(row => {
+                    row.forEach(cell => {
+                        if (cell.type === 'driver') driverCell = cell;
+                        if (cell.type === 'engine') engineCell = cell;
+                    });
+                });
+            }
+
+            let engineHtml = engineCell ? `<div class="seat status-engine" title="Engine cover" style="cursor:not-allowed; background-color:#374151; border-color:#1f2937; color:#9ca3af; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px;">ENG</div>` : `<div style="width:36px;"></div>`;
+            let entranceHtml = `<span style="font-size: 11px; color: var(--text-muted); font-weight: bold;">${hasDriver ? 'ENTRANCE' : 'UPPER DECK FRONT'}</span>`;
+            let driverHtml = driverCell ? `<div class="seat status-driver" title="Driver Seat" style="cursor:not-allowed; background-color:#10B981; border-color:#059669; color:#fff; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    <path d="M2 12h20" />
+                </svg>
+            </div>` : `<div style="width:36px;"></div>`;
+
             let html = `
                 <div class="bus-blueprint">
-                    <div class="bus-head">
-                        <div class="driver-wheel" title="Driver Cabin"></div>
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: bold;">ENTRANCE</span>
+                    <div class="bus-head" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; border-bottom:2px dashed #2A2A44; margin-bottom:20px;">
+                        ${engineHtml}
+                        ${entranceHtml}
+                        ${driverHtml}
                     </div>
                     <div class="bus-body-seats">`;
 
             deckGrid.forEach(row => {
+                if (row.some(cell => cell.type === 'driver' || cell.type === 'engine')) {
+                    return;
+                }
                 html += `<div class="seat-row">`;
                 
                 row.forEach(cell => {
                     if (cell.type === 'seat') {
                         html += renderSeatCell(schedule, cell.label, seatMap);
-                    } else if (cell.type === 'driver') {
-                        html += `<div class="seat status-driver" title="Driver Seat (Right Side)" style="cursor:not-allowed; background-color:#10B981; border-color:#059669; color:#fff; font-size:10px; font-weight:bold; display:flex; align-items:center; justify-content:center;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                <path d="M2 12h20" />
-                            </svg>
-                        </div>`;
-                    } else if (cell.type === 'engine') {
-                        html += `<div class="seat status-engine" title="Engine cover" style="cursor:not-allowed; background-color:#374151; border-color:#1f2937; color:#9ca3af; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center;">ENG</div>`;
                     } else if (cell.type === 'aisle') {
                         html += `<div class="bus-aisle"></div>`;
                     } else {
