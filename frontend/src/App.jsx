@@ -649,39 +649,223 @@ function App() {
     );
   };
 
+  const generateDefaultGrid = (layout, totalSeats) => {
+    const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    
+    if (layout === '2+2_last5') {
+      const grid = [];
+      grid.push([
+        { type: 'engine', label: 'Engine' },
+        { type: 'empty' },
+        { type: 'aisle' },
+        { type: 'empty' },
+        { type: 'driver', label: 'Driver' }
+      ]);
+
+      let remainingSeats = totalSeats - 5;
+      let normalRows = Math.ceil(remainingSeats / 4);
+      
+      let seatsCount = 0;
+      let rIndex = 0;
+      for (let r = 0; r < normalRows; r++) {
+        const rowLetter = rowLetters[rIndex++];
+        const row = [];
+        row.push({ type: 'seat', label: rowLetter + '1' });
+        row.push({ type: 'seat', label: rowLetter + '2' });
+        row.push({ type: 'aisle' });
+        row.push({ type: 'seat', label: rowLetter + '3' });
+        row.push({ type: 'seat', label: rowLetter + '4' });
+        grid.push(row);
+      }
+
+      const lastRowLetter = rowLetters[rIndex++];
+      const lastRow = [];
+      for (let num = 1; num <= 5; num++) {
+        lastRow.push({ type: 'seat', label: lastRowLetter + num });
+      }
+      grid.push(lastRow);
+      
+      return grid;
+    } else if (layout === '1+2') {
+      const grid = [];
+      grid.push([
+        { type: 'engine', label: 'Engine' },
+        { type: 'aisle' },
+        { type: 'empty' },
+        { type: 'driver', label: 'Driver' }
+      ]);
+
+      let normalRows = Math.ceil(totalSeats / 3);
+      let rIndex = 0;
+      for (let r = 0; r < normalRows; r++) {
+        const rowLetter = rowLetters[rIndex++];
+        const row = [];
+        row.push({ type: 'seat', label: rowLetter + '1' });
+        row.push({ type: 'aisle' });
+        row.push({ type: 'seat', label: rowLetter + '2' });
+        row.push({ type: 'seat', label: rowLetter + '3' });
+        grid.push(row);
+      }
+      return grid;
+    } else if (layout === 'sleeper') {
+      const lowerCount = Math.ceil(totalSeats / 2);
+      const upperCount = totalSeats - lowerCount;
+      
+      const lowerGrid = [];
+      lowerGrid.push([
+        { type: 'engine', label: 'Engine' },
+        { type: 'aisle' },
+        { type: 'empty' },
+        { type: 'driver', label: 'Driver' }
+      ]);
+      let lowerRows = Math.ceil(lowerCount / 3);
+      let rIndex = 0;
+      for (let r = 0; r < lowerRows; r++) {
+        const rowLetter = rowLetters[rIndex++];
+        const row = [];
+        row.push({ type: 'seat', label: 'L-' + rowLetter + '1' });
+        row.push({ type: 'aisle' });
+        row.push({ type: 'seat', label: 'L-' + rowLetter + '2' });
+        row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
+        lowerGrid.push(row);
+      }
+
+      const upperGrid = [];
+      upperGrid.push([
+        { type: 'empty' },
+        { type: 'aisle' },
+        { type: 'empty' },
+        { type: 'empty' }
+      ]);
+      let upperRows = Math.ceil(upperCount / 3);
+      rIndex = 0;
+      for (let r = 0; r < upperRows; r++) {
+        const rowLetter = rowLetters[rIndex++];
+        const row = [];
+        row.push({ type: 'seat', label: 'U-' + rowLetter + '1' });
+        row.push({ type: 'aisle' });
+        row.push({ type: 'seat', label: 'U-' + rowLetter + '2' });
+        row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
+        upperGrid.push(row);
+      }
+
+      return { lower: lowerGrid, upper: upperGrid };
+    }
+    
+    const grid = [];
+    grid.push([
+      { type: 'engine', label: 'Engine' },
+      { type: 'empty' },
+      { type: 'aisle' },
+      { type: 'empty' },
+      { type: 'driver', label: 'Driver' }
+    ]);
+    let normalRows = Math.ceil(totalSeats / 4);
+    let rIndex = 0;
+    for (let r = 0; r < normalRows; r++) {
+      const rowLetter = rowLetters[rIndex++];
+      const row = [];
+      row.push({ type: 'seat', label: rowLetter + '1' });
+      row.push({ type: 'seat', label: rowLetter + '2' });
+      row.push({ type: 'aisle' });
+      row.push({ type: 'seat', label: rowLetter + '3' });
+      row.push({ type: 'seat', label: rowLetter + '4' });
+      grid.push(row);
+    }
+    return grid;
+  };
+
   // Render Seat Grid helper
   const renderSeatMap = (schedule) => {
     const seatMap = getSeatMap(schedule);
+    const layout = schedule?.bus?.seat_layout || '2+2';
+    const totalSeats = schedule?.bus?.total_seats || 36;
+    
+    let grid = schedule?.bus?.seat_layout_grid;
+    if (typeof grid === 'string') {
+      try {
+        grid = JSON.parse(grid);
+      } catch (e) {
+        grid = null;
+      }
+    }
+    if (!grid || typeof grid !== 'object') {
+      grid = generateDefaultGrid(layout, totalSeats);
+    }
+
+    const isSleeper = grid.lower !== undefined;
+
+    const renderDeckHtml = (deckGrid, hasDriver = false) => {
+      return (
+        <div className="bus-blueprint">
+          <div className="bus-head">
+            <div className="driver-wheel" title="Driver Cabin"></div>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>ENTRANCE</span>
+          </div>
+
+          <div className="bus-body-seats">
+            {deckGrid.map((row, rIdx) => (
+              <div className="seat-row" key={rIdx}>
+                {row.map((cell, cIdx) => {
+                  if (cell.type === 'seat') {
+                    return renderSeatCell(schedule, cell.label, seatMap);
+                  } else if (cell.type === 'driver') {
+                    return (
+                      <div className="seat status-driver" key={`driver-${cIdx}`} title="Driver Seat (Right Side)" style={{ cursor: 'not-allowed', backgroundColor: '#10B981', borderColor: '#059669', color: '#fff', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                          <path d="M2 12h20" />
+                        </svg>
+                      </div>
+                    );
+                  } else if (cell.type === 'engine') {
+                    return (
+                      <div className="seat status-engine" key={`engine-${cIdx}`} title="Engine cover" style={{ cursor: 'not-allowed', backgroundColor: '#374151', borderColor: '#1f2937', color: '#9ca3af', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        ENG
+                      </div>
+                    );
+                  } else if (cell.type === 'aisle') {
+                    return <div className="bus-aisle" key={`aisle-${cIdx}`}></div>;
+                  } else {
+                    return <div className="seat seat-placeholder" key={`empty-${cIdx}`}></div>;
+                  }
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    if (isSleeper) {
+      return (
+        <>
+          <div className="sleeper-decks">
+            <div>
+              <div className="deck-title">Lower Deck</div>
+              {renderDeckHtml(grid.lower, true)}
+            </div>
+            <div>
+              <div className="deck-title">Upper Deck</div>
+              {renderDeckHtml(grid.upper, false)}
+            </div>
+          </div>
+          <div className="seat-legend" style={{ marginTop: '20px' }}>
+            {['booked_m', 'booked_f', 'blocked', 'available', 'selected', 'sold_m', 'sold_f'].map(key => (
+              <div className="legend-item" key={key}>
+                <div className={`legend-dot status-${key}`}></div>
+                <span>{SEAT_STATUS_LABELS[key]}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      );
+    }
 
     return (
-      <div className="bus-blueprint">
-        <div className="bus-head">
-          <div className="driver-wheel" title="Driver Cabin">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              <path d="M2 12h20" />
-            </svg>
-          </div>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>ENTRANCE</span>
-        </div>
-
-        <div className="bus-body-seats">
-          {SEAT_ROWS.map(row => (
-            <div className="seat-row" key={row}>
-              <div className="seat-pair">
-                {renderSeatCell(schedule, `${row}1`, seatMap)}
-                {renderSeatCell(schedule, `${row}2`, seatMap)}
-              </div>
-              <div className="bus-aisle"></div>
-              <div className="seat-pair">
-                {renderSeatCell(schedule, `${row}3`, seatMap)}
-                {renderSeatCell(schedule, `${row}4`, seatMap)}
-              </div>
-            </div>
-          ))}
-        </div>
-
+      <>
+        {renderDeckHtml(grid, true)}
         <div className="seat-legend">
           {['booked_m', 'booked_f', 'blocked', 'available', 'selected', 'sold_m', 'sold_f'].map(key => (
             <div className="legend-item" key={key}>
@@ -690,7 +874,7 @@ function App() {
             </div>
           ))}
         </div>
-      </div>
+      </>
     );
   };
 

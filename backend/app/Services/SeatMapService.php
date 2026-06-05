@@ -51,13 +51,137 @@ class SeatMapService
         return $codes;
     }
 
+    public function allSeatCodesForBus(?\App\Models\Bus $bus = null): array
+    {
+        if (!$bus) {
+            return $this->allSeatCodes();
+        }
+
+        // Try using the customized seat layout grid first
+        if (!empty($bus->seat_layout_grid) && is_array($bus->seat_layout_grid)) {
+            $grid = $bus->seat_layout_grid;
+            $seats = [];
+            
+            // Check if sleeper layout (nested under lower and upper keys)
+            if (isset($grid['lower']) || isset($grid['upper'])) {
+                foreach (['lower', 'upper'] as $deck) {
+                    if (isset($grid[$deck]) && is_array($grid[$deck])) {
+                        foreach ($grid[$deck] as $row) {
+                            if (is_array($row)) {
+                                foreach ($row as $cell) {
+                                    if (isset($cell['type']) && $cell['type'] === 'seat' && !empty($cell['label'])) {
+                                        $seats[] = $cell['label'];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                foreach ($grid as $row) {
+                    if (is_array($row)) {
+                        foreach ($row as $cell) {
+                            if (isset($cell['type']) && $cell['type'] === 'seat' && !empty($cell['label'])) {
+                                $seats[] = $cell['label'];
+                            }
+                        }
+                    }
+                }
+            }
+            return $seats;
+        }
+
+        $totalSeats = $bus->total_seats;
+        $layout = $bus->seat_layout ?? '2+2';
+        $rowLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+        $seats = [];
+
+        if ($layout === '1+2') {
+            $seatsCount = 0;
+            for ($r = 0; $r < count($rowLetters); $r++) {
+                $row = $rowLetters[$r];
+                for ($num = 1; $num <= 3; $num++) {
+                    if ($seatsCount >= $totalSeats) {
+                        break 2;
+                    }
+                    $seats[] = $row . $num;
+                    $seatsCount++;
+                }
+            }
+        } elseif ($layout === 'sleeper') {
+            $lowerCount = (int) ceil($totalSeats / 2);
+            $upperCount = $totalSeats - $lowerCount;
+
+            // Lower deck seats:
+            $seatsCount = 0;
+            for ($r = 0; $r < count($rowLetters); $r++) {
+                $row = $rowLetters[$r];
+                for ($num = 1; $num <= 3; $num++) {
+                    if ($seatsCount >= $lowerCount) {
+                        break 2;
+                    }
+                    $seats[] = 'L-' . $row . $num;
+                    $seatsCount++;
+                }
+            }
+
+            // Upper deck seats:
+            $seatsCount = 0;
+            for ($r = 0; $r < count($rowLetters); $r++) {
+                $row = $rowLetters[$r];
+                for ($num = 1; $num <= 3; $num++) {
+                    if ($seatsCount >= $upperCount) {
+                        break 2;
+                    }
+                    $seats[] = 'U-' . $row . $num;
+                    $seatsCount++;
+                }
+            }
+        } elseif ($layout === '2+2_last5') {
+            $seatsCount = 0;
+            $remainingSeats = $totalSeats - 5;
+            $normalRows = (int) ceil($remainingSeats / 4);
+
+            for ($r = 0; $r < $normalRows; $r++) {
+                $row = $rowLetters[$r];
+                for ($num = 1; $num <= 4; $num++) {
+                    if ($seatsCount >= $remainingSeats) {
+                        break 2;
+                    }
+                    $seats[] = $row . $num;
+                    $seatsCount++;
+                }
+            }
+
+            $lastRow = $rowLetters[$normalRows];
+            for ($num = 1; $num <= 5; $num++) {
+                $seats[] = $lastRow . $num;
+            }
+        } else {
+            // '2+2' or default fallback
+            $seatsCount = 0;
+            for ($r = 0; $r < count($rowLetters); $r++) {
+                $row = $rowLetters[$r];
+                for ($num = 1; $num <= 4; $num++) {
+                    if ($seatsCount >= $totalSeats) {
+                        break 2;
+                    }
+                    $seats[] = $row . $num;
+                    $seatsCount++;
+                }
+            }
+        }
+
+        return $seats;
+    }
+
     /**
      * @return array<string, string> seat code => status key
      */
     public function buildSeatMap(Schedule $schedule, iterable $bookings): array
     {
         $map = [];
-        foreach ($this->allSeatCodes() as $seat) {
+        foreach ($this->allSeatCodesForBus($schedule->bus) as $seat) {
             $map[$seat] = 'available';
         }
 
@@ -277,9 +401,13 @@ class SeatMapService
         return $status === 'available';
     }
 
-    public function isValidSeatCode(string $seat): bool
+    public function isValidSeatCode(string $seat, ?\App\Models\Bus $bus = null): bool
     {
         $seat = strtoupper(trim($seat));
+
+        if ($bus) {
+            return in_array($seat, $this->allSeatCodesForBus($bus), true);
+        }
 
         return in_array($seat, $this->allSeatCodes(), true);
     }
@@ -299,7 +427,7 @@ class SeatMapService
     {
         $seat = strtoupper(trim($seat));
 
-        if (! $this->isValidSeatCode($seat)) {
+        if (! $this->isValidSeatCode($seat, $schedule->bus)) {
             throw new \InvalidArgumentException('Invalid seat code.');
         }
 

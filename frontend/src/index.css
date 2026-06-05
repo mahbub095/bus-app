@@ -619,6 +619,38 @@ a {
   width: 36px;
 }
 
+.seat-single {
+  display: flex;
+  width: 36px;
+}
+
+.seat-placeholder {
+  width: 36px;
+  height: 36px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sleeper-decks {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.deck-title {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px dashed #2A2A44;
+  padding-bottom: 6px;
+}
+
 /* The Seat Box */
 .seat {
   width: 36px;
@@ -646,6 +678,22 @@ a {
   border-color: #16a34a;
   color: #fff;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
+}
+
+.seat.status-driver {
+  background-color: #10B981 !important;
+  border-color: #059669 !important;
+  color: #fff !important;
+  cursor: not-allowed;
+}
+
+.seat.status-engine {
+  background-color: #374151 !important;
+  border-color: #1f2937 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+  font-size: 9px;
+  font-weight: bold;
 }
 
 .seat.viewing-booking {

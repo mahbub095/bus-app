@@ -55,11 +55,110 @@ export function getSeatMap(schedule) {
   }
   const map = {};
   const booked = schedule?.booked_seats || [];
-  SEAT_ROWS.forEach((row) => {
-    [1, 2, 3, 4].forEach((n) => {
-      const code = `${row}${n}`;
-      map[code] = booked.includes(code) ? 'sold_m' : 'available';
-    });
+  const layout = schedule?.bus?.seat_layout || '2+2';
+  const totalSeats = schedule?.bus?.total_seats || 36;
+  const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+  let seatCodes = [];
+  const customGrid = schedule?.bus?.seat_layout_grid;
+  
+  if (customGrid) {
+    const gridObj = typeof customGrid === 'string' ? JSON.parse(customGrid) : customGrid;
+    if (gridObj.lower || gridObj.upper) {
+      ['lower', 'upper'].forEach(deck => {
+        if (gridObj[deck]) {
+          gridObj[deck].forEach(row => {
+            row.forEach(cell => {
+              if (cell.type === 'seat' && cell.label) {
+                seatCodes.push(cell.label);
+              }
+            });
+          });
+        }
+      });
+    } else {
+      gridObj.forEach(row => {
+        row.forEach(cell => {
+          if (cell.type === 'seat' && cell.label) {
+            seatCodes.push(cell.label);
+          }
+        });
+      });
+    }
+  } else if (layout === '1+2') {
+    let seatsCount = 0;
+    for (let r = 0; r < rowLetters.length; r++) {
+      let row = rowLetters[r];
+      for (let num = 1; num <= 3; num++) {
+        if (seatsCount >= totalSeats) break;
+        seatCodes.push(row + num);
+        seatsCount++;
+      }
+      if (seatsCount >= totalSeats) break;
+    }
+  } else if (layout === 'sleeper') {
+    let lowerCount = Math.ceil(totalSeats / 2);
+    let upperCount = totalSeats - lowerCount;
+
+    // Lower deck
+    let seatsCount = 0;
+    for (let r = 0; r < rowLetters.length; r++) {
+      let row = rowLetters[r];
+      for (let num = 1; num <= 3; num++) {
+        if (seatsCount >= lowerCount) break;
+        seatCodes.push('L-' + row + num);
+        seatsCount++;
+      }
+      if (seatsCount >= lowerCount) break;
+    }
+
+    // Upper deck
+    seatsCount = 0;
+    for (let r = 0; r < rowLetters.length; r++) {
+      let row = rowLetters[r];
+      for (let num = 1; num <= 3; num++) {
+        if (seatsCount >= upperCount) break;
+        seatCodes.push('U-' + row + num);
+        seatsCount++;
+      }
+      if (seatsCount >= upperCount) break;
+    }
+  } else if (layout === '2+2_last5') {
+    let seatsCount = 0;
+    let remainingSeats = totalSeats - 5;
+    let normalRows = Math.ceil(remainingSeats / 4);
+    
+    for (let r = 0; r < normalRows; r++) {
+      let row = rowLetters[r];
+      for (let num = 1; num <= 4; num++) {
+        if (seatsCount >= remainingSeats) break;
+        seatCodes.push(row + num);
+        seatsCount++;
+      }
+      if (seatsCount >= remainingSeats) break;
+    }
+
+    let lastRowLetter = rowLetters[normalRows] || 'Z';
+    for (let num = 1; num <= 5; num++) {
+      seatCodes.push(lastRowLetter + num);
+    }
+  } else {
+    // '2+2'
+    let seatsCount = 0;
+    for (let r = 0; r < rowLetters.length; r++) {
+      let row = rowLetters[r];
+      for (let num = 1; num <= 4; num++) {
+        if (seatsCount >= totalSeats) break;
+        seatCodes.push(row + num);
+        seatsCount++;
+      }
+      if (seatsCount >= totalSeats) break;
+    }
+  }
+
+  seatCodes.forEach(code => {
+    map[code] = booked.includes(code) ? 'sold_m' : 'available';
   });
+
   return map;
 }

@@ -78,6 +78,8 @@ class SearchController extends BaseController
                     'coach_number' => $sched->bus->coach_number,
                     'coach_type' => $sched->bus->coach_type,
                     'total_seats' => $sched->bus->total_seats,
+                    'seat_layout' => $sched->bus->seat_layout,
+                    'seat_layout_grid' => $sched->bus->seat_layout_grid,
                 ],
                 'route' => [
                     'id' => $sched->route->id,

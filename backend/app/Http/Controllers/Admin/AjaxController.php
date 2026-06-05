@@ -164,6 +164,8 @@ class AjaxController extends Controller
                     'coach_number' => $sched->bus->coach_number,
                     'coach_type' => $sched->bus->coach_type,
                     'total_seats' => $sched->bus->total_seats,
+                    'seat_layout' => $sched->bus->seat_layout,
+                    'seat_layout_grid' => $sched->bus->seat_layout_grid,
                 ],
                 'route' => [
                     'id' => $sched->route->id,
@@ -189,7 +191,7 @@ class AjaxController extends Controller
     public function toggleBlockedSeat(Request $request, int $id)
     {
         $request->validate([
-            'seat' => ['required', 'string', 'regex:/^[A-I][1-4]$/i'],
+            'seat' => ['required', 'string', 'regex:/^(L-|U-)?[A-Z][1-4]$/i'],
         ]);
 
         $schedule = Schedule::find($id);

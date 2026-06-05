@@ -835,6 +835,38 @@
             width: 36px;
         }
 
+        .seat-single {
+            display: flex;
+            width: 36px;
+        }
+
+        .seat-placeholder {
+            width: 36px;
+            height: 36px;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .sleeper-decks {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .deck-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed #2A2A44;
+            padding-bottom: 6px;
+        }
+
         .seat {
             width: 36px;
             height: 36px;
