@@ -53,10 +53,6 @@ function formatDate(date) {
 }
 
 // Helper to get today's date in YYYY-MM-DD format
-export function getTodayDateString() {
-    return formatDate(new Date());
-}
-
 // Helper to get a date offset by 'days' in the future
 export function getFutureDateString(days = 1) {
     const date = new Date();
