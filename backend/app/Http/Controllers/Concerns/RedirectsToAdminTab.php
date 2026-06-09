@@ -21,7 +21,6 @@ trait RedirectsToAdminTab
             'routes',
             'schedules',
             'promotions',
-            'sms-config',
             'reports',
             'database',
             'profile',

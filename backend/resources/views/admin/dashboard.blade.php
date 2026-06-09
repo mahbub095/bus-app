@@ -76,12 +76,7 @@
         @include('admin.partials.promotions')
     </section>
 
-    <!-- Sub-tab 8: SMS Config -->
-    <section class="admin-tab-content" id="tab-content-sms-config">
-        @include('admin.partials.sms-config')
-    </section>
-
-    <!-- Sub-tab 9: Reports -->
+    <!-- Sub-tab 8: Reports -->
     <section class="admin-tab-content" id="tab-content-reports">
         @include('admin.partials.reports')
     </section>

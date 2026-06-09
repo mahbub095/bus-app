@@ -96,7 +96,10 @@ class SmsGatewayService
             return 'API key is required.';
         }
 
-        if (! $config->sender_id) {
+        $driver = strtolower(trim((string) ($config->gateway_driver ?: 'custom')));
+        
+        // sms.net.bd doesn't require sender_id
+        if ($driver !== 'smsnetbd' && ! $config->sender_id) {
             return 'Sender ID is required.';
         }
 
@@ -157,6 +160,7 @@ class SmsGatewayService
         try {
             $response = match ($driver) {
                 'bulksmsbd' => $this->sendViaBulkSmsBd($config, $phone, $message),
+                'smsnetbd' => $this->sendViaSmsNetBd($config, $phone, $message),
                 'get_query' => $this->sendViaGetQuery($config, $phone, $message),
                 default => $this->sendViaCustomForm($config, $phone, $message),
             };
@@ -207,6 +211,17 @@ class SmsGatewayService
                 'number' => $phone,
                 'senderid' => $config->sender_id,
                 'message' => $message,
+            ]);
+    }
+
+    protected function sendViaSmsNetBd(SmsConfig $config, string $phone, string $message): \Illuminate\Http\Client\Response
+    {
+        return Http::timeout(15)
+            ->asForm()
+            ->post($config->api_url, [
+                'api_key' => $config->api_key,
+                'msg' => $message,
+                'to' => $phone,
             ]);
     }
 

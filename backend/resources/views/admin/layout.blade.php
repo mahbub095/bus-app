@@ -1376,11 +1376,6 @@
                 <span class="sidebar-nav-icon">🎟️</span>
                 Coupons
             </a>
-            <a href="/admin#sms-config" class="sidebar-nav-item" data-tab="sms-config">
-                <span class="sidebar-nav-icon">📲</span>
-                SMS Gateway
-            </a>
-
             <div class="sidebar-section-label">Reports</div>
             <a href="/admin#reports" class="sidebar-nav-item" data-tab="reports">
                 <span class="sidebar-nav-icon">📊</span>
