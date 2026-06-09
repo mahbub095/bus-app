@@ -4,9 +4,9 @@
  * Uses a branching behavior model (not all users book a ticket) for realistic traffic.
  * Run: k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/load.js
  */
-import { sleep } from 'k6';
 import { ApiClient } from '../utils/api.js';
 import { randomName, randomEmail, randomPhone, getFutureDateString, randomItem } from '../utils/helpers.js';
+import { getBaseUrl, sleepRandom } from '../utils/common.js';
 
 export const options = {
     stages: [
@@ -22,7 +22,7 @@ export const options = {
 };
 
 export default function () {
-    const baseUrl = __ENV.BASE_URL || 'http://sonyabus-app.test';
+    const baseUrl = getBaseUrl();
     const api = new ApiClient(baseUrl);
 
     // 1. Visit landing page: Fetch stations & promotions (100% of users)
@@ -35,7 +35,7 @@ export default function () {
     }
     
     // Pacing: think time (2 to 5 seconds)
-    sleep(2 + Math.random() * 3);
+    sleepRandom(2, 5);
 
     if (!stations || stations.length === 0) return;
 
@@ -51,7 +51,7 @@ export default function () {
     const searchDate = getFutureDateString(dateOffset);
     const schedules = api.searchRoutes(fromStation.id, toStation.id, searchDate);
 
-    sleep(2 + Math.random() * 4);
+    sleepRandom(2, 6);
 
     if (!schedules || schedules.length === 0) return;
 
@@ -64,14 +64,14 @@ export default function () {
         let activePassword = currentPassword;
 
         const token = api.registerUser(name, email, activePassword);
-        sleep(2 + Math.random() * 3);
+        sleepRandom(2, 5);
 
         if (!token) return;
 
         // Fetch auth details & current bookings list
         api.getMe(token);
         api.getMyBookings(token);
-        sleep(2 + Math.random() * 2);
+        sleepRandom(2, 4);
 
         // Update password simulation (10% of users change their password)
         if (Math.random() > 0.90) {
@@ -80,7 +80,7 @@ export default function () {
             if (passUpdated) {
                 activePassword = newPassword;
             }
-            sleep(2);
+            sleepRandom(2, 2);
         }
 
         // --- BRANCH 2: Ticket Booking (25% of all users, which is half of authenticated users) ---
@@ -110,14 +110,14 @@ export default function () {
                     };
 
                     const bookingRes = api.createBooking(token, bookingPayload);
-                    sleep(3 + Math.random() * 3);
+                    sleepRandom(3, 6);
 
                     if (bookingRes.success && bookingRes.data.booking) {
                         bookingId = bookingRes.data.booking.id;
 
                         // View updated bookings list
                         api.getMyBookings(token);
-                        sleep(2);
+                        sleepRandom(2, 2);
                     }
                 }
             }
@@ -126,13 +126,13 @@ export default function () {
         // --- BRANCH 3: Ticket Cancellation (10% of booked users request cancellation) ---
         if (bookingId && Math.random() > 0.90) {
             api.cancelBooking(token, bookingId);
-            sleep(1);
+            sleepRandom(1, 1);
         }
 
         // Logout Cleanup (90% of authenticated users logout to delete tokens)
         if (Math.random() > 0.10) {
             api.logoutUser(token);
-            sleep(1);
+            sleepRandom(1, 1);
         }
     }
 }

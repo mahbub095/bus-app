@@ -3,9 +3,10 @@
  * Simulates administrators logging in and performing back-office tasks (logs, search, seat blocking).
  * Run: k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/admin.js
  */
-import { sleep, fail } from 'k6';
+import { fail } from 'k6';
 import { ApiClient } from '../utils/api.js';
 import { getFutureDateString, randomItem } from '../utils/helpers.js';
+import { getBaseUrl, sleepRandom, ADMIN_CREDENTIALS } from '../utils/common.js';
 
 export const options = {
     vus: 5,
@@ -17,7 +18,7 @@ export const options = {
 };
 
 export default function () {
-    const baseUrl = __ENV.BASE_URL || 'http://sonyabus-app.test';
+    const baseUrl = getBaseUrl();
     const api = new ApiClient(baseUrl);
 
     // 1. Fetch Login page to get initial CSRF Token
@@ -25,26 +26,25 @@ export default function () {
     if (!csrfToken) {
         fail('Unable to parse CSRF token from Admin login page');
     }
-    sleep(1 + Math.random());
+    sleepRandom(1, 2);
 
     // 2. Perform Session Login (with admin@sonyabus.com / password123)
-    const adminEmail = 'admin@sonyabus.com';
-    const adminPassword = 'password123';
+    const { email: adminEmail, password: adminPassword } = ADMIN_CREDENTIALS;
     const dashCsrf = api.adminLogin(adminEmail, adminPassword, csrfToken);
 
     if (!dashCsrf) {
         fail('Admin login failed or failed to retrieve authenticated CSRF token');
     }
-    sleep(2 + Math.random() * 2);
+    sleepRandom(2, 4);
 
     // 3. View Dashboard
     api.adminGetDashboard();
-    sleep(2 + Math.random() * 2);
+    sleepRandom(2, 4);
 
     // 4. Fetch Logs
     api.adminGetBookingLogs();
     api.adminGetCancelLogs();
-    sleep(3 + Math.random() * 3);
+    sleepRandom(3, 6);
 
     // 5. Search coach services as Admin
     // First, fetch stations using public API to know valid IDs
@@ -56,7 +56,7 @@ export default function () {
 
     const searchDate = getFutureDateString(1); // tomorrow
     const schedules = api.adminSearchCoachServices(fromStation.id, toStation.id, searchDate);
-    sleep(2 + Math.random() * 2);
+    sleepRandom(2, 4);
 
     if (!schedules || schedules.length === 0) return;
 
@@ -71,7 +71,7 @@ export default function () {
                 const randomSeat = randomItem(seats);
                 console.log(`[Admin Scenario] Toggling blocked status of seat ${randomSeat} on schedule ${targetSchedule.id}`);
                 api.adminToggleBlockedSeat(targetSchedule.id, randomSeat, dashCsrf);
-                sleep(2);
+                sleepRandom(2, 2);
             }
         }
     }
