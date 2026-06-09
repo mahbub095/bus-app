@@ -98,3 +98,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
     
 });
+
+use App\Http\Controllers\PaymentController;
+
+Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payment.cancel');
+

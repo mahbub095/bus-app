@@ -7,12 +7,15 @@ use App\Models\Schedule;
 use App\Services\SeatMapService;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\Request;
+use App\Services\ZinipayService;
+
 
 class BookingController extends Controller
 {
     public function __construct(
         protected SmsGatewayService $smsGatewayService,
-        protected SeatMapService $seatMapService
+        protected SeatMapService $seatMapService,
+        protected ZinipayService $zinipayService
     ) {
     }
 
@@ -29,7 +32,7 @@ class BookingController extends Controller
             'passenger_gender' => 'nullable|in:M,F',
             'boarding_point' => 'nullable|string|max:150',
             'dropping_point' => 'nullable|string|max:150',
-            'status' => 'sometimes|in:PAID,CANCEL_REQUESTED,CANCELLED',
+            'status' => 'sometimes|in:PENDING,PAID,CANCEL_REQUESTED,CANCELLED',
         ]);
 
         $schedule = Schedule::with('bus')->findOrFail($request->input('schedule_id'));
@@ -41,6 +44,9 @@ class BookingController extends Controller
 
         $boardingPoints = $this->seatMapService->boardingPoints($schedule);
         $droppingPoints = $this->seatMapService->droppingPoints($schedule);
+
+        $isZinipay = strtolower($request->input('payment_method')) === 'zinipay';
+        $status = $request->input('status', $isZinipay ? 'PENDING' : 'PAID');
 
         $booking = Booking::create([
             'schedule_id' => $schedule->id,
@@ -54,8 +60,19 @@ class BookingController extends Controller
             'seat_numbers' => $request->input('seat_numbers'),
             'total_fare' => $totalFare,
             'payment_method' => $request->input('payment_method'),
-            'status' => $request->input('status', 'PAID'),
+            'status' => $status,
         ]);
+
+        $paymentUrl = null;
+        if ($isZinipay && $booking->status === 'PENDING') {
+            $invoice = $this->zinipayService->createInvoice($booking, 'admin');
+            if ($invoice && isset($invoice['payment_url'])) {
+                $booking->update([
+                    'payment_invoice_id' => $invoice['invoice_id']
+                ]);
+                $paymentUrl = $invoice['payment_url'];
+            }
+        }
 
         $smsResult = ['success' => false, 'message' => 'SMS not sent (booking is not PAID).'];
         if ($booking->status === 'PAID') {
@@ -66,8 +83,13 @@ class BookingController extends Controller
             return response()->json([
                 'message' => 'Booking created successfully!',
                 'booking' => $booking,
+                'payment_url' => $paymentUrl,
                 'sms' => $smsResult,
             ], 201);
+        }
+
+        if ($paymentUrl) {
+            return redirect($paymentUrl);
         }
 
         return $this->adminTabRedirect($request)->with('success', 'Booking created successfully!');
@@ -84,7 +106,7 @@ class BookingController extends Controller
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
             'payment_method' => 'required|string|max:50',
-            'status' => 'required|in:PAID,CANCEL_REQUESTED,CANCELLED'
+            'status' => 'required|in:PENDING,PAID,CANCEL_REQUESTED,CANCELLED'
         ]);
 
         $booking->update($request->only([

@@ -53,7 +53,7 @@ return new class extends Migration
         // Optimize PROMOTIONS table
         Schema::table('promotions', function (Blueprint $table) {
             // Already has unique on 'code' but ensure index for lookups
-            if (!Schema::hasIndexes('promotions', ['code'])) {
+            if (!Schema::hasIndex('promotions', 'promotions_code_unique')) {
                 // Code column already has unique constraint which provides index
             }
         });
@@ -70,10 +70,11 @@ return new class extends Migration
         // Optimize PERSONAL_ACCESS_TOKENS for API authentication
         Schema::table('personal_access_tokens', function (Blueprint $table) {
             // Token lookups should be fast
-            if (!Schema::hasIndexes('personal_access_tokens', ['token'])) {
+            if (!Schema::hasIndex('personal_access_tokens', 'personal_access_tokens_token_index')) {
                 $table->index('token');
             }
         });
+
 
         // Add full-text index on stations for search functionality (if using MySQL)
         if (DB::getDriverName() === 'mysql') {

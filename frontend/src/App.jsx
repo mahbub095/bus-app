@@ -291,6 +291,31 @@ function App() {
         clearAuth();
       }
     }
+
+    // Process ZiniPay redirection parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get('payment');
+    const bookingId = urlParams.get('booking_id');
+    const errorMsg = urlParams.get('error');
+
+    if (payment === 'success' && bookingId) {
+      fetch(`${API_BASE}/bookings/public/${bookingId}`)
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Failed to load transaction receipt details.');
+        })
+        .then(data => {
+          setBookingSuccess(data);
+          showToast('Payment completed successfully via ZiniPay!', 'success');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch(err => {
+          showToast(err.message, 'error');
+        });
+    } else if (payment === 'failed' && errorMsg) {
+      showToast(`Payment failed: ${decodeURIComponent(errorMsg)}`, 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
@@ -540,6 +565,10 @@ function App() {
         return;
       }
       if (res.ok) {
+        if (data.payment_url) {
+          window.location.href = data.payment_url;
+          return;
+        }
         setBookingSuccess(data.booking);
         showToast('Ticket reserved successfully!', 'success', 1000);
         // Reset inputs
@@ -1501,7 +1530,7 @@ function App() {
                                             </select>
                                             <label>Payment Method</label>
                                             <div className="payment-toggle-group" style={{ marginBottom: '12px' }}>
-                                              {['bKash', 'Nagad', 'Card'].map(method => (
+                                              {['bKash', 'Nagad', 'Card', 'ZiniPay'].map(method => (
                                                 <div
                                                   key={method}
                                                   className={`payment-toggle ${passengerDetails.paymentMethod === method ? 'active' : ''}`}

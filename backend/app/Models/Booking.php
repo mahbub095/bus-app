@@ -22,6 +22,7 @@ class Booking extends Model
         'seat_numbers',
         'total_fare',
         'payment_method',
+        'payment_invoice_id',
         'status',
     ];
 

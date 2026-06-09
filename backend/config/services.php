@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'zinipay' => [
+        'api_key' => env('ZINIPAY_API_KEY'),
+        'base_url' => env('ZINIPAY_BASE_URL', 'https://api.zinipay.com'),
+    ],
+
 ];
+

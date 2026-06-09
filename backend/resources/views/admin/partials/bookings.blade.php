@@ -140,11 +140,13 @@
                     <option value="Nagad">Nagad</option>
                     <option value="Card">Card</option>
                     <option value="Cash">Cash</option>
+                    <option value="ZiniPay">ZiniPay</option>
                 </select>
             </div>
             <div class="input-group">
                 <label>Status</label>
                 <select name="status" class="coupon-input" required>
+                    <option value="PENDING">PENDING</option>
                     <option value="PAID">PAID</option>
                     <option value="CANCEL_REQUESTED">CANCEL_REQUESTED</option>
                     <option value="CANCELLED">CANCELLED</option>

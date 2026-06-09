@@ -7,6 +7,7 @@ use App\Models\Schedule;
 use App\Models\Promotion;
 use App\Services\SeatMapService;
 use App\Services\SmsGatewayService;
+use App\Services\ZinipayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,8 @@ class BookingController extends BaseController
 {
     public function __construct(
         protected SmsGatewayService $smsGatewayService,
-        protected SeatMapService $seatMapService
+        protected SeatMapService $seatMapService,
+        protected ZinipayService $zinipayService
     ) {
     }
 
@@ -58,7 +60,13 @@ class BookingController extends BaseController
 
         return DB::transaction(function () use ($request, $schedule, $requestedSeats, $promoCode, $user) {
             $activeBookings = Booking::where('schedule_id', $schedule->id)
-                ->where('status', 'PAID')
+                ->where(function ($q) {
+                    $q->where('status', 'PAID')
+                      ->orWhere(function ($qp) {
+                          $qp->where('status', 'PENDING')
+                             ->where('created_at', '>=', now()->subMinutes(10));
+                      });
+                })
                 ->select(SeatMapService::paidBookingColumns())
                 ->lockForUpdate()
                 ->get();
@@ -89,6 +97,8 @@ class BookingController extends BaseController
             $boardingPoints = $this->seatMapService->boardingPoints($schedule);
             $droppingPoints = $this->seatMapService->droppingPoints($schedule);
 
+            $isZinipay = strtolower($request->input('payment_method')) === 'zinipay';
+
             $booking = Booking::create([
                 'user_id' => $user->id,
                 'schedule_id' => $schedule->id,
@@ -102,8 +112,27 @@ class BookingController extends BaseController
                 'seat_numbers' => implode(',', $requestedSeats),
                 'total_fare' => $totalFare,
                 'payment_method' => $request->input('payment_method'),
-                'status' => 'PAID',
+                'status' => $isZinipay ? 'PENDING' : 'PAID',
             ]);
+
+            if ($isZinipay) {
+                $invoice = $this->zinipayService->createInvoice($booking, 'frontend');
+                if ($invoice && isset($invoice['payment_url'])) {
+                    $booking->update([
+                        'payment_invoice_id' => $invoice['invoice_id']
+                    ]);
+                    
+                    return response()->json([
+                        'message' => 'Booking initiated. Redirecting to payment...',
+                        'payment_url' => $invoice['payment_url'],
+                        'booking' => $this->formatBooking($booking, $schedule)
+                    ], 201);
+                } else {
+                    return response()->json([
+                        'message' => 'Failed to create payment invoice with ZiniPay.'
+                    ], 500);
+                }
+            }
 
             $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
 
@@ -226,5 +255,14 @@ class BookingController extends BaseController
             }
         }
         return $bookedSeats;
+    }
+
+    /**
+     * Public ticket view (used on receipt screen).
+     */
+    public function showPublic($id)
+    {
+        $booking = Booking::findOrFail($id);
+        return response()->json($this->formatBooking($booking));
     }
 }

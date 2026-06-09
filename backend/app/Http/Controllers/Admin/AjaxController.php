@@ -203,7 +203,13 @@ class AjaxController extends Controller
         $seat = strtoupper($request->input('seat'));
 
         $bookings = $schedule->bookings()
-            ->where('status', 'PAID')
+            ->where(function ($q) {
+                $q->where('status', 'PAID')
+                  ->orWhere(function ($qp) {
+                      $qp->where('status', 'PENDING')
+                         ->where('created_at', '>=', now()->subMinutes(10));
+                  });
+            })
             ->select(SeatMapService::paidBookingColumns())
             ->get();
 
@@ -215,7 +221,13 @@ class AjaxController extends Controller
 
         $schedule->refresh();
         $bookings = $schedule->bookings()
-            ->where('status', 'PAID')
+            ->where(function ($q) {
+                $q->where('status', 'PAID')
+                  ->orWhere(function ($qp) {
+                      $qp->where('status', 'PENDING')
+                         ->where('created_at', '>=', now()->subMinutes(10));
+                  });
+            })
             ->select(SeatMapService::paidBookingColumns())
             ->get();
 

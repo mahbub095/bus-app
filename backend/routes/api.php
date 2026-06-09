@@ -22,6 +22,11 @@ Route::get('/promotions/check', [PromotionController::class, 'check']);
 Route::post('/auth/register', [UserAuthController::class, 'register']);
 Route::post('/auth/login', [UserAuthController::class, 'login']);
 
+use App\Http\Controllers\PaymentController;
+Route::post('/payment/webhook', [PaymentController::class, 'webhook'])->name('payment.webhook');
+Route::get('/bookings/public/{id}', [BookingController::class, 'showPublic'])->name('bookings.show_public');
+
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated customer API (Laravel Sanctum)
