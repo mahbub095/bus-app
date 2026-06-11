@@ -1394,6 +1394,10 @@
                 <span class="sidebar-nav-icon">🎟️</span>
                 Coupons
             </a>
+            <a href="/admin#users" class="sidebar-nav-item" data-tab="users">
+                <span class="sidebar-nav-icon">👥</span>
+                Users & Roles
+            </a>
             <div class="sidebar-section-label">Reports</div>
             <a href="/admin#reports" class="sidebar-nav-item" data-tab="reports">
                 <span class="sidebar-nav-icon">📊</span>
@@ -1403,6 +1407,7 @@
             <div class="sidebar-spacer"></div>
 
             <div class="sidebar-section-label">System</div>
+            @if(Auth::user()->isSuperAdmin())
             <a href="/admin#site-settings" class="sidebar-nav-item" data-tab="site-settings">
                 <span class="sidebar-nav-icon">⚙️</span>
                 Site Settings
@@ -1411,6 +1416,7 @@
                 <span class="sidebar-nav-icon">🗄️</span>
                 Database Operations
             </a>
+            @endif
             <a href="/admin#profile" class="sidebar-nav-item" data-tab="profile">
                 <span class="sidebar-nav-icon">👤</span>
                 Profile

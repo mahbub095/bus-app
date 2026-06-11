@@ -93,15 +93,20 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/admin/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
     Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
 
-    // System Database Migration Actions
-    Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');
-    Route::post('/admin/system/seed', [SystemController::class, 'seed'])->name('admin.system.seed');
-    Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
+    // System Database Migration Actions & Site Settings & Users role update (restricted to super_admin)
+    Route::middleware('super_admin')->group(function () {
+        Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');
+        Route::post('/admin/system/seed', [SystemController::class, 'seed'])->name('admin.system.seed');
+        Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
 
-    // Site Settings Management
-    Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
-    Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
-    
+        Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
+        Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
+
+        Route::put('/admin/users/{id}', [\App\Http\Controllers\UserController::class, 'update'])->name('admin.users.update');
+    });
+
+    // Users deletion (accessible by both admin & super_admin)
+    Route::delete('/admin/users/{id}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('admin.users.destroy');
 });
 
 use App\Http\Controllers\PaymentController;

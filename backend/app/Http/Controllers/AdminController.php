@@ -9,6 +9,7 @@ use App\Models\Bus;
 use App\Models\Route;
 use App\Models\Promotion;
 use App\Models\SiteSetting;
+use App\Models\User;
 
 class AdminController extends Controller
 {
@@ -60,6 +61,7 @@ class AdminController extends Controller
             ->get();
         $promotions = Promotion::orderBy('code', 'asc')->get();
         $siteSettings = SiteSetting::getAll();
+        $users = User::orderBy('created_at', 'desc')->get();
 
         return view('admin.dashboard', compact(
             'metrics',
@@ -70,7 +72,8 @@ class AdminController extends Controller
             'routes',
             'schedules',
             'promotions',
-            'siteSettings'
+            'siteSettings',
+            'users'
         ));
     }
 

@@ -14,6 +14,15 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Seed Admin User
         User::updateOrCreate(
+            ['email' => 'superadmin@sonyabus.com'],
+            [
+                'name' => 'Sonya Super Admin',
+                'password' => bcrypt('password123'),
+                'role' => 'super_admin',
+            ]
+        );
+
+        User::updateOrCreate(
             ['email' => 'admin@sonyabus.com'],
             [
                 'name' => 'Sonya Admin',

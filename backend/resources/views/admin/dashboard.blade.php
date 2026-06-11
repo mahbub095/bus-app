@@ -76,11 +76,17 @@
         @include('admin.partials.promotions')
     </section>
 
+    <!-- Sub-tab 9: Users & Roles management -->
+    <section class="admin-tab-content" id="tab-content-users">
+        @include('admin.partials.users')
+    </section>
+
     <!-- Sub-tab 8: Reports -->
     <section class="admin-tab-content" id="tab-content-reports">
         @include('admin.partials.reports')
     </section>
 
+    @if(Auth::user()->isSuperAdmin())
     <!-- Sub-tab 10: System Database Migrations & Artisan hooks -->
     <section class="admin-tab-content" id="tab-content-database">
         @include('admin.partials.database')
@@ -90,6 +96,7 @@
     <section class="admin-tab-content" id="tab-content-site-settings">
         @include('admin.partials.site-settings')
     </section>
+    @endif
 
     <!-- Sub-tab 11: Admin profile -->
     <section class="admin-tab-content" id="tab-content-profile">
