@@ -5,7 +5,16 @@ use App\Http\Controllers\API\PromotionController;
 use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\StationController;
 use App\Http\Controllers\API\UserAuthController;
+use App\Http\Controllers\API\SiteSettingsApiController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Site Settings (always accessible, even during maintenance)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/site-settings', [SiteSettingsApiController::class, 'index']);
 
 /*
 |--------------------------------------------------------------------------
@@ -13,11 +22,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/stations', [StationController::class, 'index']);
-Route::get('/search', [SearchController::class, 'search']);
+Route::middleware(\App\Http\Middleware\CheckMaintenanceMode::class)->group(function () {
+    Route::get('/stations', [StationController::class, 'index']);
+    Route::get('/search', [SearchController::class, 'search']);
 
-Route::get('/promotions', [PromotionController::class, 'index']);
-Route::get('/promotions/check', [PromotionController::class, 'check']);
+    Route::get('/promotions', [PromotionController::class, 'index']);
+    Route::get('/promotions/check', [PromotionController::class, 'check']);
+});
 
 Route::post('/auth/register', [UserAuthController::class, 'register']);
 Route::post('/auth/login', [UserAuthController::class, 'login']);
@@ -33,7 +44,7 @@ Route::get('/bookings/public/{id}', [BookingController::class, 'showPublic'])->n
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckMaintenanceMode::class])->group(function () {
     Route::post('/auth/logout', [UserAuthController::class, 'logout']);
     Route::get('/auth/me', [UserAuthController::class, 'me']);
     Route::post('/auth/password', [UserAuthController::class, 'updatePassword']);

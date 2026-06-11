@@ -86,6 +86,11 @@
         @include('admin.partials.database')
     </section>
 
+    <!-- Sub-tab 12: Site Settings (Footer, Title, Favicon, Maintenance, SEO) -->
+    <section class="admin-tab-content" id="tab-content-site-settings">
+        @include('admin.partials.site-settings')
+    </section>
+
     <!-- Sub-tab 11: Admin profile -->
     <section class="admin-tab-content" id="tab-content-profile">
         @include('admin.partials.profile')

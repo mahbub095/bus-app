@@ -1403,8 +1403,12 @@
             <div class="sidebar-spacer"></div>
 
             <div class="sidebar-section-label">System</div>
-            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database" target="_blank" rel="noopener noreferrer">
+            <a href="/admin#site-settings" class="sidebar-nav-item" data-tab="site-settings">
                 <span class="sidebar-nav-icon">⚙️</span>
+                Site Settings
+            </a>
+            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database" target="_blank" rel="noopener noreferrer">
+                <span class="sidebar-nav-icon">🗄️</span>
                 Database Operations
             </a>
             <a href="/admin#profile" class="sidebar-nav-item" data-tab="profile">
@@ -1454,7 +1458,7 @@
     <!-- Footer -->
     <footer class="app-footer">
         <div class="container">
-            <p>© 2026 SonyaBus Enterprise Ltd. All rights reserved. Admin Dashboard Control Portal.</p>
+            <p>{{ $siteSettings['footer_copyright'] ?? '© 2026 SonyaBus Enterprise Ltd. All rights reserved.' }} Admin Dashboard Control Portal.</p>
         </div>
     </footer>
 

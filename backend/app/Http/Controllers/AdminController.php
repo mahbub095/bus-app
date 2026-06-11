@@ -8,6 +8,8 @@ use App\Models\Station;
 use App\Models\Bus;
 use App\Models\Route;
 use App\Models\Promotion;
+use App\Models\SiteSetting;
+
 class AdminController extends Controller
 {
     /**
@@ -57,6 +59,7 @@ class AdminController extends Controller
             ->limit(100)
             ->get();
         $promotions = Promotion::orderBy('code', 'asc')->get();
+        $siteSettings = SiteSetting::getAll();
 
         return view('admin.dashboard', compact(
             'metrics',
@@ -66,7 +69,8 @@ class AdminController extends Controller
             'buses',
             'routes',
             'schedules',
-            'promotions'
+            'promotions',
+            'siteSettings'
         ));
     }
 

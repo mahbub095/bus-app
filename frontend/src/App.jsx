@@ -79,6 +79,9 @@ function App() {
   });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
+  // Site Settings (fetched from admin backend)
+  const [siteSettings, setSiteSettings] = useState(null);
+
   // Min Date constraint for safety
   const minDateStr = new Date().toISOString().split('T')[0];
 
@@ -278,8 +281,87 @@ function App() {
     }
   };
 
+  // Fetch site settings on mount
+  const fetchSiteSettings = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/site-settings`);
+      if (res.ok) {
+        const data = await res.json();
+        setSiteSettings(data);
+      }
+    } catch (err) {
+      // Silently fail — use defaults
+    }
+  };
+
+  // Dynamic document title, favicon, and SEO meta tags
+  useEffect(() => {
+    if (!siteSettings) return;
+
+    // Update document title
+    if (siteSettings.site_title) {
+      document.title = siteSettings.site_title;
+    }
+
+    // Update favicon
+    if (siteSettings.favicon_url) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      // If it's a relative URL, prepend the backend origin
+      link.href = siteSettings.favicon_url.startsWith('http')
+        ? siteSettings.favicon_url
+        : `http://localhost:8000${siteSettings.favicon_url}`;
+    }
+
+    // Update SEO meta tags
+    const seo = siteSettings.seo;
+    if (seo) {
+      const setMeta = (name, content, property = false) => {
+        if (!content) return;
+        const attr = property ? 'property' : 'name';
+        let tag = document.querySelector(`meta[${attr}="${name}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute(attr, name);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      setMeta('description', seo.meta_description);
+      setMeta('keywords', seo.meta_keywords);
+      setMeta('og:title', seo.og_title, true);
+      setMeta('og:description', seo.og_description, true);
+      setMeta('og:image', seo.og_image, true);
+      setMeta('og:type', 'website', true);
+
+      // Google Analytics
+      if (seo.google_analytics_id && !document.getElementById('ga-script')) {
+        const script1 = document.createElement('script');
+        script1.id = 'ga-script';
+        script1.async = true;
+        script1.src = `https://www.googletagmanager.com/gtag/js?id=${seo.google_analytics_id}`;
+        document.head.appendChild(script1);
+
+        const script2 = document.createElement('script');
+        script2.textContent = `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${seo.google_analytics_id}');
+        `;
+        document.head.appendChild(script2);
+      }
+    }
+  }, [siteSettings]);
+
   useEffect(() => {
     fetchStations();
+    fetchSiteSettings();
 
     const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
     const savedUser = localStorage.getItem(AUTH_USER_KEY);
@@ -1021,6 +1103,33 @@ function App() {
       showToast('Unable to download PDF right now. Please try again.', 'error');
     }
   };
+
+  // Maintenance Mode Page
+  if (siteSettings?.maintenance?.enabled) {
+    return (
+      <div className="maintenance-page">
+        <div className="maintenance-content">
+          <div className="maintenance-icon-wrap">
+            <div className="maintenance-icon">🔧</div>
+            <div className="maintenance-pulse"></div>
+          </div>
+          <h1 className="maintenance-title">Under Maintenance</h1>
+          <p className="maintenance-message">
+            {siteSettings.maintenance.message || 'We are currently performing scheduled maintenance. Please check back soon.'}
+          </p>
+          <div className="maintenance-brand">
+            <div className="logo-icon" style={{ width: 32, height: 32, fontSize: 16 }}>S</div>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18 }}>
+              {siteSettings?.footer?.company_name || 'SonyaBus'}
+            </span>
+          </div>
+          <div className="maintenance-footer">
+            {siteSettings?.footer?.copyright || '© 2026 SonyaBus Enterprise Ltd.'}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1988,14 +2097,41 @@ function App() {
       {/* Footer */}
       <footer className="app-footer">
         <div className="container">
-          <div className="footer-logo">SonyaBus Enterprise</div>
+          <div className="footer-logo">{siteSettings?.footer?.company_name || 'SonyaBus Enterprise'}</div>
           <ul className="footer-links">
-            <li onClick={() => { setActiveTab('home'); setBookingSuccess(null); }} style={{ cursor: 'pointer' }}>Search Buses</li>
-            <li onClick={() => setActiveTab('cancel')} style={{ cursor: 'pointer' }}>My Tickets</li>
-            <li onClick={() => setActiveTab('offers')} style={{ cursor: 'pointer' }}>Special Promotions</li>
-            <li onClick={() => authUser ? setActiveTab('profile') : openAuthModal('login', () => setActiveTab('profile'))} style={{ cursor: 'pointer' }}>My Profile</li>
+            {siteSettings?.footer?.links && Array.isArray(siteSettings.footer.links) ? (
+              siteSettings.footer.links.map((link, idx) => (
+                <li
+                  key={idx}
+                  onClick={() => {
+                    if (link.url) {
+                      window.open(link.url, '_blank');
+                    } else if (link.tab) {
+                      if (link.tab === 'home') {
+                        setActiveTab('home');
+                        setBookingSuccess(null);
+                      } else if (link.tab === 'profile') {
+                        authUser ? setActiveTab('profile') : openAuthModal('login', () => setActiveTab('profile'));
+                      } else {
+                        setActiveTab(link.tab);
+                      }
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {link.label}
+                </li>
+              ))
+            ) : (
+              <>
+                <li onClick={() => { setActiveTab('home'); setBookingSuccess(null); }} style={{ cursor: 'pointer' }}>Search Buses</li>
+                <li onClick={() => setActiveTab('cancel')} style={{ cursor: 'pointer' }}>My Tickets</li>
+                <li onClick={() => setActiveTab('offers')} style={{ cursor: 'pointer' }}>Special Promotions</li>
+                <li onClick={() => authUser ? setActiveTab('profile') : openAuthModal('login', () => setActiveTab('profile'))} style={{ cursor: 'pointer' }}>My Profile</li>
+              </>
+            )}
           </ul>
-          <p>© 2026 SonyaBus Enterprise Ltd. All rights reserved. Built with React + Laravel.</p>
+          <p>{siteSettings?.footer?.copyright || '© 2026 SonyaBus Enterprise Ltd. All rights reserved. Built with React + Laravel.'}</p>
         </div>
       </footer>
     </>
