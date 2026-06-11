@@ -816,12 +816,13 @@ a {
 }
 
 .ticket-booking-panel select.ticket-field option {
-  background-color: #ffffff;
-  color: #1f2937;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
 }
 
 .ticket-booking-panel select.ticket-field option:checked {
-  background-color: #4f46e5;
+  background: linear-gradient(var(--primary), var(--primary));
+  background-color: var(--primary);
   color: #ffffff;
 }
 
@@ -1023,6 +1024,18 @@ a {
 
 .coupon-input:focus {
   border-color: var(--border-active);
+}
+
+/* Select option styling with theme colors */
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+select option:checked {
+  background: linear-gradient(var(--primary), var(--primary));
+  background-color: var(--primary);
+  color: #fff;
 }
 
 .btn-coupon-apply {

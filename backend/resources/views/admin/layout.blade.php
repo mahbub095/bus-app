@@ -462,6 +462,23 @@
             border-color: var(--border-active);
         }
 
+        /* Select option styling with theme colors */
+        .coupon-input option {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .coupon-input option:checked {
+            background: linear-gradient(var(--primary), var(--primary));
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .coupon-input option:hover {
+            background: linear-gradient(var(--border-active), var(--border-active));
+            background-color: var(--border-active);
+        }
+
         /* Buttons */
         .btn {
             display: inline-flex;
@@ -1095,12 +1112,13 @@
         }
 
         .ticket-booking-panel select option {
-            background-color: #ffffff;
-            color: #1f2937;
+            background-color: var(--bg-card);
+            color: var(--text-primary);
         }
 
         .ticket-booking-panel select option:checked {
-            background-color: #4f46e5;
+            background: linear-gradient(var(--primary), var(--primary));
+            background-color: var(--primary);
             color: #ffffff;
         }
 
