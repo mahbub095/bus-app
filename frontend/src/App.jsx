@@ -39,7 +39,7 @@ function App() {
     name: '',
     phone: '',
     email: '',
-    paymentMethod: 'Cash'
+    paymentMethod: 'ZiniPay'
   });
   const [boardingPoint, setBoardingPoint] = useState('');
   const [droppingPoint, setDroppingPoint] = useState('');
@@ -687,6 +687,11 @@ function App() {
       showToast('Passenger phone number is required.', 'error');
       return;
     }
+    const cleanPhone = passengerDetails.phone.replace(/\D/g, '');
+    if (cleanPhone.length < 11) {
+      showToast('Passenger phone number must be at least 11 digits.', 'error');
+      return;
+    }
     if (!passengerDetails.email.trim()) {
       showToast('Passenger email is required.', 'error');
       return;
@@ -737,7 +742,7 @@ function App() {
           name: authUser?.name || '',
           phone: '',
           email: authUser?.email || '',
-          paymentMethod: 'Cash'
+          paymentMethod: 'ZiniPay'
         });
         
         // Refresh matching schedules in the background
@@ -1782,7 +1787,7 @@ function App() {
                                             </select>
                                             <label>Payment Method</label>
                                             <div className="payment-toggle-group" style={{ marginBottom: '12px' }}>
-                                              {['Cash', 'ZiniPay'].map(method => (
+                                              {['ZiniPay'].map(method => (
                                                 <div
                                                   key={method}
                                                   className={`payment-toggle ${passengerDetails.paymentMethod === method ? 'active' : ''}`}

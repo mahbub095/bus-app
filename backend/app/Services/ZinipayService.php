@@ -35,16 +35,20 @@ class ZinipayService
             'booking_id' => $booking->id,
             'source' => $source
         ]);
-        $redirectUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $redirectUrl);
 
         $cancelUrl = route('payment.cancel', [
             'booking_id' => $booking->id,
             'source' => $source
         ]);
-        $cancelUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $cancelUrl);
 
         $webhookUrl = route('payment.webhook');
-        $webhookUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $webhookUrl);
+
+        // Only force 127.0.0.1 in local/testing environments to bypass sandbox domain checks
+        if (app()->environment('local', 'testing')) {
+            $redirectUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $redirectUrl);
+            $cancelUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $cancelUrl);
+            $webhookUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $webhookUrl);
+        }
 
         try {
             $response = Http::timeout(15)
