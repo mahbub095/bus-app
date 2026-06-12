@@ -27,7 +27,7 @@ export function formatBdt(amount) {
   return `৳ ${Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function calcPricing(schedule, seatCount, paymentMethod = 'bKash') {
+export function calcPricing(schedule, seatCount, paymentMethod = 'Cash') {
   const fare = Number(schedule?.fare || 0);
   const perSeat = schedule?.pricing || {};
   const applyGateway = String(paymentMethod).toLowerCase() !== 'cash';

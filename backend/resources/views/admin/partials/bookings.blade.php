@@ -49,12 +49,17 @@
                             <td style="font-weight: bold;">{{ $b->seat_numbers }}</td>
                             <td style="color: var(--gold); font-weight: bold;">BDT {{ number_format($b->total_fare) }}</td>
                             <td>
-                                <span class="badge-status {{ $b->status === 'PAID' ? 'paid' : ($b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
+                                <span class="badge-status {{ $b->status === 'PAID' ? 'paid' : ($b->status === 'PENDING' || $b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
                                     {{ $b->status }}
                                 </span>
                             </td>
                             <td>
                                 <div class="action-btns">
+                                    @if($b->status === 'PENDING' && strtolower($b->payment_method) === 'zinipay')
+                                        <a href="{{ route('admin.bookings.pay', $b->id) }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; height: 28px; line-height: 28px; padding: 0 10px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                                            Pay
+                                        </a>
+                                    @endif
                                     <button type="button" class="btn btn-secondary btn-sm"
                                         onclick="setCrudFormMode('booking-form', {
                                             mode: 'edit',
@@ -74,7 +79,7 @@
                                         })">
                                         Edit
                                     </button>
-                                    <form action="{{ route('admin.bookings.destroy', $b->id) }}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');">
+                                    <form action="{{ route('admin.bookings.destroy', $b->id) }}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');" style="display:inline-block;">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-danger btn-sm" type="submit">Delete</button>
@@ -213,12 +218,19 @@
 
         bodyEl.innerHTML = bookings.map((b) => {
             bookingsMap[b.id] = b;
-            const statusClass = b.status === 'PAID' ? 'paid' : (b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
+            const statusClass = b.status === 'PAID' ? 'paid' : (b.status === 'PENDING' || b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
             const routeFrom = b.schedule?.route?.from || 'N/A';
             const routeTo = b.schedule?.route?.to || 'N/A';
             const busName = b.schedule?.bus?.operator_name || 'N/A';
             const updateUrl = getRoute(updateRouteTemplate, b.id);
             const destroyUrl = getRoute(destroyRouteTemplate, b.id);
+
+            const isZinipay = (b.payment_method || '').toLowerCase() === 'zinipay';
+            const payButtonHtml = (b.status === 'PENDING' && isZinipay) ? `
+                <a href="/admin/bookings/${b.id}/pay" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; height: 28px; line-height: 28px; padding: 0 10px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                    Pay
+                </a>
+            ` : '';
 
             return `
                 <tr>
@@ -244,10 +256,11 @@
                     </td>
                     <td>
                         <div class="action-btns">
+                            ${payButtonHtml}
                             <button type="button" class="btn btn-secondary btn-sm edit-booking-btn" data-booking-id="${b.id}">
                                 Edit
                             </button>
-                            <form action="${escapeHtml(destroyUrl)}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');">
+                            <form action="${escapeHtml(destroyUrl)}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');" style="display:inline-block;">
                                 <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                                 <input type="hidden" name="_method" value="DELETE">
                                 <button class="btn btn-danger btn-sm" type="submit">Delete</button>

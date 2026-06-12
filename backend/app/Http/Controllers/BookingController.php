@@ -166,4 +166,22 @@ class BookingController extends Controller
 
         return $this->adminTabRedirect($request)->with('success', 'Cancellation request approved successfully. Booking is now cancelled.');
     }
+
+    public function payAdmin($id)
+    {
+        $booking = Booking::findOrFail($id);
+        if ($booking->status !== 'PENDING' || strtolower($booking->payment_method) !== 'zinipay') {
+            return redirect()->route('admin.dashboard')->withErrors(['message' => 'Invalid booking status or payment method.']);
+        }
+
+        $invoice = $this->zinipayService->createInvoice($booking, 'admin');
+        if ($invoice && isset($invoice['payment_url'])) {
+            $booking->update([
+                'payment_invoice_id' => $invoice['invoice_id']
+            ]);
+            return redirect($invoice['payment_url']);
+        }
+
+        return redirect()->route('admin.dashboard')->withErrors(['message' => 'Failed to initiate ZiniPay payment.']);
+    }
 }

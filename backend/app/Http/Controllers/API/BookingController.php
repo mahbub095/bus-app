@@ -125,6 +125,7 @@ class BookingController extends BaseController
                     return response()->json([
                         'message' => 'Booking initiated. Redirecting to payment...',
                         'payment_url' => $invoice['payment_url'],
+                        'invoice_id' => $invoice['invoice_id'],
                         'booking' => $this->formatBooking($booking, $schedule)
                     ], 201);
                 } else {
@@ -182,6 +183,15 @@ class BookingController extends BaseController
             ], 403);
         }
 
+        if ($booking->status === 'PENDING') {
+            $booking->update(['status' => 'CANCELLED']);
+            return response()->json([
+                'message' => 'Ticket booking cancelled.',
+                'booking_id' => $booking->id,
+                'status' => 'CANCELLED',
+            ]);
+        }
+
         if ($booking->status === 'CANCELLED') {
             return response()->json([
                 'message' => 'Ticket is already cancelled.',
@@ -222,6 +232,7 @@ class BookingController extends BaseController
             'seat_numbers' => $booking->seat_numbers,
             'total_fare' => floatval($booking->total_fare),
             'payment_method' => $booking->payment_method,
+            'payment_invoice_id' => $booking->payment_invoice_id,
             'status' => $booking->status,
             'created_at' => $booking->created_at->toIso8601String(),
             'schedule' => [

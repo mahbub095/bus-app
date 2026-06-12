@@ -8,6 +8,7 @@ import {
   getSeatMap,
   isSeatSelectable,
 } from './bookingUtils';
+import { ziniPayVerifyPayment } from './zinipay';
 
 const API_BASE = 'http://localhost:8000/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
@@ -38,7 +39,7 @@ function App() {
     name: '',
     phone: '',
     email: '',
-    paymentMethod: 'bKash'
+    paymentMethod: 'Cash'
   });
   const [boardingPoint, setBoardingPoint] = useState('');
   const [droppingPoint, setDroppingPoint] = useState('');
@@ -46,6 +47,7 @@ function App() {
   const [seatMapLastSync, setSeatMapLastSync] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState(null);
 
   // Cancellation States
   const [cancelBookings, setCancelBookings] = useState([]);
@@ -379,8 +381,90 @@ function App() {
     const payment = urlParams.get('payment');
     const bookingId = urlParams.get('booking_id');
     const errorMsg = urlParams.get('error');
+    const invoiceId = urlParams.get('invoiceId');
 
-    if (payment === 'success' && bookingId) {
+    if (invoiceId) {
+      const verifyZiniPayInvoice = async (invId) => {
+        setVerificationStatus({
+          loading: true,
+          invoiceId: invId,
+          success: false,
+          message: '',
+          transactionId: '',
+          bookingId: null
+        });
+
+        try {
+          const apiKey = import.meta.env.VITE_ZINIPAY_API_KEY || "90e76eb23cdf5ec69fe8820a5007b8713844626087a8fb86";
+          const response = await ziniPayVerifyPayment(invId, apiKey);
+          console.log("response from verify payment:", response);
+
+          if (response.status === "COMPLETED") {
+            // Call backend webhook to update status in DB securely
+            const updateRes = await fetch(`${API_BASE}/payment/webhook`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                invoice_id: invId,
+                status: 'COMPLETED'
+              })
+            });
+
+            if (updateRes.ok) {
+              const updateData = await updateRes.json();
+              const bId = updateData.booking?.id || null;
+
+              setVerificationStatus({
+                loading: false,
+                invoiceId: invId,
+                success: true,
+                message: 'Verified successfully!',
+                transactionId: response.transaction_id || response.payment_id || 'N/A',
+                bookingId: bId
+              });
+              showToast('Payment verified successfully!', 'success');
+            } else {
+              setVerificationStatus({
+                loading: false,
+                invoiceId: invId,
+                success: false,
+                message: 'Payment verified, but failed to update local database.',
+                transactionId: '',
+                bookingId: null
+              });
+              showToast('Failed to update booking status.', 'error');
+            }
+          } else {
+            setVerificationStatus({
+              loading: false,
+              invoiceId: invId,
+              success: false,
+              message: response.message || `Payment status: ${response.status}`,
+              transactionId: '',
+              bookingId: null
+            });
+            showToast('Payment verification failed.', 'error');
+          }
+        } catch (err) {
+          console.error("ZiniPay verification failed", err);
+          setVerificationStatus({
+            loading: false,
+            invoiceId: invId,
+            success: false,
+            message: 'Error communicating with ZiniPay.',
+            transactionId: '',
+            bookingId: null
+          });
+          showToast('Verification failed.', 'error');
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      };
+
+      verifyZiniPayInvoice(invoiceId);
+    } else if (payment === 'success' && bookingId) {
       fetch(`${API_BASE}/bookings/public/${bookingId}`)
         .then(res => {
           if (res.ok) return res.json();
@@ -537,14 +621,6 @@ function App() {
         if (!updated) return;
 
         setSelectedSchedule(updated);
-        setSelectedSeats(prev => {
-          const map = getSeatMap(updated);
-          const next = prev.filter(seat => isSeatSelectable(map[seat]));
-          if (next.length < prev.length) {
-            window.alert('One or more selected seats were just booked by another user. Please choose again.');
-          }
-          return next;
-        });
         setSeatMapLastSync(new Date());
       } catch {
         // ignore transient network errors during polling
@@ -661,7 +737,7 @@ function App() {
           name: authUser?.name || '',
           phone: '',
           email: authUser?.email || '',
-          paymentMethod: 'bKash'
+          paymentMethod: 'Cash'
         });
         
         // Refresh matching schedules in the background
@@ -1218,6 +1294,73 @@ function App() {
 
       {/* Content */}
       <main style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {verificationStatus && (
+          <div className="container" style={{ marginTop: '20px' }}>
+            <div id="verification-status" className="verification-status-box" style={{
+              background: 'rgba(30, 30, 56, 0.85)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              padding: '24px',
+              color: '#fff',
+              textAlign: 'center',
+              marginBottom: '20px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
+            }}>
+              {verificationStatus.loading ? (
+                <div>
+                  <div className="loading-spinner" style={{ margin: '10px auto' }}></div>
+                  <p style={{ fontSize: '15px' }}>Verifying payment for Invoice ID: <strong>{verificationStatus.invoiceId}</strong>...</p>
+                </div>
+              ) : (
+                <div>
+                  {verificationStatus.success ? (
+                    <div>
+                      <div style={{ fontSize: '32px', marginBottom: '10px' }}>✅</div>
+                      <p style={{ fontSize: '18px', fontWeight: 'bold' }}>Payment Verified Successfully!</p>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px' }}>
+                        Invoice ID: <strong>{verificationStatus.invoiceId}</strong><br/>
+                        Transaction ID: <strong>{verificationStatus.transactionId}</strong>
+                      </p>
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ marginTop: '20px', padding: '10px 24px', fontSize: '13px', fontWeight: 'bold' }}
+                        onClick={() => {
+                          const bid = verificationStatus.bookingId;
+                          setVerificationStatus(null);
+                          if (bid) {
+                            fetch(`${API_BASE}/bookings/public/${bid}`)
+                              .then(res => res.json())
+                              .then(data => {
+                                setBookingSuccess(data);
+                              })
+                              .catch(() => {});
+                          }
+                        }}
+                      >
+                        View Boarding Pass
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '32px', marginBottom: '10px' }}>❌</div>
+                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F87171' }}>Payment Verification Failed</p>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px' }}>{verificationStatus.message}</p>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ marginTop: '20px', padding: '10px 24px', fontSize: '13px', fontWeight: 'bold' }}
+                        onClick={() => setVerificationStatus(null)}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* VIEW: HOME (BOOKING Portal) */}
         {activeTab === 'home' && (
@@ -1639,7 +1782,7 @@ function App() {
                                             </select>
                                             <label>Payment Method</label>
                                             <div className="payment-toggle-group" style={{ marginBottom: '12px' }}>
-                                              {['bKash', 'Nagad', 'Card', 'ZiniPay'].map(method => (
+                                              {['Cash', 'ZiniPay'].map(method => (
                                                 <div
                                                   key={method}
                                                   className={`payment-toggle ${passengerDetails.paymentMethod === method ? 'active' : ''}`}

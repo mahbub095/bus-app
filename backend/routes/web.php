@@ -74,6 +74,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/admin/bookings', [BookingController::class, 'store'])->name('admin.bookings.store');
         Route::put('/admin/bookings/{id}', [BookingController::class, 'update'])->name('admin.bookings.update');
         Route::delete('/admin/bookings/{id}', [BookingController::class, 'destroy'])->name('admin.bookings.destroy');
+        Route::get('/admin/bookings/{id}/pay', [BookingController::class, 'payAdmin'])->name('admin.bookings.pay');
     });
 
     // Cancel requests

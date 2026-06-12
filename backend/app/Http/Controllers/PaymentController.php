@@ -111,7 +111,14 @@ class PaymentController extends Controller
             // Send SMS
             $this->smsGatewayService->sendBookingVerification($booking);
 
-            return response()->json(['message' => 'Payment verified and booking completed'], 200);
+            return response()->json([
+                'message' => 'Payment verified and booking completed',
+                'booking' => [
+                    'id' => $booking->id,
+                    'pnr' => 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
+                    'status' => 'PAID'
+                ]
+            ], 200);
         }
 
         return response()->json(['message' => 'Payment status is: ' . $verifiedStatus], 200);

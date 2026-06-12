@@ -28,6 +28,7 @@ class SeatMapService
             'total_fare',
             'boarding_point',
             'dropping_point',
+            'created_at',
         ];
     }
 

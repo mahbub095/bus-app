@@ -35,13 +35,16 @@ class ZinipayService
             'booking_id' => $booking->id,
             'source' => $source
         ]);
+        $redirectUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $redirectUrl);
 
         $cancelUrl = route('payment.cancel', [
             'booking_id' => $booking->id,
             'source' => $source
         ]);
+        $cancelUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $cancelUrl);
 
         $webhookUrl = route('payment.webhook');
+        $webhookUrl = preg_replace('/:\/\/[^\/:]+/', '://127.0.0.1', $webhookUrl);
 
         try {
             $response = Http::timeout(15)
@@ -51,16 +54,16 @@ class ZinipayService
                     'Accept' => 'application/json',
                 ])
                 ->post("{$this->baseUrl}/v1/payment/create", [
-                    'amount' => (float) $booking->total_fare,
                     'cus_name' => $booking->passenger_name,
                     'cus_email' => $booking->passenger_email,
+                    'amount' => (float) $booking->total_fare,
+                    'metadata' => [
+                        'booking_id' => $booking->id,
+                        'source' => $source
+                    ],
                     'redirect_url' => $redirectUrl,
                     'cancel_url' => $cancelUrl,
                     'webhook_url' => $webhookUrl,
-                    'metadata' => json_encode([
-                        'booking_id' => $booking->id,
-                        'source' => $source
-                    ])
                 ]);
 
             if ($response->successful()) {
