@@ -24,10 +24,11 @@ trait RedirectsToAdminTab
             'reports',
             'database',
             'profile',
+            'users',
         ];
 
         $tab = $request->input('admin_tab', 'coach-services');
-        if (! in_array($tab, $allowed, true)) {
+        if (!in_array($tab, $allowed, true)) {
             $tab = 'coach-services';
         }
 
