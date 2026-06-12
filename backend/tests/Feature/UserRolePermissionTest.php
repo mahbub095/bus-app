@@ -73,7 +73,10 @@ class UserRolePermissionTest extends TestCase
         $response->assertRedirect('/admin');
         $response->assertSessionHasErrors();
 
-        // Admin tries to update another user's details/role
+        // Admin tries to update another user's details/role without users menu permission
+        $this->admin->menu_permissions = ['coach-services'];
+        $this->admin->save();
+
         $response = $this->actingAs($this->admin)
             ->put('/admin/users/' . $this->user->id, [
                 'name' => 'Updated Customer',
@@ -126,5 +129,112 @@ class UserRolePermissionTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHasErrors();
         $this->assertNotNull(User::find($this->admin->id));
+    }
+
+    /**
+     * Test admin cannot delete super_admin or admin users.
+     */
+    public function test_admin_cannot_delete_higher_or_equal_roles(): void
+    {
+        // Admin tries to delete Super Admin
+        $response = $this->actingAs($this->admin)
+            ->delete('/admin/users/' . $this->superAdmin->id);
+        $response->assertRedirect();
+        $response->assertSessionHasErrors();
+        $this->assertNotNull(User::find($this->superAdmin->id));
+
+        // Let's create another admin
+        $anotherAdmin = User::create([
+            'name' => 'Another Admin',
+            'email' => 'anotheradmin@test.com',
+            'password' => bcrypt('password123'),
+            'role' => 'admin',
+        ]);
+
+        // Admin tries to delete another Admin
+        $response = $this->actingAs($this->admin)
+            ->delete('/admin/users/' . $anotherAdmin->id);
+        $response->assertRedirect();
+        $response->assertSessionHasErrors();
+        $this->assertNotNull(User::find($anotherAdmin->id));
+    }
+
+    /**
+     * Test admin with users permission can update user details but cannot change user role.
+     */
+    public function test_admin_cannot_change_user_role(): void
+    {
+        $this->admin->menu_permissions = ['users'];
+        $this->admin->save();
+
+        // Admin tries to change user's role to admin
+        $response = $this->actingAs($this->admin)
+            ->put('/admin/users/' . $this->user->id, [
+                'name' => 'Updated Customer Name',
+                'email' => 'customer@test.com',
+                'role' => 'admin',
+            ]);
+        
+        $response->assertRedirect();
+        $this->assertEquals('user', $this->user->fresh()->role); // role did NOT change
+        $this->assertEquals('Updated Customer Name', $this->user->fresh()->name); // name did change
+    }
+
+    /**
+     * Test admin can assign menu permissions to users.
+     */
+    public function test_admin_can_assign_menu_permissions(): void
+    {
+        $this->admin->menu_permissions = ['users'];
+        $this->admin->save();
+
+        $response = $this->actingAs($this->admin)
+            ->put('/admin/users/' . $this->user->id, [
+                'name' => 'Test Customer',
+                'email' => 'customer@test.com',
+                'menu_permissions' => ['bookings', 'stations']
+            ]);
+
+        $response->assertRedirect();
+        $this->assertEquals(['bookings', 'stations'], $this->user->fresh()->menu_permissions);
+    }
+
+    /**
+     * Test existing admins/super_admins roles cannot be modified even by super admin.
+     */
+    public function test_admin_and_super_admin_roles_are_locked(): void
+    {
+        // Super Admin tries to demote another admin
+        $response = $this->actingAs($this->superAdmin)
+            ->put('/admin/users/' . $this->admin->id, [
+                'name' => 'Test Admin',
+                'email' => 'admin@test.com',
+                'role' => 'user',
+            ]);
+
+        $response->assertRedirect();
+        $this->assertEquals('admin', $this->admin->fresh()->role); // remains admin
+    }
+
+    /**
+     * Test route protection based on menu permissions.
+     */
+    public function test_menu_permission_route_protection(): void
+    {
+        // Admin with only stations permission tries to access bookings logs API
+        $this->admin->menu_permissions = ['stations'];
+        $this->admin->save();
+
+        $response = $this->actingAs($this->admin)
+            ->get('/admin/api/bookings/logs');
+        $response->assertStatus(403); // Forbidden
+
+        // Admin with bookings permission can access it
+        $this->admin->menu_permissions = ['bookings'];
+        $this->admin->save();
+
+        $response = $this->actingAs($this->admin)
+            ->get('/admin/api/bookings/logs');
+        $response->assertStatus(200);
     }
 }

@@ -1,4 +1,4 @@
-<div class="admin-sections-layout" style="grid-column: 1 / -1; {{ Auth::user()->isSuperAdmin() ? '' : 'grid-template-columns: 1fr;' }}">
+<div class="admin-sections-layout" style="grid-column: 1 / -1; {{ Auth::user()->isAdmin() ? '' : 'grid-template-columns: 1fr;' }}">
 
     <div class="admin-panel">
         <h3 class="admin-panel-title">Registered User Accounts</h3>
@@ -32,29 +32,27 @@
                             <td style="color: var(--text-secondary)">{{ $u->created_at->format('M d, Y') }}</td>
                             <td>
                                 <div class="action-btns">
-                                    @if(Auth::user()->isSuperAdmin())
+                                    @if(Auth::user()->isAdmin())
                                         <button type="button" class="btn btn-secondary btn-sm"
-                                            onclick="setCrudFormMode('user-form', {
-                                                mode: 'edit',
+                                            onclick="editUser({
                                                 id: {{ $u->id }},
-                                                action: '{{ route('admin.users.update', $u->id) }}',
-                                                title: 'Edit User Account #{{ $u->id }}',
-                                                submitLabel: 'Update User details',
-                                                fields: {
-                                                    name: {{ json_encode($u->name) }},
-                                                    email: {{ json_encode($u->email) }},
-                                                    role: {{ json_encode($u->role) }}
-                                                }
+                                                name: {{ json_encode($u->name) }},
+                                                email: {{ json_encode($u->email) }},
+                                                role: {{ json_encode($u->role) }},
+                                                menu_permissions: {{ json_encode($u->menu_permissions ?? []) }},
+                                                action: '{{ route('admin.users.update', $u->id) }}'
                                             })">
                                             Edit
                                         </button>
                                     @endif
                                     @if(Auth::id() !== $u->id)
-                                        <form action="{{ route('admin.users.destroy', $u->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user account? This cannot be undone.');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
-                                        </form>
+                                        @if(Auth::user()->isSuperAdmin() || !in_array($u->role, ['super_admin', 'admin']))
+                                            <form action="{{ route('admin.users.destroy', $u->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user account? This cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                                            </form>
+                                        @endif
                                     @else
                                         <span style="color: var(--text-muted); font-size: 11px;">(Active Account)</span>
                                     @endif
@@ -71,11 +69,11 @@
         </div>
     </div>
 
-    @if(Auth::user()->isSuperAdmin())
+    @if(Auth::user()->isAdmin())
         <div class="booking-form-sidebar" id="user-sidebar-container">
-            <h3 class="booking-summary-title" id="user-form-title">Edit User Role</h3>
+            <h3 class="booking-summary-title" id="user-form-title">Edit User Role & Permissions</h3>
             <div class="notice-info-box" style="margin-bottom: 15px; padding: 10px; font-size: 11px;">
-                As a Super Admin, you can promote accounts to admin or demote them to regular users.
+                Update account details, role, and menu-based dashboard permissions.
             </div>
             <form class="booking-form-fields" id="user-form" action="" method="POST">
                 @csrf
@@ -92,13 +90,59 @@
                     <input type="email" name="email" class="coupon-input" placeholder="Email Address" required>
                 </div>
                 
-                <div class="input-group">
+                <div class="input-group" id="role-select-container">
                     <label>Assigned Role</label>
-                    <select name="role" class="coupon-input" required>
+                    <select name="role" id="user-role-select" class="coupon-input" required>
                         <option value="user">User (Frontend Only)</option>
                         <option value="admin">Admin (Staff dashboard)</option>
                         <option value="super_admin">Super Admin (Full access)</option>
                     </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Menu Permissions</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; background: #121223; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="coach-services" style="accent-color: var(--primary);">
+                            Coach Services
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="bookings" style="accent-color: var(--primary);">
+                            Bookings Logs
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="cancel-requests" style="accent-color: var(--primary);">
+                            Cancel Requests
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="stations" style="accent-color: var(--primary);">
+                            Stations
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="buses" style="accent-color: var(--primary);">
+                            Coaches
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="routes" style="accent-color: var(--primary);">
+                            Routes
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="schedules" style="accent-color: var(--primary);">
+                            Schedules
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="promotions" style="accent-color: var(--primary);">
+                            Coupons
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="users" style="accent-color: var(--primary);">
+                            Users & Roles
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
+                            <input type="checkbox" name="menu_permissions[]" value="reports" style="accent-color: var(--primary);">
+                            Ticket Reports
+                        </label>
+                    </div>
                 </div>
                 
                 <button class="btn btn-primary" id="user-form-submit" type="submit" style="height: 42px; margin-top: 10px;">
@@ -112,12 +156,62 @@
         </div>
 
         <script>
+            function editUser(config) {
+                setCrudFormMode('user-form', {
+                    mode: 'edit',
+                    id: config.id,
+                    action: config.action,
+                    title: 'Edit User Account #' + config.id,
+                    submitLabel: 'Update User details',
+                    fields: {
+                        name: config.name,
+                        email: config.email,
+                        role: config.role
+                    }
+                });
+
+                const form = document.getElementById('user-form');
+                if (!form) return;
+
+                // Set menu permissions checkboxes
+                const permissions = config.menu_permissions || [];
+                form.querySelectorAll('input[name="menu_permissions[]"]').forEach(cb => {
+                    cb.checked = permissions.includes(cb.value);
+                });
+
+                const roleSelect = document.getElementById('user-role-select');
+                const isSuperAdmin = {{ Auth::user()->isSuperAdmin() ? 'true' : 'false' }};
+                const targetRole = config.role;
+
+                // Disable role select if target user is super_admin/admin OR the logged in user is not super_admin
+                if (targetRole === 'super_admin' || targetRole === 'admin' || !isSuperAdmin) {
+                    roleSelect.disabled = true;
+                    roleSelect.setAttribute('title', 'This role is not editable');
+                    // Add a hidden input to submit the role value
+                    let hiddenRole = form.querySelector('input[type="hidden"][name="role"]');
+                    if (!hiddenRole) {
+                        hiddenRole = document.createElement('input');
+                        hiddenRole.type = 'hidden';
+                        hiddenRole.name = 'role';
+                        form.appendChild(hiddenRole);
+                    }
+                    hiddenRole.value = targetRole;
+                } else {
+                    roleSelect.disabled = false;
+                    roleSelect.removeAttribute('title');
+                    const hiddenRole = form.querySelector('input[type="hidden"][name="role"]');
+                    if (hiddenRole) {
+                        hiddenRole.remove();
+                    }
+                }
+            }
+
             function resetUserForm() {
                 const form = document.getElementById('user-form');
                 if (!form) return;
                 form.reset();
                 const titleEl = document.getElementById('user-form-title');
-                if (titleEl) titleEl.textContent = 'Edit User Role';
+                if (titleEl) titleEl.textContent = 'Edit User Role & Permissions';
                 const submitBtn = document.getElementById('user-form-submit');
                 if (submitBtn) submitBtn.textContent = 'Update User details';
                 const cancelBtn = document.getElementById('user-form-cancel');
@@ -125,6 +219,22 @@
                 form.action = '';
                 const idInput = form.querySelector('[name="_edit_id"]');
                 if (idInput) idInput.value = '';
+
+                // Uncheck checkboxes
+                form.querySelectorAll('input[name="menu_permissions[]"]').forEach(cb => {
+                    cb.checked = false;
+                });
+
+                // Reset role dropdown state
+                const roleSelect = document.getElementById('user-role-select');
+                if (roleSelect) {
+                    roleSelect.disabled = false;
+                    roleSelect.removeAttribute('title');
+                }
+                const hiddenRole = form.querySelector('input[type="hidden"][name="role"]');
+                if (hiddenRole) {
+                    hiddenRole.remove();
+                }
             }
         </script>
     @endif

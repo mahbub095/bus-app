@@ -19,6 +19,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'menu_permissions',
     ];
 
     protected $hidden = [
@@ -31,6 +32,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'menu_permissions' => 'array',
         ];
     }
 
@@ -52,5 +54,22 @@ class User extends Authenticatable
     public function isUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    public function hasMenuPermission(string $menu): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (!$this->isAdmin()) {
+            return false;
+        }
+
+        if (is_null($this->menu_permissions)) {
+            return true;
+        }
+
+        return in_array($menu, $this->menu_permissions);
     }
 }
