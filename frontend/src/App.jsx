@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import {
-  SEAT_ROWS,
-  SEAT_STATUS_LABELS,
-  calcPricing,
-  formatBdt,
-  getSeatMap,
-  isSeatSelectable,
-} from './bookingUtils';
 import { ziniPayVerifyPayment } from './zinipay';
+
+// Subcomponents
+import Toast from './components/Toast';
+import Navbar from './components/Navbar';
+import AuthModal from './components/AuthModal';
+import VerificationStatus from './components/VerificationStatus';
+import SearchForm from './components/SearchForm';
+import BookingSuccess from './components/BookingSuccess';
+import ScheduleList from './components/ScheduleList';
+import OffersList from './components/OffersList';
+import UserProfile from './components/UserProfile';
+import MyTickets from './components/MyTickets';
 
 const API_BASE = 'http://localhost:8000/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
@@ -632,20 +636,7 @@ function App() {
     return () => clearInterval(timer);
   }, [searchDone, selectedSchedule?.id, searchParams.from, searchParams.to, searchParams.date, searchParams.coachType]);
 
-  // Handle seat click
-  const handleSeatClick = (seatCode, status) => {
-    if (!isSeatSelectable(status)) return;
-
-    if (selectedSeats.includes(seatCode)) {
-      setSelectedSeats(prev => prev.filter(s => s !== seatCode));
-    } else {
-      if (selectedSeats.length >= 4) {
-        window.alert('You can select a maximum of 4 seats per booking.');
-        return;
-      }
-      setSelectedSeats(prev => [...prev, seatCode]);
-    }
-  };
+  // handleSeatClick is now managed directly inside ScheduleList component
 
   // Handle Promo Apply
   const handleApplyPromo = async (e) => {
@@ -823,290 +814,7 @@ function App() {
     showToast(`Coupon code "${code}" copied to clipboard!`, 'success');
   };
 
-  const renderSeatCell = (schedule, seat, seatMap) => {
-    const status = seatMap[seat] || 'available';
-    const isSelected = selectedSeats.includes(seat);
-    const displayClass = isSelected ? 'selected' : `status-${status}`;
-    const canSelect = isSeatSelectable(status);
-
-    return (
-      <div
-        key={seat}
-        className={`seat ${displayClass} ${canSelect || isSelected ? 'selectable' : ''}`}
-        title={isSelected ? SEAT_STATUS_LABELS.selected : (SEAT_STATUS_LABELS[status] || status)}
-        onClick={() => handleSeatClick(seat, status)}
-      >
-        {seat}
-      </div>
-    );
-  };
-
-  const generateDefaultGrid = (layout, totalSeats) => {
-    const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-    
-    if (layout === '2+2_last5') {
-      const grid = [];
-      grid.push([
-        { type: 'engine', label: 'Engine' },
-        { type: 'empty' },
-        { type: 'aisle' },
-        { type: 'empty' },
-        { type: 'driver', label: 'Driver' }
-      ]);
-
-      let remainingSeats = totalSeats - 5;
-      let normalRows = Math.ceil(remainingSeats / 4);
-      
-      let seatsCount = 0;
-      let rIndex = 0;
-      for (let r = 0; r < normalRows; r++) {
-        const rowLetter = rowLetters[rIndex++];
-        const row = [];
-        row.push({ type: 'seat', label: rowLetter + '1' });
-        row.push({ type: 'seat', label: rowLetter + '2' });
-        row.push({ type: 'aisle' });
-        row.push({ type: 'seat', label: rowLetter + '3' });
-        row.push({ type: 'seat', label: rowLetter + '4' });
-        grid.push(row);
-      }
-
-      const lastRowLetter = rowLetters[rIndex++];
-      const lastRow = [];
-      for (let num = 1; num <= 5; num++) {
-        lastRow.push({ type: 'seat', label: lastRowLetter + num });
-      }
-      grid.push(lastRow);
-      
-      return grid;
-    } else if (layout === '1+2') {
-      const grid = [];
-      grid.push([
-        { type: 'engine', label: 'Engine' },
-        { type: 'aisle' },
-        { type: 'empty' },
-        { type: 'driver', label: 'Driver' }
-      ]);
-
-      let normalRows = Math.ceil(totalSeats / 3);
-      let rIndex = 0;
-      for (let r = 0; r < normalRows; r++) {
-        const rowLetter = rowLetters[rIndex++];
-        const row = [];
-        row.push({ type: 'seat', label: rowLetter + '1' });
-        row.push({ type: 'aisle' });
-        row.push({ type: 'seat', label: rowLetter + '2' });
-        row.push({ type: 'seat', label: rowLetter + '3' });
-        grid.push(row);
-      }
-      return grid;
-    } else if (layout === 'sleeper') {
-      const lowerCount = Math.ceil(totalSeats / 2);
-      const upperCount = totalSeats - lowerCount;
-      
-      const lowerGrid = [];
-      lowerGrid.push([
-        { type: 'engine', label: 'Engine' },
-        { type: 'aisle' },
-        { type: 'empty' },
-        { type: 'driver', label: 'Driver' }
-      ]);
-      let remainingSeats = lowerCount - 4;
-      let lowerRows = Math.ceil(remainingSeats / 3);
-      if (lowerRows < 0) lowerRows = 0;
-      let rIndex = 0;
-      for (let r = 0; r < lowerRows; r++) {
-        const rowLetter = rowLetters[rIndex++];
-        const row = [];
-        row.push({ type: 'seat', label: 'L-' + rowLetter + '1' });
-        row.push({ type: 'aisle' });
-        row.push({ type: 'seat', label: 'L-' + rowLetter + '2' });
-        row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
-        lowerGrid.push(row);
-      }
-      const lastRowLetter = rowLetters[rIndex++];
-      const lastRow = [];
-      for (let num = 1; num <= 4; num++) {
-        lastRow.push({ type: 'seat', label: 'L-' + lastRowLetter + num });
-      }
-      lowerGrid.push(lastRow);
-
-      const upperGrid = [];
-      upperGrid.push([
-        { type: 'empty' },
-        { type: 'aisle' },
-        { type: 'empty' },
-        { type: 'empty' }
-      ]);
-      let remainingSeatsU = upperCount - 4;
-      let upperRows = Math.ceil(remainingSeatsU / 3);
-      if (upperRows < 0) upperRows = 0;
-      rIndex = 0;
-      for (let r = 0; r < upperRows; r++) {
-        const rowLetter = rowLetters[rIndex++];
-        const row = [];
-        row.push({ type: 'seat', label: 'U-' + rowLetter + '1' });
-        row.push({ type: 'aisle' });
-        row.push({ type: 'seat', label: 'U-' + rowLetter + '2' });
-        row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
-        upperGrid.push(row);
-      }
-      const lastRowLetterU = rowLetters[rIndex++];
-      const lastRowU = [];
-      for (let num = 1; num <= 4; num++) {
-        lastRowU.push({ type: 'seat', label: 'U-' + lastRowLetterU + num });
-      }
-      upperGrid.push(lastRowU);
-
-      return { lower: lowerGrid, upper: upperGrid };
-    }
-    
-    const grid = [];
-    grid.push([
-      { type: 'engine', label: 'Engine' },
-      { type: 'empty' },
-      { type: 'aisle' },
-      { type: 'empty' },
-      { type: 'driver', label: 'Driver' }
-    ]);
-    let normalRows = Math.ceil(totalSeats / 4);
-    let rIndex = 0;
-    for (let r = 0; r < normalRows; r++) {
-      const rowLetter = rowLetters[rIndex++];
-      const row = [];
-      row.push({ type: 'seat', label: rowLetter + '1' });
-      row.push({ type: 'seat', label: rowLetter + '2' });
-      row.push({ type: 'aisle' });
-      row.push({ type: 'seat', label: rowLetter + '3' });
-      row.push({ type: 'seat', label: rowLetter + '4' });
-      grid.push(row);
-    }
-    return grid;
-  };
-
-  // Render Seat Grid helper
-  const renderSeatMap = (schedule) => {
-    const seatMap = getSeatMap(schedule);
-    const layout = schedule?.bus?.seat_layout || '2+2';
-    const totalSeats = schedule?.bus?.total_seats || 36;
-    
-    let grid = schedule?.bus?.seat_layout_grid;
-    if (typeof grid === 'string') {
-      try {
-        grid = JSON.parse(grid);
-      } catch (e) {
-        grid = null;
-      }
-    }
-    if (!grid || typeof grid !== 'object') {
-      grid = generateDefaultGrid(layout, totalSeats);
-    }
-
-    const isSleeper = grid.lower !== undefined;
-
-    const renderDeckHtml = (deckGrid, hasDriver = false) => {
-      let driverCell = null;
-      let engineCell = null;
-
-      if (hasDriver) {
-        deckGrid.forEach(row => {
-          row.forEach(cell => {
-            if (cell.type === 'driver') driverCell = cell;
-            if (cell.type === 'engine') engineCell = cell;
-          });
-        });
-      }
-
-      return (
-        <div className="bus-blueprint">
-          <div className="bus-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '2px dashed #2A2A44', marginBottom: '20px' }}>
-            {engineCell ? (
-              <div className="seat status-engine" title="Engine cover" style={{ cursor: 'not-allowed', backgroundColor: '#374151', borderColor: '#1f2937', color: '#9ca3af', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px' }}>
-                ENG
-              </div>
-            ) : (
-              <div style={{ width: '36px' }}></div>
-            )}
-            
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>
-              {hasDriver ? 'ENTRANCE' : 'UPPER DECK FRONT'}
-            </span>
-            
-            {driverCell ? (
-              <div className="seat status-driver" title="Driver Seat" style={{ cursor: 'not-allowed', backgroundColor: '#10B981', borderColor: '#059669', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '8px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  <path d="M2 12h20" />
-                </svg>
-              </div>
-            ) : (
-              <div style={{ width: '36px' }}></div>
-            )}
-          </div>
-
-          <div className="bus-body-seats">
-            {deckGrid.map((row, rIdx) => {
-              if (row.some(cell => cell.type === 'driver' || cell.type === 'engine')) {
-                return null;
-              }
-              return (
-                <div className="seat-row" key={rIdx}>
-                  {row.map((cell, cIdx) => {
-                    if (cell.type === 'seat') {
-                      return renderSeatCell(schedule, cell.label, seatMap);
-                    } else if (cell.type === 'aisle') {
-                      return <div className="bus-aisle" key={`aisle-${cIdx}`}></div>;
-                    } else {
-                      return <div className="seat seat-placeholder" key={`empty-${cIdx}`}></div>;
-                    }
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    };
-
-    if (isSleeper) {
-      return (
-        <>
-          <div className="sleeper-decks">
-            <div>
-              <div className="deck-title">Lower Deck</div>
-              {renderDeckHtml(grid.lower, true)}
-            </div>
-            <div>
-              <div className="deck-title">Upper Deck</div>
-              {renderDeckHtml(grid.upper, false)}
-            </div>
-          </div>
-          <div className="seat-legend" style={{ marginTop: '20px' }}>
-            {['booked_m', 'booked_f', 'blocked', 'available', 'selected', 'sold_m', 'sold_f'].map(key => (
-              <div className="legend-item" key={key}>
-                <div className={`legend-dot status-${key}`}></div>
-                <span>{SEAT_STATUS_LABELS[key]}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      );
-    }
-
-    return (
-      <>
-        {renderDeckHtml(grid, true)}
-        <div className="seat-legend">
-          {['booked_m', 'booked_f', 'blocked', 'available', 'selected', 'sold_m', 'sold_f'].map(key => (
-            <div className="legend-item" key={key}>
-              <div className={`legend-dot status-${key}`}></div>
-              <span>{SEAT_STATUS_LABELS[key]}</span>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  };
+  // Seat map rendering helpers have been extracted to SeatMap.jsx component
 
   // Formatting date strings helpers
   const formatTime = (isoString) => {
@@ -1215,655 +923,77 @@ function App() {
   return (
     <>
       {/* Toast Notification */}
-      {toast.show && (
-        <div className={`toast-notification ${toast.type === 'error' ? 'error' : 'success'}`}>
-          {toast.type === 'error' ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-          )}
-          <span>{toast.message}</span>
-        </div>
-      )}
+      <Toast toast={toast} />
 
       {/* Header navbar */}
-      <header className="app-header">
-        <div className="container navbar">
-          <div className="logo" onClick={() => { setActiveTab('home'); setBookingSuccess(null); }} style={{ cursor: 'pointer' }}>
-            <div className="logo-icon">S</div>
-            Sonya<span className="logo-accent">Bus</span>
-          </div>
-          <ul className="nav-menu">
-            <li 
-              className={`nav-link ${activeTab === 'home' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('home'); setBookingSuccess(null); }}
-            >
-              Ticket Booking
-            </li>
-            <li 
-              className={`nav-link ${activeTab === 'cancel' ? 'active' : ''}`}
-              onClick={() => setActiveTab('cancel')}
-            >
-              My Tickets
-            </li>
-            <li 
-              className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('offers')}
-            >
-              Promotions & Offers
-            </li>
-            <li
-              className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => {
-                if (!authUser) {
-                  openAuthModal('login', () => setActiveTab('profile'));
-                  return;
-                }
-                setActiveTab('profile');
-              }}
-            >
-              My Profile
-            </li>
-          </ul>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {authUser ? (
-              <>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  Hi, <strong style={{ color: '#fff' }}>{authUser.name}</strong>
-                </span>
-                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={handleLogout}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => openAuthModal('login')}>
-                  Login
-                </button>
-                <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => openAuthModal('register')}>
-                  Register
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        setBookingSuccess={setBookingSuccess}
+        authUser={authUser}
+        handleLogout={handleLogout}
+        openAuthModal={openAuthModal}
+      />
 
       {/* Content */}
       <main style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        {verificationStatus && (
-          <div className="container" style={{ marginTop: '20px' }}>
-            <div id="verification-status" className="verification-status-box" style={{
-              background: 'rgba(30, 30, 56, 0.85)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              padding: '24px',
-              color: '#fff',
-              textAlign: 'center',
-              marginBottom: '20px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
-            }}>
-              {verificationStatus.loading ? (
-                <div>
-                  <div className="loading-spinner" style={{ margin: '10px auto' }}></div>
-                  <p style={{ fontSize: '15px' }}>Verifying payment for Invoice ID: <strong>{verificationStatus.invoiceId}</strong>...</p>
-                </div>
-              ) : (
-                <div>
-                  {verificationStatus.success ? (
-                    <div>
-                      <div style={{ fontSize: '32px', marginBottom: '10px' }}>✅</div>
-                      <p style={{ fontSize: '18px', fontWeight: 'bold' }}>Payment Verified Successfully!</p>
-                      <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px' }}>
-                        Invoice ID: <strong>{verificationStatus.invoiceId}</strong><br/>
-                        Transaction ID: <strong>{verificationStatus.transactionId}</strong>
-                      </p>
-                      <button 
-                        className="btn btn-primary" 
-                        style={{ marginTop: '20px', padding: '10px 24px', fontSize: '13px', fontWeight: 'bold' }}
-                        onClick={() => {
-                          const bid = verificationStatus.bookingId;
-                          setVerificationStatus(null);
-                          if (bid) {
-                            fetch(`${API_BASE}/bookings/public/${bid}`)
-                              .then(res => res.json())
-                              .then(data => {
-                                setBookingSuccess(data);
-                              })
-                              .catch(() => {});
-                          }
-                        }}
-                      >
-                        View Boarding Pass
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: '32px', marginBottom: '10px' }}>❌</div>
-                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F87171' }}>Payment Verification Failed</p>
-                      <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px' }}>{verificationStatus.message}</p>
-                      <button 
-                        className="btn btn-secondary" 
-                        style={{ marginTop: '20px', padding: '10px 24px', fontSize: '13px', fontWeight: 'bold' }}
-                        onClick={() => setVerificationStatus(null)}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <VerificationStatus
+          verificationStatus={verificationStatus}
+          setVerificationStatus={setVerificationStatus}
+          setBookingSuccess={setBookingSuccess}
+          API_BASE={API_BASE}
+        />
         
         {/* VIEW: HOME (BOOKING Portal) */}
         {activeTab === 'home' && (
           <>
             {bookingSuccess ? (
-              <div className="container success-container">
-                <div className="success-badge">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Reservation Secured Successfully!
-                </div>
-                
-                <h2 className="banner-title" style={{ fontSize: '28px', color: '#fff' }}>Boarding Pass Invoice</h2>
-                <p className="banner-subtitle" style={{ fontSize: '14px', marginBottom: '20px' }}>
-                  Present this PNR code at the counter 15 minutes before departure.
-                </p>
-
-                <div className="ticket-wrapper">
-                  <div className="ticket-header">
-                    <div className="ticket-brand">SonyaBus Enterprise</div>
-                    <div className="ticket-pnr">PNR: {bookingSuccess.pnr}</div>
-                  </div>
-                  
-                  <div className="ticket-body">
-                    <div className="ticket-row-grid">
-                      <div className="ticket-field">
-                        <span className="ticket-label">Passenger Name</span>
-                        <span className="ticket-val">{bookingSuccess.passenger_name}</span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Contact Number</span>
-                        <span className="ticket-val">{bookingSuccess.passenger_phone}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="ticket-row-grid">
-                      <div className="ticket-field">
-                        <span className="ticket-label">From</span>
-                        <span className="ticket-val">{bookingSuccess.schedule.route.from}</span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">To</span>
-                        <span className="ticket-val">{bookingSuccess.schedule.route.to}</span>
-                      </div>
-                    </div>
-
-                    <div className="ticket-row-grid">
-                      <div className="ticket-field">
-                        <span className="ticket-label">Bus Name</span>
-                        <span className="ticket-val">{bookingSuccess.schedule?.bus?.operator_name || 'N/A'}</span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Departure Date & Time</span>
-                        <span className="ticket-val">
-                          {formatDate(bookingSuccess.schedule.departure_time)} @ {formatTime(bookingSuccess.schedule.departure_time)}
-                        </span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Coach Details</span>
-                        <span className="ticket-val">
-                          {bookingSuccess.schedule.bus.operator_name} ({bookingSuccess.schedule.bus.coach_type})
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="ticket-row-grid">
-                      <div className="ticket-field">
-                        <span className="ticket-label">Reserved Seats</span>
-                        <span className="ticket-val" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
-                          {bookingSuccess.seat_numbers}
-                        </span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Estimated Duration</span>
-                        <span className="ticket-val">{bookingSuccess.schedule.route.duration}</span>
-                      </div>
-                    </div>
-
-                    <div className="ticket-divider"></div>
-
-                    <div className="ticket-row-grid" style={{ marginBottom: '10px' }}>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Payment Method</span>
-                        <span className="ticket-val">{bookingSuccess.payment_method}</span>
-                      </div>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Reservation Status</span>
-                        <span className="badge-status paid" style={{ width: 'max-content', marginTop: '4px' }}>
-                          {bookingSuccess.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="ticket-row-grid" style={{ marginBottom: '0' }}>
-                      <div className="ticket-field">
-                        <span className="ticket-label">Fare Summary</span>
-                        <span className="ticket-val" style={{ fontSize: '18px', color: 'var(--gold)' }}>
-                          BDT {bookingSuccess.total_fare.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Virtual Barcode */}
-                    <div className="ticket-barcode-wrap">
-                      <div className="ticket-barcode">
-                        <div className="barcode-line wide"></div>
-                        <div className="barcode-line"></div>
-                        <div className="barcode-line narrow"></div>
-                        <div className="barcode-line wide"></div>
-                        <div className="barcode-line narrow"></div>
-                        <div className="barcode-line"></div>
-                        <div className="barcode-line wide"></div>
-                        <div className="barcode-line"></div>
-                        <div className="barcode-line narrow"></div>
-                        <div className="barcode-line wide"></div>
-                        <div className="barcode-line"></div>
-                        <div className="barcode-line narrow"></div>
-                        <div className="barcode-line wide"></div>
-                        <div className="barcode-line"></div>
-                      </div>
-                      <span className="barcode-number">PNR-{bookingSuccess.pnr}</span>
-                    </div>
-
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-                  <button className="btn btn-secondary" onClick={() => window.print()}>
-                    Print Boarding Ticket
-                  </button>
-                  <button className="btn btn-primary" onClick={() => setBookingSuccess(null)}>
-                    Book Another Ticket
-                  </button>
-                </div>
-              </div>
+              <BookingSuccess
+                bookingSuccess={bookingSuccess}
+                setBookingSuccess={setBookingSuccess}
+                formatDate={formatDate}
+                formatTime={formatTime}
+              />
             ) : (
               <>
-                {/* Search Banner Header */}
-                <section className="search-banner">
-                  <div className="container">
-                    <h1 className="banner-title">Premium Bus Booking Portal</h1>
-                    <p className="banner-subtitle">Search routes, visual seat grids, and get instant PNR confirmations</p>
-                    
-                    <div className="search-card">
-                      <form className="search-form" onSubmit={handleSearch}>
-                        
-                        <div className="input-group">
-                          <label htmlFor="from-station">From</label>
-                          <div className="input-with-icon">
-                            <span className="input-icon">📍</span>
-                            <select 
-                              id="from-station"
-                              className="input-control" 
-                              value={searchParams.from}
-                              onChange={(e) => setSearchParams(prev => ({ ...prev, from: e.target.value }))}
-                            >
-                              <option value="">Select departure...</option>
-                              {stations.map(st => (
-                                <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
+                <SearchForm
+                  stations={stations}
+                  searchParams={searchParams}
+                  setSearchParams={setSearchParams}
+                  minDateStr={minDateStr}
+                  handleSearch={handleSearch}
+                  isLoading={isLoading}
+                />
 
-                        <div className="input-group">
-                          <label htmlFor="to-station">To</label>
-                          <div className="input-with-icon">
-                            <span className="input-icon">🏁</span>
-                            <select 
-                              id="to-station"
-                              className="input-control" 
-                              value={searchParams.to}
-                              onChange={(e) => setSearchParams(prev => ({ ...prev, to: e.target.value }))}
-                            >
-                              <option value="">Select arrival...</option>
-                              {stations.map(st => (
-                                <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="input-group">
-                          <label htmlFor="journey-date">Date of Journey</label>
-                          <div className="input-with-icon">
-                            <span className="input-icon">📅</span>
-                            <input 
-                              id="journey-date"
-                              type="date" 
-                              className="input-control"
-                              min={minDateStr}
-                              value={searchParams.date}
-                              onChange={(e) => setSearchParams(prev => ({ ...prev, date: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="input-group">
-                          <label htmlFor="coach-type">Coach Type</label>
-                          <div className="input-with-icon">
-                            <span className="input-icon">🚌</span>
-                            <select 
-                              id="coach-type"
-                              className="input-control"
-                              value={searchParams.coachType}
-                              onChange={(e) => setSearchParams(prev => ({ ...prev, coachType: e.target.value }))}
-                            >
-                              <option value="All">All Coach Types</option>
-                              <option value="AC">AC (Air Conditioned)</option>
-                              <option value="Non AC">Non AC</option>
-                            </select>
-                          </div>
-                        </div>
-
-                      </form>
-                      
-                      <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button 
-                          className="btn btn-primary search-submit-btn" 
-                          style={{ maxWidth: '250px' }}
-                          onClick={handleSearch}
-                          disabled={isLoading}
-                        >
-                          {isLoading ? 'Searching...' : 'Search Buses'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Results listing */}
-                {searchDone && (
-                  <section className="results-container container">
-                    <div className="results-header">
-                      <h2 className="section-title" style={{ margin: '0', textAlign: 'left' }}>Available Coach Services</h2>
-                      <span className="results-count">Showing {searchResults.length} schedules matches</span>
-                    </div>
-
-                    <div className="bus-list">
-                      {searchResults.length === 0 ? (
-                        <div className="search-card text-center" style={{ padding: '60px' }}>
-                          <h3>No Coaches Scheduled</h3>
-                          <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-                            We couldn't find any scheduled buses matching this criteria. Try selecting another date or location.
-                          </p>
-                        </div>
-                      ) : (
-                        searchResults.map(sched => {
-                          const isExpanded = selectedSchedule?.id === sched.id;
-                          return (
-                            <div className="bus-card" key={sched.id}>
-                              
-                              <div className="bus-main-info">
-                                <div className="operator-block">
-                                  <span className="operator-name">{sched.bus.operator_name}</span>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Coach {sched.bus.coach_number}</span>
-                                  <span className={`coach-tag ${sched.bus.coach_type === 'AC' ? 'ac' : ''}`}>
-                                    {sched.bus.coach_type}
-                                  </span>
-                                </div>
-                                
-                                <div className="time-block">
-                                  <span className="time-label">Departure</span>
-                                  <span className="time-value">{formatTime(sched.departure_time)}</span>
-                                  <span className="station-value">{searchParams.from ? stations.find(s => s.id === parseInt(searchParams.from))?.name : ''}</span>
-                                </div>
-
-                                <div className="time-block">
-                                  <span className="time-label">Arrival</span>
-                                  <span className="time-value">{formatTime(sched.arrival_time)}</span>
-                                  <span className="station-value">{searchParams.to ? stations.find(s => s.id === parseInt(searchParams.to))?.name : ''}</span>
-                                </div>
-
-                                <div className="time-block">
-                                  <span className="time-label">Duration</span>
-                                  <span className="time-value" style={{ fontWeight: '500' }}>{sched.route.duration}</span>
-                                  <span className="station-value" style={{ fontSize: '11px' }}>{sched.route.distance}</span>
-                                </div>
-
-                                <div className="seats-block">
-                                  <span className="time-label">Seats Available</span>
-                                  <span className="seats-count" style={{ color: sched.available_seats_count === 0 ? 'var(--danger)' : 'var(--success)' }}>
-                                    {sched.available_seats_count} Seats
-                                  </span>
-                                </div>
-
-                                <div className="price-block">
-                                  <span className="time-label">Fare Price</span>
-                                  <span className="price-amount">BDT {sched.fare.toLocaleString()}</span>
-                                  <button 
-                                    className={`btn ${isExpanded ? 'btn-secondary' : 'btn-primary'}`} 
-                                    style={{ marginTop: '8px', padding: '6px 12px', fontSize: '12px' }}
-                                    onClick={() => {
-                                      if (!authUser) {
-                                        openAuthModal('login');
-                                        showToast('Login required to select seats and book tickets.', 'error');
-                                        return;
-                                      }
-                                      if (isExpanded) {
-                                        setSelectedSchedule(null);
-                                        setSelectedSeats([]);
-                                      } else {
-                                        setSelectedSchedule(sched);
-                                        setSelectedSeats([]);
-                                      }
-                                      setAppliedPromo(null);
-                                      setPromoInput('');
-                                    }}
-                                  >
-                                    {isExpanded ? 'Close Map' : (authUser ? 'Select Seats' : 'Login to Book')}
-                                  </button>
-                                </div>
-                              </div>
-
-                              {isExpanded && (
-                                <div className="seats-selector-container">
-                                  <div className="seat-selection-grid">
-                                    
-                                    <div>
-                                      <h3 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                        Bus Seat Layout (Select Up To 4)
-                                      </h3>
-                                      {seatMapLastSync && (
-                                        <div className="seat-map-live-status">
-                                          <span className="live-dot"></span>
-                                          <span>
-                                            Live — updated {seatMapLastSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} (every 5s)
-                                          </span>
-                                        </div>
-                                      )}
-                                      {renderSeatMap(sched)}
-                                    </div>
-
-                                    <div className="booking-form-sidebar">
-                                      {(() => {
-                                        const pricing = calcPricing(sched, Math.max(selectedSeats.length, 1), passengerDetails.paymentMethod);
-                                        const seatClass = sched.seat_class || 'E-Class';
-                                        const promoDiscount = appliedPromo ? Number(appliedPromo.discount_amount) : 0;
-                                        const grandTotal = Math.max(0, pricing.total - promoDiscount);
-                                        const activeBoarding = (sched.boarding_points || []).find(bp => bp.value === boardingPoint);
-                                        const activeDropping = (sched.dropping_points || []).find(dp => dp.value === droppingPoint);
-                                        return (
-                                          <div className="ticket-booking-panel">
-                                            <h3>Boarding / Dropping Point</h3>
-                                            <label>Boarding Point *</label>
-                                            <select
-                                              className="ticket-field"
-                                              value={boardingPoint}
-                                              onChange={(e) => setBoardingPoint(e.target.value)}
-                                              disabled={selectedSeats.length === 0}
-                                            >
-                                              {(sched.boarding_points || []).map(bp => (
-                                                <option key={bp.id} value={bp.value}>
-                                                  {bp.label} — Reporting: {bp.reporting_time || '—'}, Departure: {bp.departure_time || '—'}
-                                                </option>
-                                              ))}
-                                            </select>
-                                            <p className="boarding-point-info">
-                                              {activeBoarding
-                                                ? `Reporting: ${activeBoarding.reporting_time || '—'} · Departure: ${activeBoarding.departure_time || '—'}`
-                                                : 'Select a boarding point'}
-                                            </p>
-                                            <label>Dropping Point *</label>
-                                            <select
-                                              className="ticket-field"
-                                              value={droppingPoint}
-                                              onChange={(e) => setDroppingPoint(e.target.value)}
-                                              disabled={selectedSeats.length === 0}
-                                            >
-                                              <option value="">Select dropping point</option>
-                                              {(sched.dropping_points || []).map(dp => (
-                                                <option key={dp.id} value={dp.value}>
-                                                  {dp.label} — Arrival: {dp.arrival_time || '—'}
-                                                </option>
-                                              ))}
-                                            </select>
-                                            <p className="boarding-point-info">
-                                              {activeDropping
-                                                ? `Estimated arrival: ${activeDropping.arrival_time || '—'}`
-                                                : 'Select a dropping point'}
-                                            </p>
-                                            <label>Mobile Number *</label>
-                                            <input
-                                              type="tel"
-                                              className="ticket-field"
-                                              placeholder="01XXXXXXXXX"
-                                              value={passengerDetails.phone}
-                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, phone: e.target.value }))}
-                                              disabled={selectedSeats.length === 0}
-                                            />
-                                            <label>Passenger Name *</label>
-                                            <input
-                                              type="text"
-                                              className="ticket-field"
-                                              placeholder="Full name"
-                                              value={passengerDetails.name}
-                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, name: e.target.value }))}
-                                              disabled={selectedSeats.length === 0}
-                                            />
-                                            <label>Email *</label>
-                                            <input
-                                              type="email"
-                                              className="ticket-field"
-                                              placeholder="email@example.com"
-                                              value={passengerDetails.email}
-                                              onChange={(e) => setPassengerDetails(prev => ({ ...prev, email: e.target.value }))}
-                                              disabled={selectedSeats.length === 0}
-                                            />
-                                            <label>Gender</label>
-                                            <select
-                                              className="ticket-field"
-                                              value={passengerGender}
-                                              onChange={(e) => setPassengerGender(e.target.value)}
-                                              disabled={selectedSeats.length === 0}
-                                            >
-                                              <option value="M">Male</option>
-                                              <option value="F">Female</option>
-                                            </select>
-                                            <label>Payment Method</label>
-                                            <div className="payment-toggle-group" style={{ marginBottom: '12px' }}>
-                                              {['ZiniPay'].map(method => (
-                                                <div
-                                                  key={method}
-                                                  className={`payment-toggle ${passengerDetails.paymentMethod === method ? 'active' : ''}`}
-                                                  onClick={() => selectedSeats.length > 0 && setPassengerDetails(prev => ({ ...prev, paymentMethod: method }))}
-                                                >
-                                                  {method}
-                                                </div>
-                                              ))}
-                                            </div>
-                                            <form className="coupon-field" onSubmit={handleApplyPromo} style={{ marginBottom: '8px' }}>
-                                              <input
-                                                type="text"
-                                                placeholder="Promo code"
-                                                className="coupon-input"
-                                                value={promoInput}
-                                                onChange={(e) => setPromoInput(e.target.value)}
-                                                disabled={selectedSeats.length === 0}
-                                              />
-                                              <button className="btn btn-secondary btn-coupon-apply" type="submit" disabled={selectedSeats.length === 0}>Apply</button>
-                                            </form>
-                                            {appliedPromo && (
-                                              <p style={{ fontSize: '11px', color: 'var(--success)', marginBottom: '8px' }}>
-                                                Promo: -{formatBdt(appliedPromo.discount_amount)}
-                                              </p>
-                                            )}
-                                            <button
-                                              type="button"
-                                              className="btn-ticket-submit"
-                                              onClick={handleConfirmBooking}
-                                              disabled={selectedSeats.length === 0 || isBooking}
-                                            >
-                                              {isBooking ? 'Processing...' : 'Submit'}
-                                            </button>
-                                            <h4>Seat Information</h4>
-                                            <table className="seat-info-table">
-                                              <thead>
-                                                <tr><th>Seats</th><th>Class</th><th>Fare</th></tr>
-                                              </thead>
-                                              <tbody>
-                                                {selectedSeats.length > 0 ? selectedSeats.map(seat => (
-                                                  <tr key={seat}>
-                                                    <td>{seat}</td>
-                                                    <td>{seatClass}</td>
-                                                    <td>{formatBdt(sched.fare)}</td>
-                                                  </tr>
-                                                )) : (
-                                                  <tr><td colSpan={3} style={{ fontStyle: 'italic', color: '#9ca3af' }}>Select seat(s) from the map</td></tr>
-                                                )}
-                                              </tbody>
-                                            </table>
-                                            <div className="fare-breakdown">
-                                              <div className="fare-line"><span>Seat Fare:</span><strong>{formatBdt(pricing.seatFare)}</strong></div>
-                                              <div className="fare-line"><span>Service Charge:</span><strong>{formatBdt(pricing.serviceCharge)}</strong></div>
-                                              <div className="fare-line"><span>Gateway Charge:</span><strong>{formatBdt(pricing.gatewayCharge)}</strong></div>
-                                              <div className="fare-line"><span>SC Discount:</span><strong>{formatBdt(pricing.scDiscount)}</strong></div>
-                                              <div className="fare-line"><span>GC Discount:</span><strong>{formatBdt(pricing.gcDiscount)}</strong></div>
-                                              {promoDiscount > 0 && (
-                                                <div className="fare-line"><span>Promo Discount:</span><strong>-{formatBdt(promoDiscount)}</strong></div>
-                                              )}
-                                              <div className="fare-line fare-total"><span>Total Payable:</span><strong>{formatBdt(grandTotal)}</strong></div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </section>
-                )}
+                <ScheduleList
+                  searchDone={searchDone}
+                  searchResults={searchResults}
+                  selectedSchedule={selectedSchedule}
+                  setSelectedSchedule={setSelectedSchedule}
+                  selectedSeats={selectedSeats}
+                  setSelectedSeats={setSelectedSeats}
+                  setAppliedPromo={setAppliedPromo}
+                  setPromoInput={setPromoInput}
+                  authUser={authUser}
+                  openAuthModal={openAuthModal}
+                  showToast={showToast}
+                  stations={stations}
+                  searchParams={searchParams}
+                  boardingPoint={boardingPoint}
+                  setBoardingPoint={setBoardingPoint}
+                  droppingPoint={droppingPoint}
+                  setDroppingPoint={setDroppingPoint}
+                  passengerDetails={passengerDetails}
+                  setPassengerDetails={setPassengerDetails}
+                  passengerGender={passengerGender}
+                  setPassengerGender={setPassengerGender}
+                  promoInput={promoInput}
+                  appliedPromo={appliedPromo}
+                  handleApplyPromo={handleApplyPromo}
+                  handleConfirmBooking={handleConfirmBooking}
+                  isBooking={isBooking}
+                  seatMapLastSync={seatMapLastSync}
+                />
 
                 {/* Info Visual Steps */}
                 {!searchDone && (
@@ -1929,318 +1059,54 @@ function App() {
 
         {/* VIEW: CANCEL TICKET */}
         {activeTab === 'cancel' && (
-          <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
-            <div className="cancel-card">
-              <h2 className="cancel-title">My Tickets & Cancellations</h2>
-              <p className="cancel-desc">
-                Sign in to view tickets you purchased online. You can only cancel your own reservations.
-              </p>
-
-              {!authUser ? (
-                <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                    Please log in to access your ticket dashboard.
-                  </p>
-                  <button className="btn btn-primary" onClick={() => openAuthModal('login', () => setActiveTab('cancel'))}>
-                    Login to Continue
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                      Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
-                    </span>
-                    <button className="btn btn-secondary btn-sm" onClick={fetchMyBookings} disabled={isSearchingCancel}>
-                      {isSearchingCancel ? 'Refreshing...' : 'Refresh My Tickets'}
-                    </button>
-                  </div>
-
-                  <div className="cancellation-preview">
-                    {isSearchingCancel ? (
-                      <div className="loading-spinner"></div>
-                    ) : cancelBookings.length > 0 ? (
-                      cancelBookings.map(b => (
-                        <div 
-                          key={b.id} 
-                          style={{ 
-                            border: '1px solid var(--border-color)', 
-                            borderRadius: '12px', 
-                            padding: '20px', 
-                            backgroundColor: '#111124',
-                            marginBottom: '15px'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Ticket PNR: {b.pnr}</span>
-                            <span className={`badge-status ${b.status === 'PAID' ? 'paid' : (b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled')}`}>{b.status}</span>
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            <div>Passenger: <strong style={{ color: '#fff' }}>{b.passenger_name}</strong></div>
-                            <div>Phone: <strong style={{ color: '#fff' }}>{b.passenger_phone}</strong></div>
-                            <div>From: <strong style={{ color: '#fff' }}>{b.schedule.route.from}</strong></div>
-                            <div>To: <strong style={{ color: '#fff' }}>{b.schedule.route.to}</strong></div>
-                            <div>Bus Name: <strong style={{ color: '#fff' }}>{b.schedule?.bus?.operator_name || 'N/A'}</strong></div>
-                            <div>Date: <strong style={{ color: '#fff' }}>{formatDate(b.schedule.departure_time)}</strong></div>
-                            <div>Departure: <strong style={{ color: '#fff' }}>{formatTime(b.schedule.departure_time)}</strong></div>
-                            <div>Seats Reserved: <strong style={{ color: 'var(--primary)' }}>{b.seat_numbers}</strong></div>
-                            <div>Fare paid: <strong style={{ color: 'var(--gold)' }}>BDT {b.total_fare.toLocaleString()}</strong></div>
-                          </div>
-
-                          {b.status === 'PAID' ? (
-                            <div style={{ marginTop: '20px' }}>
-                              <div className="cancellation-refund-info">
-                                <strong>Notice:</strong> You can submit a cancellation request for admin verification. After approval, the ticket is cancelled and refund is processed to your {b.payment_method} account.
-                              </div>
-                              <button
-                                className="btn btn-secondary w-full"
-                                style={{ marginBottom: '10px' }}
-                                onClick={() => handleDownloadTicketPdf(b)}
-                              >
-                                Download Ticket PDF
-                              </button>
-                              <button 
-                                className="btn btn-danger w-full"
-                                onClick={() => handleCancelBooking(b.id)}
-                              >
-                                Submit Cancellation Request
-                              </button>
-                            </div>
-                          ) : b.status === 'CANCEL_REQUESTED' ? (
-                            <div style={{ marginTop: '15px', color: '#FBBF24', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
-                              Cancellation request submitted. Waiting for admin approval.
-                              <div style={{ marginTop: '10px' }}>
-                                <button
-                                  className="btn btn-secondary w-full"
-                                  onClick={() => handleDownloadTicketPdf(b)}
-                                >
-                                  Download Ticket PDF
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ marginTop: '15px' }}>
-                              <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
-                                This reservation was cancelled. Refund has been processed.
-                              </div>
-                              <div style={{ marginTop: '10px' }}>
-                                <button
-                                  className="btn btn-secondary w-full"
-                                  onClick={() => handleDownloadTicketPdf(b)}
-                                >
-                                  Download Ticket PDF
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>
-                        You have no ticket bookings yet. Book a ticket from the home page while logged in.
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-            </div>
-          </div>
+          <MyTickets
+            authUser={authUser}
+            openAuthModal={openAuthModal}
+            setActiveTab={setActiveTab}
+            fetchMyBookings={fetchMyBookings}
+            isSearchingCancel={isSearchingCancel}
+            cancelBookings={cancelBookings}
+            handleCancelBooking={handleCancelBooking}
+            handleDownloadTicketPdf={handleDownloadTicketPdf}
+            formatDate={formatDate}
+            formatTime={formatTime}
+          />
         )}
 
         {/* VIEW: PROMOTIONS & OFFERS */}
         {activeTab === 'offers' && (
-          <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
-            <div className="section-title">
-              <h2>Discount Coupon Offers</h2>
-              <p>Apply these promotional codes during checkout to secure special flat pricing discounts</p>
-            </div>
-
-            {isLoadingOffers ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <div className="offers-grid">
-                {offers.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    No promotional coupons are available at the moment.
-                  </div>
-                ) : (
-                  offers.map(promo => (
-                    <div className="offer-card" key={promo.id}>
-                      <div className="offer-header">
-                        <div className="offer-badge">Flat Discount</div>
-                        <div className="offer-discount">BDT {promo.discount_amount} Off</div>
-                      </div>
-                      
-                      <div className="offer-body">
-                        <p className="offer-desc">{promo.description}</p>
-                        <div className="coupon-pill">
-                          <span className="coupon-code">{promo.code}</span>
-                          <span className="coupon-copy-btn" onClick={() => handleCopyCode(promo.code)}>
-                            Copy Code
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <OffersList
+            isLoadingOffers={isLoadingOffers}
+            offers={offers}
+            handleCopyCode={handleCopyCode}
+          />
         )}
 
         {/* VIEW: PROFILE */}
         {activeTab === 'profile' && (
-          <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
-            <div className="cancel-card">
-              <h2 className="cancel-title">My Profile</h2>
-              {!authUser ? (
-                <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                    Please log in to manage your account password.
-                  </p>
-                  <button className="btn btn-primary" onClick={() => openAuthModal('login', () => setActiveTab('profile'))}>
-                    Login to Continue
-                  </button>
-                </div>
-              ) : (
-                <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-                  <p style={{ color: 'var(--text-secondary)', marginBottom: '18px' }}>
-                    Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
-                  </p>
-                  <form onSubmit={handleProfilePasswordSubmit} className="booking-form-fields">
-                    <div className="input-group">
-                      <label>Current Password</label>
-                      <input
-                        type="password"
-                        className="coupon-input"
-                        value={profileForm.current_password}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, current_password: e.target.value }))}
-                        required
-                        minLength={6}
-                        autoComplete="current-password"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label>New Password</label>
-                      <input
-                        type="password"
-                        className="coupon-input"
-                        value={profileForm.password}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, password: e.target.value }))}
-                        required
-                        minLength={6}
-                        autoComplete="new-password"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label>Confirm New Password</label>
-                      <input
-                        type="password"
-                        className="coupon-input"
-                        value={profileForm.password_confirmation}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, password_confirmation: e.target.value }))}
-                        required
-                        minLength={6}
-                        autoComplete="new-password"
-                      />
-                    </div>
-                    <button className="btn btn-primary" type="submit" disabled={isUpdatingProfile}>
-                      {isUpdatingProfile ? 'Updating Password...' : 'Update Password'}
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          </div>
+          <UserProfile
+            authUser={authUser}
+            openAuthModal={openAuthModal}
+            setActiveTab={setActiveTab}
+            profileForm={profileForm}
+            setProfileForm={setProfileForm}
+            handleProfilePasswordSubmit={handleProfilePasswordSubmit}
+            isUpdatingProfile={isUpdatingProfile}
+          />
         )}
-
       </main>
 
       {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="modal-overlay" onClick={closeAuthModal}>
-          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" type="button" onClick={closeAuthModal}>&times;</button>
-            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: '8px' }}>
-              {authMode === 'register' ? 'Create Account' : 'Customer Login'}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
-              {authMode === 'register'
-                ? 'Register to book and manage your bus tickets online.'
-                : 'Sign in to purchase tickets and cancel your own bookings.'}
-            </p>
-
-            <div className="auth-tabs">
-              <div
-                className={`auth-tab ${authMode === 'login' ? 'active' : ''}`}
-                onClick={() => setAuthMode('login')}
-              >
-                Login
-              </div>
-              <div
-                className={`auth-tab ${authMode === 'register' ? 'active' : ''}`}
-                onClick={() => setAuthMode('register')}
-              >
-                Register
-              </div>
-            </div>
-
-            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
-              {authMode === 'register' && (
-                <div className="input-group">
-                  <label>Full Name</label>
-                  <input
-                    type="text"
-                    className="coupon-input"
-                    value={authForm.name}
-                    onChange={(e) => setAuthForm(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
-                </div>
-              )}
-              <div className="input-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  className="coupon-input"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="input-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  className="coupon-input"
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                  minLength={6}
-                />
-              </div>
-              {authMode === 'register' && (
-                <div className="input-group">
-                  <label>Confirm Password</label>
-                  <input
-                    type="password"
-                    className="coupon-input"
-                    value={authForm.password_confirmation}
-                    onChange={(e) => setAuthForm(prev => ({ ...prev, password_confirmation: e.target.value }))}
-                    required
-                    minLength={6}
-                  />
-                </div>
-              )}
-              <button className="btn btn-primary w-full" type="submit" disabled={isAuthLoading}>
-                {isAuthLoading ? 'Please wait...' : (authMode === 'register' ? 'Create Account' : 'Sign In')}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <AuthModal
+        showAuthModal={showAuthModal}
+        closeAuthModal={closeAuthModal}
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        authForm={authForm}
+        setAuthForm={setAuthForm}
+        handleAuthSubmit={handleAuthSubmit}
+        isAuthLoading={isAuthLoading}
+      />
 
       {/* Footer */}
       <footer className="app-footer">
