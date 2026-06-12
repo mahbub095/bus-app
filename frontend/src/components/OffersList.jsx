@@ -1,10 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function OffersList({
-  isLoadingOffers,
-  offers,
-  handleCopyCode
-}) {
+export default function OffersList({ API_BASE, showToast }) {
+  const [offers, setOffers] = useState([]);
+  const [isLoadingOffers, setIsLoadingOffers] = useState(false);
+
+  const fetchOffers = async () => {
+    setIsLoadingOffers(true);
+    try {
+      const res = await fetch(`${API_BASE}/promotions`);
+      if (res.ok) {
+        const data = await res.json();
+        setOffers(data);
+      }
+    } catch (err) {
+      showToast('Could not fetch promotions.', 'error');
+    } finally {
+      setIsLoadingOffers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOffers();
+  }, []);
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    showToast(`Coupon code "${code}" copied to clipboard!`, 'success');
+  };
+
   return (
     <div className="container" style={{ flexGrow: 1, padding: '40px 0' }}>
       <div className="section-title">

@@ -253,22 +253,6 @@ class BookingController extends BaseController
     }
 
     /**
-     * Extract booked seats from bookings collection.
-     * Optimized to reduce memory and processing time.
-     */
-    protected function extractBookedSeats($bookings): array
-    {
-        $bookedSeats = [];
-        foreach ($bookings as $booking) {
-            $seats = array_filter(array_map('trim', explode(',', $booking->seat_numbers)));
-            foreach ($seats as $seat) {
-                $bookedSeats[$seat] = true;
-            }
-        }
-        return $bookedSeats;
-    }
-
-    /**
      * Public ticket view (used on receipt screen).
      */
     public function showPublic($id)
