@@ -1030,6 +1030,7 @@ a {
 select option {
   background-color: var(--bg-card);
   color: var(--text-primary);
+  padding: 8px 12px;
 }
 
 select option:checked {

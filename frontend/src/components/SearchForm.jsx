@@ -28,10 +28,10 @@ export default function SearchForm({
                   value={searchParams.from}
                   onChange={(e) => setSearchParams((prev) => ({ ...prev, from: e.target.value }))}
                 >
-                  <option value="">Select departure...</option>
+                  <option value="">&nbsp;&nbsp;Select departure...</option>
                   {stations.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.name} ({st.district})
+                      &nbsp;&nbsp;{st.name} ({st.district})
                     </option>
                   ))}
                 </select>
@@ -48,10 +48,10 @@ export default function SearchForm({
                   value={searchParams.to}
                   onChange={(e) => setSearchParams((prev) => ({ ...prev, to: e.target.value }))}
                 >
-                  <option value="">Select arrival...</option>
+                  <option value="">&nbsp;&nbsp;Select arrival...</option>
                   {stations.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.name} ({st.district})
+                      &nbsp;&nbsp;{st.name} ({st.district})
                     </option>
                   ))}
                 </select>
@@ -83,9 +83,9 @@ export default function SearchForm({
                   value={searchParams.coachType}
                   onChange={(e) => setSearchParams((prev) => ({ ...prev, coachType: e.target.value }))}
                 >
-                  <option value="All">All Coach Types</option>
-                  <option value="AC">AC (Air Conditioned)</option>
-                  <option value="Non AC">Non AC</option>
+                  <option value="All">&nbsp;&nbsp;All Coach Types</option>
+                  <option value="AC">&nbsp;&nbsp;AC (Air Conditioned)</option>
+                  <option value="Non AC">&nbsp;&nbsp;Non AC</option>
                 </select>
               </div>
             </div>
