@@ -38,7 +38,7 @@ class SeatMapService
     public static function scopePaidBookingsForSeatMap($query): void
     {
         $query->where(function ($q) {
-            $q->where('status', 'PAID')
+            $q->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
               ->orWhere(function ($qp) {
                   $qp->where('status', 'PENDING')
                      ->where('created_at', '>=', now()->subMinutes(10));
@@ -206,7 +206,7 @@ class SeatMapService
         }
 
         foreach ($bookings as $booking) {
-            $isPaid = $booking->status === 'PAID';
+            $isPaid = in_array($booking->status, ['PAID', 'SOLD', 'BOOKED']);
             $isRecentPending = $booking->status === 'PENDING' && $booking->created_at->gt(now()->subMinutes(10));
 
             if (!$isPaid && !$isRecentPending) {
@@ -387,7 +387,7 @@ class SeatMapService
         $details = [];
 
         foreach ($bookings as $booking) {
-            $isPaid = $booking->status === 'PAID';
+            $isPaid = in_array($booking->status, ['PAID', 'SOLD', 'BOOKED']);
             $isRecentPending = $booking->status === 'PENDING' && $booking->created_at->gt(now()->subMinutes(10));
 
             if (!$isPaid && !$isRecentPending) {

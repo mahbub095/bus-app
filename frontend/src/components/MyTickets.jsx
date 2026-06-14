@@ -228,7 +228,7 @@ export default function MyTickets({
                       <span style={{ fontWeight: 'bold', fontSize: '15px' }}>Ticket PNR: {b.pnr}</span>
                       <span
                         className={`badge-status ${
-                          b.status === 'PAID'
+                          ['PAID', 'SOLD', 'BOOKED'].includes(b.status)
                             ? 'paid'
                             : b.status === 'CANCEL_REQUESTED'
                             ? 'pending'
@@ -286,7 +286,7 @@ export default function MyTickets({
                       </div>
                     </div>
 
-                    {b.status === 'PAID' ? (
+                    {['PAID', 'SOLD', 'BOOKED'].includes(b.status) ? (
                       <div style={{ marginTop: '20px' }}>
                         <div className="cancellation-refund-info">
                           <strong>Notice:</strong> You can submit a cancellation request for admin verification.

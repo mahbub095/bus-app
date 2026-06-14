@@ -164,6 +164,9 @@ export async function handleZiniPayRedirect({
       .catch(err => {
         showToast(err.message, 'error');
       });
+  } else if (payment === 'cancelled') {
+    showToast(`Payment was cancelled. Your seat booking is still reserved.`, 'warning');
+    window.history.replaceState({}, document.title, window.location.pathname);
   } else if (payment === 'failed' && errorMsg) {
     showToast(`Payment failed: ${decodeURIComponent(errorMsg)}`, 'error');
     window.history.replaceState({}, document.title, window.location.pathname);

@@ -32,7 +32,7 @@ class BookingController extends Controller
             'passenger_gender' => 'nullable|in:M,F',
             'boarding_point' => 'nullable|string|max:150',
             'dropping_point' => 'nullable|string|max:150',
-            'status' => 'sometimes|in:PENDING,PAID,CANCEL_REQUESTED,CANCELLED',
+            'status' => 'sometimes|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED',
         ]);
 
         $schedule = Schedule::with('bus')->findOrFail($request->input('schedule_id'));
@@ -45,8 +45,18 @@ class BookingController extends Controller
         $boardingPoints = $this->seatMapService->boardingPoints($schedule);
         $droppingPoints = $this->seatMapService->droppingPoints($schedule);
 
-        $isZinipay = strtolower($request->input('payment_method')) === 'zinipay';
-        $status = $request->input('status', $isZinipay ? 'PENDING' : 'PAID');
+        $paymentMethod = strtolower($request->input('payment_method'));
+        $isZinipay = $paymentMethod === 'zinipay';
+        $isGateway = in_array($paymentMethod, ['zinipay', 'bkash', 'nagad', 'card']);
+
+        $defaultStatus = 'BOOKED';
+        if ($isZinipay) {
+            $defaultStatus = 'PENDING';
+        } elseif ($isGateway) {
+            $defaultStatus = 'SOLD';
+        }
+
+        $status = $request->input('status', $defaultStatus);
 
         $booking = Booking::create([
             'schedule_id' => $schedule->id,
@@ -106,7 +116,7 @@ class BookingController extends Controller
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
             'payment_method' => 'required|string|max:50',
-            'status' => 'required|in:PENDING,PAID,CANCEL_REQUESTED,CANCELLED'
+            'status' => 'required|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED'
         ]);
 
         $booking->update($request->only([

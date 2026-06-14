@@ -31,7 +31,7 @@ class PaymentController extends Controller
         }
 
         // If it's already paid, just redirect to success
-        if ($booking->status === 'PAID') {
+        if (in_array($booking->status, ['PAID', 'SOLD'])) {
             return $this->handleRedirectWithSuccess($source, $booking);
         }
 
@@ -45,12 +45,16 @@ class PaymentController extends Controller
         $status = $this->zinipayService->verifyPayment($targetInvoiceId);
 
         if ($status === 'COMPLETED') {
-            $booking->update(['status' => 'PAID']);
+            $booking->update(['status' => 'SOLD']);
             
             // Send booking verification SMS
             $this->smsGatewayService->sendBookingVerification($booking);
 
             return $this->handleRedirectWithSuccess($source, $booking);
+        }
+
+        if ($status === 'FAILED') {
+            $booking->update(['status' => 'CANCELLED']);
         }
 
         Log::warning('ZiniPay payment callback verification was not completed.', [
@@ -61,9 +65,6 @@ class PaymentController extends Controller
         return $this->handleRedirectWithError($source, 'Payment verification failed or pending.');
     }
 
-    /**
-     * Handle payment cancel redirection.
-     */
     public function cancel(Request $request)
     {
         $bookingId = $request->query('booking_id');
@@ -74,7 +75,13 @@ class PaymentController extends Controller
             $booking->update(['status' => 'CANCELLED']);
         }
 
-        return $this->handleRedirectWithError($source, 'Payment was cancelled.');
+        if ($source === 'admin') {
+            return redirect()->route('admin.dashboard')
+                ->withFragment('bookings')
+                ->withErrors(['Payment was cancelled.']);
+        }
+
+        return redirect('http://localhost:5173/?payment=cancelled&booking_id=' . ($booking ? $booking->id : ''));
     }
 
     /**
@@ -98,7 +105,7 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Booking not found'], 404);
         }
 
-        if ($booking->status === 'PAID') {
+        if (in_array($booking->status, ['PAID', 'SOLD'])) {
             return response()->json(['message' => 'Already processed'], 200);
         }
 
@@ -106,7 +113,7 @@ class PaymentController extends Controller
         $verifiedStatus = $this->zinipayService->verifyPayment($invoiceId);
 
         if ($verifiedStatus === 'COMPLETED') {
-            $booking->update(['status' => 'PAID']);
+            $booking->update(['status' => 'SOLD']);
             
             // Send SMS
             $this->smsGatewayService->sendBookingVerification($booking);
@@ -116,9 +123,13 @@ class PaymentController extends Controller
                 'booking' => [
                     'id' => $booking->id,
                     'pnr' => 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
-                    'status' => 'PAID'
+                    'status' => 'SOLD'
                 ]
             ], 200);
+        }
+
+        if ($verifiedStatus === 'FAILED') {
+            $booking->update(['status' => 'CANCELLED']);
         }
 
         return response()->json(['message' => 'Payment status is: ' . $verifiedStatus], 200);

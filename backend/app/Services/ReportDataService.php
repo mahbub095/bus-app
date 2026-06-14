@@ -22,7 +22,7 @@ class ReportDataService
             'schedule.route.departureStation',
             'schedule.route.arrivalStation',
         ])
-            ->where('status', 'PAID')
+            ->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
             ->whereBetween('created_at', [$start, $end]);
 
         return $this->applyCommonFilters($query, $request);

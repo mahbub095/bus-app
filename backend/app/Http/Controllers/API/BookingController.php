@@ -41,6 +41,14 @@ class BookingController extends BaseController
         $user = $request->user();
         $scheduleId = $request->input('schedule_id');
         $promoCode = $request->input('promo_code');
+        $paymentMethod = strtolower($request->input('payment_method'));
+
+        // Only a super admin or an admin can Booked seat (Cash payment / BOOKED status)
+        if (($paymentMethod === 'cash' || $request->input('status') === 'BOOKED') && (!$user || !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'Only admins or super admins can book a seat manually.'
+            ], 403);
+        }
 
         $requestedSeats = array_filter(array_map('trim', explode(',', $request->input('seat_numbers'))));
 
@@ -58,91 +66,103 @@ class BookingController extends BaseController
 
         $schedule = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])->find($scheduleId);
 
-        return DB::transaction(function () use ($request, $schedule, $requestedSeats, $promoCode, $user) {
-            $activeBookings = Booking::where('schedule_id', $schedule->id)
-                ->where(function ($q) {
-                    $q->where('status', 'PAID')
-                      ->orWhere(function ($qp) {
-                          $qp->where('status', 'PENDING')
-                             ->where('created_at', '>=', now()->subMinutes(10));
-                      });
-                })
-                ->select(SeatMapService::paidBookingColumns())
-                ->lockForUpdate()
-                ->get();
+        try {
+            return DB::transaction(function () use ($request, $schedule, $requestedSeats, $promoCode, $user, $paymentMethod) {
+                $activeBookings = Booking::where('schedule_id', $schedule->id)
+                    ->where(function ($q) {
+                        $q->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
+                          ->orWhere(function ($qp) {
+                              $qp->where('status', 'PENDING')
+                                 ->where('created_at', '>=', now()->subMinutes(10));
+                          });
+                    })
+                    ->select(SeatMapService::paidBookingColumns())
+                    ->lockForUpdate()
+                    ->get();
 
-            $seatMap = $this->seatMapService->buildSeatMap($schedule, $activeBookings);
+                $seatMap = $this->seatMapService->buildSeatMap($schedule, $activeBookings);
 
-            foreach ($requestedSeats as $reqSeat) {
-                $status = $seatMap[$reqSeat] ?? 'available';
-                if (! $this->seatMapService->isSeatSelectable($status)) {
-                    return response()->json([
-                        'message' => "Seat {$reqSeat} is not available. Please select another seat.",
-                    ], 422);
+                foreach ($requestedSeats as $reqSeat) {
+                    $status = $seatMap[$reqSeat] ?? 'available';
+                    if (! $this->seatMapService->isSeatSelectable($status)) {
+                        return response()->json([
+                            'message' => "Seat {$reqSeat} is not available. Please select another seat.",
+                        ], 422);
+                    }
                 }
-            }
 
-            $seatCount = count($requestedSeats);
-            $applyGateway = strtolower($request->input('payment_method')) !== 'cash';
-            $pricing = $this->seatMapService->pricingBreakdown($seatCount, (float) $schedule->fare, $applyGateway);
-            $totalFare = $pricing['total'];
+                $seatCount = count($requestedSeats);
+                $applyGateway = $paymentMethod !== 'cash';
+                $pricing = $this->seatMapService->pricingBreakdown($seatCount, (float) $schedule->fare, $applyGateway);
+                $totalFare = $pricing['total'];
 
-            if ($promoCode) {
-                $promotion = Promotion::where('code', strtoupper($promoCode))->first();
-                if ($promotion) {
-                    $totalFare = max(0.00, $totalFare - floatval($promotion->discount_amount));
+                if ($promoCode) {
+                    $promotion = Promotion::where('code', strtoupper($promoCode))->first();
+                    if ($promotion) {
+                        $totalFare = max(0.00, $totalFare - floatval($promotion->discount_amount));
+                    }
                 }
-            }
 
-            $boardingPoints = $this->seatMapService->boardingPoints($schedule);
-            $droppingPoints = $this->seatMapService->droppingPoints($schedule);
+                $boardingPoints = $this->seatMapService->boardingPoints($schedule);
+                $droppingPoints = $this->seatMapService->droppingPoints($schedule);
 
-            $isZinipay = strtolower($request->input('payment_method')) === 'zinipay';
+                $isZinipay = $paymentMethod === 'zinipay';
+                $isGateway = in_array($paymentMethod, ['zinipay', 'bkash', 'nagad', 'card']);
 
-            $booking = Booking::create([
-                'user_id' => $user->id,
-                'schedule_id' => $schedule->id,
-                'passenger_name' => $request->input('passenger_name'),
-                'passenger_phone' => $request->input('passenger_phone'),
-                'passenger_email' => $request->input('passenger_email'),
-                'passenger_gender' => $request->input('passenger_gender', 'M'),
-                'boarding_point' => $request->input('boarding_point', $boardingPoints[0]['value'] ?? null),
-                'dropping_point' => $request->input('dropping_point', $droppingPoints[0]['value'] ?? null),
-                'seat_class' => $this->seatMapService->seatClassForCoach($schedule->bus->coach_type ?? null),
-                'seat_numbers' => implode(',', $requestedSeats),
-                'total_fare' => $totalFare,
-                'payment_method' => $request->input('payment_method'),
-                'status' => $isZinipay ? 'PENDING' : 'PAID',
-            ]);
-
-            if ($isZinipay) {
-                $invoice = $this->zinipayService->createInvoice($booking, 'frontend');
-                if ($invoice && isset($invoice['payment_url'])) {
-                    $booking->update([
-                        'payment_invoice_id' => $invoice['invoice_id']
-                    ]);
-                    
-                    return response()->json([
-                        'message' => 'Booking initiated. Redirecting to payment...',
-                        'payment_url' => $invoice['payment_url'],
-                        'invoice_id' => $invoice['invoice_id'],
-                        'booking' => $this->formatBooking($booking, $schedule)
-                    ], 201);
-                } else {
-                    return response()->json([
-                        'message' => 'Failed to create payment invoice with ZiniPay.'
-                    ], 500);
+                $status = 'BOOKED';
+                if ($isZinipay) {
+                    $status = 'PENDING';
+                } elseif ($isGateway) {
+                    $status = 'SOLD';
                 }
-            }
 
-            $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
+                $booking = Booking::create([
+                    'user_id' => $user->id,
+                    'schedule_id' => $schedule->id,
+                    'passenger_name' => $request->input('passenger_name'),
+                    'passenger_phone' => $request->input('passenger_phone'),
+                    'passenger_email' => $request->input('passenger_email'),
+                    'passenger_gender' => $request->input('passenger_gender', 'M'),
+                    'boarding_point' => $request->input('boarding_point', $boardingPoints[0]['value'] ?? null),
+                    'dropping_point' => $request->input('dropping_point', $droppingPoints[0]['value'] ?? null),
+                    'seat_class' => $this->seatMapService->seatClassForCoach($schedule->bus->coach_type ?? null),
+                    'seat_numbers' => implode(',', $requestedSeats),
+                    'total_fare' => $totalFare,
+                    'payment_method' => $request->input('payment_method'),
+                    'status' => $status,
+                ]);
 
+                if ($isZinipay) {
+                    $invoice = $this->zinipayService->createInvoice($booking, 'frontend');
+                    if ($invoice && isset($invoice['payment_url'])) {
+                        $booking->update([
+                            'payment_invoice_id' => $invoice['invoice_id']
+                        ]);
+                        
+                        return response()->json([
+                            'message' => 'Booking initiated. Redirecting to payment...',
+                            'payment_url' => $invoice['payment_url'],
+                            'invoice_id' => $invoice['invoice_id'],
+                            'booking' => $this->formatBooking($booking, $schedule)
+                        ], 201);
+                    } else {
+                        throw new \Exception('Failed to create payment invoice with ZiniPay.');
+                    }
+                }
+
+                $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
+
+                return response()->json([
+                    'message' => 'Booking successfully created!',
+                    'booking' => $this->formatBooking($booking, $schedule),
+                    'sms' => $smsResult,
+                ], 201);
+            });
+        } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Booking successfully created!',
-                'booking' => $this->formatBooking($booking, $schedule),
-                'sms' => $smsResult,
-            ], 201);
-        });
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

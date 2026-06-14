@@ -204,7 +204,7 @@ class AjaxController extends Controller
 
         $bookings = $schedule->bookings()
             ->where(function ($q) {
-                $q->where('status', 'PAID')
+                $q->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
                   ->orWhere(function ($qp) {
                       $qp->where('status', 'PENDING')
                          ->where('created_at', '>=', now()->subMinutes(10));
@@ -222,7 +222,7 @@ class AjaxController extends Controller
         $schedule->refresh();
         $bookings = $schedule->bookings()
             ->where(function ($q) {
-                $q->where('status', 'PAID')
+                $q->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
                   ->orWhere(function ($qp) {
                       $qp->where('status', 'PENDING')
                          ->where('created_at', '>=', now()->subMinutes(10));

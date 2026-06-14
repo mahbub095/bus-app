@@ -49,7 +49,7 @@
                             <td style="font-weight: bold;">{{ $b->seat_numbers }}</td>
                             <td style="color: var(--gold); font-weight: bold;">BDT {{ number_format($b->total_fare) }}</td>
                             <td>
-                                <span class="badge-status {{ $b->status === 'PAID' ? 'paid' : ($b->status === 'PENDING' || $b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
+                                <span class="badge-status {{ in_array($b->status, ['PAID', 'SOLD', 'BOOKED']) ? 'paid' : ($b->status === 'PENDING' || $b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
                                     {{ $b->status }}
                                 </span>
                             </td>
@@ -153,6 +153,8 @@
                 <select name="status" class="coupon-input" required>
                     <option value="PENDING">PENDING</option>
                     <option value="PAID">PAID</option>
+                    <option value="SOLD">SOLD</option>
+                    <option value="BOOKED">BOOKED</option>
                     <option value="CANCEL_REQUESTED">CANCEL_REQUESTED</option>
                     <option value="CANCELLED">CANCELLED</option>
                 </select>
@@ -218,7 +220,7 @@
 
         bodyEl.innerHTML = bookings.map((b) => {
             bookingsMap[b.id] = b;
-            const statusClass = b.status === 'PAID' ? 'paid' : (b.status === 'PENDING' || b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
+            const statusClass = ['PAID', 'SOLD', 'BOOKED'].includes(b.status) ? 'paid' : (b.status === 'PENDING' || b.status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled');
             const routeFrom = b.schedule?.route?.from || 'N/A';
             const routeTo = b.schedule?.route?.to || 'N/A';
             const busName = b.schedule?.bus?.operator_name || 'N/A';
