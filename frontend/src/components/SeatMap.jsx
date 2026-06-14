@@ -281,18 +281,19 @@ export default function SeatMap({
                 }}
               >
                 <svg
-                  width="20"
-                  height="20"
+                  width="22"
+                  height="22"
                   viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  <path d="M2 12h20" />
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c3.72 0 6.85 2.56 7.74 6H4.26C5.15 6.56 8.28 4 12 4zm-8 8c0-.69.1-1.36.26-2h4.38L8.2 13.6C6 12.68 4.4 10.96 4 8.92 4 9.94 4 10 4 12zm1.42 4.47C6.76 14.89 8.3 14 10.05 13.65l1.17 3.61-5.8-1.79zM12 20c-.82 0-1.61-.12-2.36-.35l1.75-5.38h1.22l1.75 5.38c-.75.23-1.54.35-2.36.35zm2.78-.7l1.17-3.61c1.75.35 3.29 1.24 4.63 2.82l-5.8 1.79-.01-1zM16 12c0-1.66-.67-3.16-1.76-4.24L12 12l-2.24-4.24A5.97 5.97 0 008 12h8z" opacity="0"/>
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+                  <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+                  <line x1="12" y1="8.5" x2="12" y2="2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="9" y1="14" x2="4" y2="18.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="15" y1="14" x2="20" y2="18.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </div>
             ) : (

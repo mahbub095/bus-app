@@ -615,10 +615,13 @@ function createDeckDesignerGrid(grid, deckKey, title) {
             } else if (cell.type === 'driver') {
                 cellDiv.classList.add('cell-driver');
                 cellDiv.innerHTML = `
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                        <path d="M2 12h20" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                        <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+                        <line x1="12" y1="8.5" x2="12" y2="2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="9" y1="14" x2="4" y2="18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="15" y1="14" x2="20" y2="18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 `;
             } else if (cell.type === 'engine') {
