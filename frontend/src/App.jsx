@@ -13,6 +13,7 @@ import MyTickets from './components/MyTickets';
 import Footer from './components/Footer';
 import BookingPortal from './components/BookingPortal';
 import Maintenance from './components/Maintenance';
+import PaymentFailed from './components/PaymentFailed';
 
 const API_BASE = 'http://localhost:8000/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
@@ -29,6 +30,7 @@ function App() {
   // Booking & Verification success states (shared for navbar/footer integration)
   const [bookingSuccess, setBookingSuccess] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState(null);
+  const [paymentFailed, setPaymentFailed] = useState(null);
 
   // Auth States
   const [authUser, setAuthUser] = useState(null);
@@ -245,6 +247,7 @@ function App() {
       apiBase: API_BASE,
       setVerificationStatus,
       setBookingSuccess,
+      setPaymentFailed,
       showToast
     });
   }, []);
@@ -278,6 +281,7 @@ function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         setBookingSuccess={setBookingSuccess}
+        setPaymentFailed={setPaymentFailed}
         authUser={authUser}
         handleLogout={handleLogout}
         openAuthModal={openAuthModal}
@@ -294,18 +298,26 @@ function App() {
 
         {/* VIEW: HOME (BOOKING Portal) */}
         {activeTab === 'home' && (
-          <BookingPortal
-            bookingSuccess={bookingSuccess}
-            setBookingSuccess={setBookingSuccess}
-            verificationStatus={verificationStatus}
-            setVerificationStatus={setVerificationStatus}
-            authUser={authUser}
-            authToken={authToken}
-            clearAuth={clearAuth}
-            openAuthModal={openAuthModal}
-            showToast={showToast}
-            API_BASE={API_BASE}
-          />
+          paymentFailed ? (
+            <PaymentFailed
+              paymentFailed={paymentFailed}
+              setPaymentFailed={setPaymentFailed}
+              setActiveTab={setActiveTab}
+            />
+          ) : (
+            <BookingPortal
+              bookingSuccess={bookingSuccess}
+              setBookingSuccess={setBookingSuccess}
+              verificationStatus={verificationStatus}
+              setVerificationStatus={setVerificationStatus}
+              authUser={authUser}
+              authToken={authToken}
+              clearAuth={clearAuth}
+              openAuthModal={openAuthModal}
+              showToast={showToast}
+              API_BASE={API_BASE}
+            />
+          )
         )}
 
         {/* VIEW: CANCEL TICKET */}

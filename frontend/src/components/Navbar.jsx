@@ -4,6 +4,7 @@ export default function Navbar({
   activeTab,
   setActiveTab,
   setBookingSuccess,
+  setPaymentFailed,
   authUser,
   handleLogout,
   openAuthModal
@@ -16,6 +17,7 @@ export default function Navbar({
           onClick={() => {
             setActiveTab('home');
             setBookingSuccess(null);
+            if (setPaymentFailed) setPaymentFailed(null);
           }}
           style={{ cursor: 'pointer' }}
         >
@@ -28,25 +30,33 @@ export default function Navbar({
             onClick={() => {
               setActiveTab('home');
               setBookingSuccess(null);
+              if (setPaymentFailed) setPaymentFailed(null);
             }}
           >
             Ticket Booking
           </li>
           <li
             className={`nav-link ${activeTab === 'cancel' ? 'active' : ''}`}
-            onClick={() => setActiveTab('cancel')}
+            onClick={() => {
+              setActiveTab('cancel');
+              if (setPaymentFailed) setPaymentFailed(null);
+            }}
           >
             My Tickets
           </li>
           <li
             className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('offers')}
+            onClick={() => {
+              setActiveTab('offers');
+              if (setPaymentFailed) setPaymentFailed(null);
+            }}
           >
             Promotions & Offers
           </li>
           <li
             className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => {
+              if (setPaymentFailed) setPaymentFailed(null);
               if (!authUser) {
                 openAuthModal('login', () => setActiveTab('profile'));
                 return;

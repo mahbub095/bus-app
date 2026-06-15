@@ -65,6 +65,7 @@ export async function handleZiniPayRedirect({
   apiBase,
   setVerificationStatus,
   setBookingSuccess,
+  setPaymentFailed,
   showToast
 }) {
   const urlParams = new URLSearchParams(window.location.search);
@@ -165,10 +166,10 @@ export async function handleZiniPayRedirect({
         showToast(err.message, 'error');
       });
   } else if (payment === 'cancelled') {
-    showToast(`Payment was cancelled. Your seat booking is still reserved.`, 'warning');
+    setPaymentFailed({ type: 'cancelled' });
     window.history.replaceState({}, document.title, window.location.pathname);
-  } else if (payment === 'failed' && errorMsg) {
-    showToast(`Payment failed: ${decodeURIComponent(errorMsg)}`, 'error');
+  } else if (payment === 'failed') {
+    setPaymentFailed({ type: 'failed', errorMsg: errorMsg ? decodeURIComponent(errorMsg) : '' });
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
