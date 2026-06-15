@@ -32,6 +32,8 @@ Route::middleware(\App\Http\Middleware\CheckMaintenanceMode::class)->group(funct
 
 Route::post('/auth/register', [UserAuthController::class, 'register']);
 Route::post('/auth/login', [UserAuthController::class, 'login']);
+Route::post('/auth/forgot-password', [UserAuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [UserAuthController::class, 'resetPassword']);
 
 use App\Http\Controllers\PaymentController;
 Route::post('/payment/webhook', [PaymentController::class, 'webhook'])->name('payment.webhook');

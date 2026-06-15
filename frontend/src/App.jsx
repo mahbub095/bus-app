@@ -105,6 +105,62 @@ function App() {
     e.preventDefault();
     setIsAuthLoading(true);
 
+    if (authMode === 'forgot') {
+      try {
+        const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ email: authForm.email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Reset code sent to your email.', 'success');
+          if (data.code) {
+            showToast(`[Dev Mode] Reset code: ${data.code}`, 'success', 8000);
+          }
+          setAuthMode('reset');
+          setAuthForm(prev => ({ ...prev, password: '', password_confirmation: '', code: '' }));
+        } else {
+          const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Request failed.');
+          showToast(msg, 'error');
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+      } finally {
+        setIsAuthLoading(false);
+      }
+      return;
+    }
+
+    if (authMode === 'reset') {
+      try {
+        const res = await fetch(`${API_BASE}/auth/reset-password`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            email: authForm.email,
+            code: authForm.code,
+            password: authForm.password,
+            password_confirmation: authForm.password_confirmation
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || 'Password reset successfully.', 'success');
+          setAuthMode('login');
+          setAuthForm(prev => ({ ...prev, password: '', password_confirmation: '', code: '' }));
+        } else {
+          const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Reset failed.');
+          showToast(msg, 'error');
+        }
+      } catch (err) {
+        showToast('Network error.', 'error');
+      } finally {
+        setIsAuthLoading(false);
+      }
+      return;
+    }
+
     const endpoint = authMode === 'register' ? '/auth/register' : '/auth/login';
     const body = authMode === 'register'
       ? authForm
