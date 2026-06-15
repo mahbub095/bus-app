@@ -19,8 +19,8 @@ class AdminController extends Controller
     public function dashboardView()
     {
         $metrics = [
-            'total_sales' => Booking::where('status', 'PAID')->sum('total_fare'),
-            'active_bookings' => Booking::where('status', 'PAID')->count(),
+            'total_sales' => Booking::whereIn('status', ['PAID', 'SOLD', 'BOOKED'])->sum('total_fare'),
+            'active_bookings' => Booking::whereIn('status', ['PAID', 'SOLD', 'BOOKED'])->count(),
             'cancelled_bookings' => Booking::where('status', 'CANCELLED')->count(),
             'total_schedules' => Schedule::count(),
         ];
