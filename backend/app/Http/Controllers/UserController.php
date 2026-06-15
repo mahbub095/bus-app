@@ -21,8 +21,11 @@ class UserController extends Controller
 
         $rules = [
             'name' => 'required|string|max:100',
-            'email' => 'required|email|max:100|unique:users,email,' . $id,
         ];
+
+        if ($user->role !== 'super_admin') {
+            $rules['email'] = 'required|email|max:100|unique:users,email,' . $id;
+        }
 
         if ($canEditRole) {
             $rules['role'] = 'required|string|in:super_admin,admin,user';
@@ -32,8 +35,11 @@ class UserController extends Controller
 
         $updateData = [
             'name' => trim($request->input('name')),
-            'email' => trim($request->input('email')),
         ];
+
+        if ($user->role !== 'super_admin') {
+            $updateData['email'] = trim($request->input('email'));
+        }
 
         if ($canEditRole) {
             $updateData['role'] = $request->input('role');

@@ -87,7 +87,7 @@
                 
                 <div class="input-group">
                     <label>Email Address</label>
-                    <input type="email" name="email" class="coupon-input" placeholder="Email Address" required>
+                    <input type="email" name="email" id="user-email-input" class="coupon-input" placeholder="Email Address" required>
                 </div>
                 
                 <div class="input-group" id="role-select-container">
@@ -204,6 +204,22 @@
                         hiddenRole.remove();
                     }
                 }
+                
+                // Readonly email for super_admin
+                const emailInput = document.getElementById('user-email-input');
+                if (emailInput) {
+                    if (targetRole === 'super_admin') {
+                        emailInput.readOnly = true;
+                        emailInput.style.opacity = '0.7';
+                        emailInput.style.cursor = 'not-allowed';
+                        emailInput.setAttribute('title', 'Super Admin email address is not editable');
+                    } else {
+                        emailInput.readOnly = false;
+                        emailInput.style.opacity = '1';
+                        emailInput.style.cursor = 'text';
+                        emailInput.removeAttribute('title');
+                    }
+                }
             }
 
             function resetUserForm() {
@@ -234,6 +250,15 @@
                 const hiddenRole = form.querySelector('input[type="hidden"][name="role"]');
                 if (hiddenRole) {
                     hiddenRole.remove();
+                }
+
+                // Reset email input readOnly status
+                const emailInput = document.getElementById('user-email-input');
+                if (emailInput) {
+                    emailInput.readOnly = false;
+                    emailInput.style.opacity = '1';
+                    emailInput.style.cursor = 'text';
+                    emailInput.removeAttribute('title');
                 }
             }
         </script>

@@ -237,4 +237,24 @@ class UserRolePermissionTest extends TestCase
             ->get('/admin/api/bookings/logs');
         $response->assertStatus(200);
     }
+
+    /**
+     * Test super admin email address cannot be updated.
+     */
+    public function test_super_admin_email_cannot_be_updated(): void
+    {
+        $originalEmail = $this->superAdmin->email;
+
+        $response = $this->actingAs($this->superAdmin)
+            ->put('/admin/users/' . $this->superAdmin->id, [
+                'name' => 'Updated Super Admin Name',
+                'email' => 'newsuperadmin@test.com',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $this->assertEquals('Updated Super Admin Name', $this->superAdmin->fresh()->name);
+        $this->assertEquals($originalEmail, $this->superAdmin->fresh()->email); // email remains unchanged
+    }
 }
