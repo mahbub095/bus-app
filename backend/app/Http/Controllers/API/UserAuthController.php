@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ResetPasswordCodeMail;
 
 class UserAuthController extends BaseController
 {
@@ -134,14 +136,27 @@ class UserAuthController extends BaseController
             ]
         );
 
-        // Log the code (since mailer is set to log)
+        // Log the code
         Log::info("Password reset code for {$user->email}: {$code}");
 
-        // Return token/code in local/development env for testing convenience
+        // Send the email
+        try {
+            Mail::to($user->email)->send(new ResetPasswordCodeMail($code));
+        } catch (\Exception $e) {
+            Log::error("Failed to send password reset email to {$user->email}: " . $e->getMessage());
+            if (config('app.env') !== 'local') {
+                throw ValidationException::withMessages([
+                    'email' => ['We encountered an error while sending the password reset code. Please try again.'],
+                ]);
+            }
+        }
+
+        // Return message
         $response = [
             'message' => 'A password reset code has been sent to your email.'
         ];
         
+        // Return code in local and testing environments for development convenience
         if (config('app.env') === 'local' || config('app.env') === 'testing') {
             $response['code'] = $code;
         }

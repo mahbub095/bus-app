@@ -8,7 +8,8 @@ export default function AuthModal({
   authForm,
   setAuthForm,
   handleAuthSubmit,
-  isAuthLoading
+  isAuthLoading,
+  devResetCode
 }) {
   if (!showAuthModal) return null;
 
@@ -92,6 +93,11 @@ export default function AuthModal({
                 required
                 maxLength={6}
               />
+              {devResetCode && (
+                <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px', fontWeight: '500' }}>
+                  [Dev Mode] Reset code: {devResetCode}
+                </div>
+              )}
             </div>
           )}
 

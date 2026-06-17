@@ -45,6 +45,7 @@ function App() {
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authReturnAction, setAuthReturnAction] = useState(null);
+  const [devResetCode, setDevResetCode] = useState(null);
 
   // Site Settings (fetched from admin backend)
   const [siteSettings, setSiteSettings] = useState(null);
@@ -98,6 +99,7 @@ function App() {
   const closeAuthModal = () => {
     setShowAuthModal(false);
     setAuthReturnAction(null);
+    setDevResetCode(null);
     setAuthForm({ name: '', email: '', password: '', password_confirmation: '' });
   };
 
@@ -116,7 +118,9 @@ function App() {
         if (res.ok) {
           showToast(data.message || 'Reset code sent to your email.', 'success');
           if (data.code) {
-            showToast(`[Dev Mode] Reset code: ${data.code}`, 'success', 8000);
+            setDevResetCode(data.code);
+          } else {
+            setDevResetCode(null);
           }
           setAuthMode('reset');
           setAuthForm(prev => ({ ...prev, password: '', password_confirmation: '', code: '' }));
@@ -147,6 +151,7 @@ function App() {
         const data = await res.json();
         if (res.ok) {
           showToast(data.message || 'Password reset successfully.', 'success');
+          setDevResetCode(null);
           setAuthMode('login');
           setAuthForm(prev => ({ ...prev, password: '', password_confirmation: '', code: '' }));
         } else {
@@ -423,6 +428,7 @@ function App() {
         setAuthForm={setAuthForm}
         handleAuthSubmit={handleAuthSubmit}
         isAuthLoading={isAuthLoading}
+        devResetCode={devResetCode}
       />
 
       {/* Footer */}
