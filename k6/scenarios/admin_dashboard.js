@@ -5,7 +5,7 @@
  */
 import { fail } from 'k6';
 import { ApiClient } from '../utils/api.js';
-import { getFutureDateString } from '../utils/helpers.js';
+import { getFutureDateString, randomItem } from '../utils/helpers.js';
 import { getBaseUrl, sleepRandom, ADMIN_CREDENTIALS } from '../utils/common.js';
 
 export const options = {
@@ -38,17 +38,53 @@ export default function () {
     sleepRandom(2, 3);
 
     // 3. Load Admin Dashboard view
-    api.adminGetDashboard();
+    const dashboardRes = api.adminGetDashboard();
     sleepRandom(2, 3);
 
     // 4. Fetch Logs and Cancel Requests
-    api.adminGetBookingLogs();
-    api.adminGetCancelLogs();
+    const bookingLogs = api.adminGetBookingLogs();
+    const cancelLogs = api.adminGetCancelLogs();
     sleepRandom(2, 2);
 
     // 5. Search coach services as Admin (Dhaka to Chittagong routes)
     const searchDate = getFutureDateString(1);
-    api.adminSearchCoachServices(1, 2, searchDate);
+    const schedules = api.adminSearchCoachServices(1, 2, searchDate);
+    sleepRandom(2, 3);
+
+    if (schedules && schedules.length > 0) {
+        const targetSchedule = randomItem(schedules);
+        const seatMap = targetSchedule?.seat_map || {};
+        const seats = Object.keys(seatMap);
+
+        if (seats.length > 0 && Math.random() > 0.80) {
+            const randomSeat = randomItem(seats);
+            api.adminToggleBlockedSeat(targetSchedule.id, randomSeat, dashCsrf);
+            sleepRandom(1, 2);
+        }
+    }
+
+    // 6. Exercise admin reporting endpoints for dashboard coverage
+    api.adminGetReportPreview('selling');
+    api.adminGetReportPreview('cancel');
+    api.adminGetReportExport('selling', 'excel');
+    api.adminGetReportExport('selling', 'pdf');
+    api.adminGetReportExport('cancel', 'excel');
+    api.adminGetReportExport('cancel', 'pdf');
+    sleepRandom(2, 3);
+
+    // 7. If there are pending cancel requests, approve one to cover the cancellation workflow
+    const pendingCancel = cancelLogs?.cancel_requests?.find((item) => item.status === 'CANCEL_REQUESTED');
+    if (pendingCancel) {
+        api.adminApproveCancelRequest(pendingCancel.id, dashCsrf);
+        sleepRandom(1, 2);
+    }
+
+    // 8. If there are booking logs with not-yet-cancelled bookings, try a cancel request via API
+    const cancellableBooking = bookingLogs?.bookings?.find((item) => item.status !== 'CANCELLED' && item.status !== 'CANCEL_REQUESTED');
+    if (cancellableBooking && Math.random() > 0.90) {
+        api.adminCancelBookingApi(cancellableBooking.id, dashCsrf);
+        sleepRandom(1, 2);
+    }
 
     sleepRandom(3, 6);
 }

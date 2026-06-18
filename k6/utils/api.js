@@ -364,6 +364,86 @@ export class ApiClient {
             'GET /admin status is 200': (r) => r.status === 200,
             'GET /admin is dashboard': (r) => r.body.indexOf('Dashboard') !== -1,
         });
+
+        return res;
+    }
+
+    adminPostForm(path, payload = {}, csrfToken, extraHeaders = {}) {
+        const url = `${this.baseUrl}${path}`;
+        const params = {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json, text/html, */*',
+                'X-CSRF-TOKEN': csrfToken,
+                ...extraHeaders,
+            }
+        };
+
+        return http.post(url, payload, params);
+    }
+
+    // GET admin report endpoints
+    adminGetReportPreview(reportType) {
+        const url = `${this.baseUrl}/admin/reports/${reportType}/preview`;
+        const res = http.get(url, { headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml' } });
+
+        check(res, {
+            [`GET /admin/reports/${reportType}/preview status is 200`]: (r) => r.status === 200,
+        });
+
+        return res;
+    }
+
+    adminGetReportExport(reportType, format) {
+        const url = `${this.baseUrl}/admin/reports/${reportType}/export/${format}`;
+        const res = http.get(url, { headers: { 'Accept': '*/*' } });
+
+        check(res, {
+            [`GET /admin/reports/${reportType}/export/${format} status is 200`]: (r) => r.status === 200,
+        });
+
+        return res;
+    }
+
+    adminCancelBookingApi(bookingId, csrfToken) {
+        const url = `${this.baseUrl}/admin/api/bookings/${bookingId}/cancel`;
+        const payload = {
+            _token: csrfToken,
+        };
+
+        const res = this.adminPostForm(`/admin/api/bookings/${bookingId}/cancel`, payload, csrfToken, {
+            'Accept': 'application/json'
+        });
+
+        check(res, {
+            [`POST /admin/api/bookings/${bookingId}/cancel status is 200 or 400`]: (r) => r.status === 200 || r.status === 400,
+        });
+
+        try {
+            return JSON.parse(res.body);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    adminApproveCancelRequest(bookingId, csrfToken) {
+        const payload = {
+            _token: csrfToken,
+        };
+
+        const res = this.adminPostForm(`/admin/bookings/${bookingId}/approve-cancel`, payload, csrfToken, {
+            'Accept': 'application/json'
+        });
+
+        check(res, {
+            [`POST /admin/bookings/${bookingId}/approve-cancel status is 200 or 302`]: (r) => r.status === 200 || r.status === 302,
+        });
+
+        try {
+            return JSON.parse(res.body);
+        } catch (e) {
+            return null;
+        }
     }
 
     // GET /admin/api/bookings/logs
