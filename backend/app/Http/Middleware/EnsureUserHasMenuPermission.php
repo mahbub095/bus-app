@@ -15,11 +15,16 @@ class EnsureUserHasMenuPermission
     public function handle(Request $request, Closure $next, string $menu): Response
     {
         if (! Auth::check()) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
             return redirect()->route('login');
         }
 
         if (! Auth::user()->hasMenuPermission($menu)) {
-            if ($request->expectsJson() || $request->is('admin/api/*')) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
                 return response()->json([
                     'message' => "Access denied. You do not have permission to access the {$menu} menu.",
                 ], 403);

@@ -12,10 +12,20 @@ class EnsureUserIsAdmin
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::check()) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
             return redirect()->route('login');
         }
 
         if (! Auth::user()->isAdmin()) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Access denied. Only admin accounts can use this resource.',
+                ], 403);
+            }
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

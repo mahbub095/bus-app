@@ -12,11 +12,16 @@ class EnsureUserIsSuperAdmin
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::check()) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
             return redirect()->route('login');
         }
 
         if (! Auth::user()->isSuperAdmin()) {
-            if ($request->expectsJson() || $request->is('admin/api/*')) {
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('admin/api/*')) {
                 return response()->json([
                     'message' => 'Access denied. You do not have Super Admin permissions.',
                 ], 403);
