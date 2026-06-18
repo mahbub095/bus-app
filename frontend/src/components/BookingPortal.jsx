@@ -4,6 +4,7 @@ import ScheduleList from './ScheduleList';
 import Features from './Features';
 import Partners from './Partners';
 import BookingSuccess from './BookingSuccess';
+import { scheduleCache } from '../scheduleCache';
 
 export default function BookingPortal({
   bookingSuccess,
@@ -31,6 +32,8 @@ export default function BookingPortal({
   const [searchResults, setSearchResults] = useState([]);
   const [searchDone, setSearchDone] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFromCache, setIsFromCache] = useState(false);
+  const [lastFetched, setLastFetched] = useState(null);
 
   // Booking & Selection States
   const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -95,8 +98,10 @@ export default function BookingPortal({
   }, []);
 
   // Handle Search Submission
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const handleSearch = async (e, forceRefresh = false) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     if (!searchParams.from) {
       showToast('Please select a departure station', 'error');
       return;
@@ -120,6 +125,29 @@ export default function BookingPortal({
     setAppliedPromo(null);
     setPromoInput('');
 
+    // Check Cache first if not forcing a refresh
+    if (!forceRefresh) {
+      const cached = scheduleCache.getEntry(
+        searchParams.from,
+        searchParams.to,
+        searchParams.date,
+        searchParams.coachType
+      );
+      if (cached) {
+        setSearchResults(cached.data);
+        setSearchDone(true);
+        setIsFromCache(true);
+        setLastFetched(cached.timestamp);
+        setIsLoading(false);
+        if (cached.data.length === 0) {
+          showToast('No schedules found for this query.', 'error');
+        } else {
+          showToast(`Found ${cached.data.length} schedules (cached).`, 'success');
+        }
+        return;
+      }
+    }
+
     try {
       const params = new URLSearchParams({
         from: searchParams.from,
@@ -132,6 +160,19 @@ export default function BookingPortal({
         const data = await res.json();
         setSearchResults(data);
         setSearchDone(true);
+        setIsFromCache(false);
+        const now = Date.now();
+        setLastFetched(now);
+
+        // Update cache
+        scheduleCache.set(
+          searchParams.from,
+          searchParams.to,
+          searchParams.date,
+          searchParams.coachType,
+          data
+        );
+
         if (data.length === 0) {
           showToast('No schedules found for this query.', 'error');
         } else {
@@ -145,6 +186,10 @@ export default function BookingPortal({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    handleSearch(null, true);
   };
 
   useEffect(() => {
@@ -179,6 +224,17 @@ export default function BookingPortal({
 
         const fresh = await res.json();
         setSearchResults(fresh);
+        setIsFromCache(false);
+        setLastFetched(Date.now());
+
+        // Update cache
+        scheduleCache.set(
+          searchParams.from,
+          searchParams.to,
+          searchParams.date,
+          searchParams.coachType,
+          fresh
+        );
 
         const updated = fresh.find(s => s.id === selectedSchedule.id);
         if (!updated) return;
@@ -305,6 +361,17 @@ export default function BookingPortal({
           const freshData = await refreshRes.json();
           setSearchResults(freshData);
           setSelectedSchedule(null);
+          setIsFromCache(false);
+          setLastFetched(Date.now());
+
+          // Update cache
+          scheduleCache.set(
+            searchParams.from,
+            searchParams.to,
+            searchParams.date,
+            searchParams.coachType,
+            freshData
+          );
         }
       } else {
         showToast(data.message || 'Seat booking failed. Please try again.', 'error');
@@ -377,6 +444,9 @@ export default function BookingPortal({
             handleConfirmBooking={handleConfirmBooking}
             isBooking={isBooking}
             seatMapLastSync={seatMapLastSync}
+            isFromCache={isFromCache}
+            lastFetched={lastFetched}
+            onRefresh={handleRefresh}
           />
 
           {/* Info Visual Steps */}

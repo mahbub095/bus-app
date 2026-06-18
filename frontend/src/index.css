@@ -2124,4 +2124,84 @@ select option:checked {
   background-repeat: repeat-x;
 }
 
+/* Cache status badge styling */
+.cache-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  background: rgba(20, 20, 36, 0.6);
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.cache-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cache-status-dot.status-live {
+  background-color: var(--success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.cache-status-dot.status-cached {
+  background-color: var(--warning);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.cache-status-text {
+  color: var(--text-secondary);
+}
+
+.cache-refresh-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  transition: var(--transition);
+  font-family: var(--font-sans);
+}
+
+.cache-refresh-btn:hover {
+  color: #818CF8;
+  background: rgba(99, 102, 241, 0.12);
+  transform: translateY(-0.5px);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.65;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.65;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+
 

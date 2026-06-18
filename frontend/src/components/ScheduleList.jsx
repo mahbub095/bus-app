@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import SeatMap from './SeatMap';
 
 export default function ScheduleList({
@@ -28,8 +28,30 @@ export default function ScheduleList({
   handleApplyPromo,
   handleConfirmBooking,
   isBooking,
-  seatMapLastSync
+  seatMapLastSync,
+  isFromCache,
+  lastFetched,
+  onRefresh
 }) {
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
+  useEffect(() => {
+    if (!lastFetched) return;
+
+    const initialTimeout = setTimeout(() => {
+      setSecondsAgo(Math.max(0, Math.round((Date.now() - lastFetched) / 1000)));
+    }, 0);
+
+    const interval = setInterval(() => {
+      setSecondsAgo(Math.max(0, Math.round((Date.now() - lastFetched) / 1000)));
+    }, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [lastFetched]);
+
   if (!searchDone) return null;
 
   const formatTime = (isoString) => {
@@ -41,10 +63,30 @@ export default function ScheduleList({
   return (
     <section className="results-container container">
       <div className="results-header">
-        <h2 className="section-title" style={{ margin: '0', textAlign: 'left' }}>
-          Available Coach Services
-        </h2>
-        <span className="results-count">Showing {searchResults.length} schedules matches</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
+          <h2 className="section-title" style={{ margin: '0', textAlign: 'left' }}>
+            Available Coach Services
+          </h2>
+          <span className="results-count">Showing {searchResults.length} schedules matches</span>
+        </div>
+
+        {lastFetched && (
+          <div className="cache-status-badge">
+            <span className={`cache-status-dot ${isFromCache ? 'status-cached' : 'status-live'}`}></span>
+            <span className="cache-status-text">
+              {isFromCache 
+                ? `Cached (${secondsAgo}s ago)` 
+                : 'Live connection'}
+            </span>
+            <button 
+              onClick={onRefresh} 
+              className="cache-refresh-btn"
+              title="Refresh schedule data"
+            >
+              <span style={{ fontSize: '10px' }}>🔄</span> Refresh
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bus-list">
