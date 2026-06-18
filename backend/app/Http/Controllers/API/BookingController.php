@@ -280,4 +280,143 @@ class BookingController extends BaseController
         $booking = Booking::findOrFail($id);
         return response()->json($this->formatBooking($booking));
     }
+
+    /**
+     * Get booking logs for Admin.
+     */
+    public function bookingLogs()
+    {
+        $recentBookings = Booking::with([
+            'schedule.bus',
+            'schedule.route.departureStation',
+            'schedule.route.arrivalStation',
+        ])
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        $formattedBookings = $recentBookings->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'pnr' => 'SE' . str_pad($b->id, 5, '0', STR_PAD_LEFT),
+                'passenger_name' => $b->passenger_name,
+                'passenger_phone' => $b->passenger_phone,
+                'passenger_email' => $b->passenger_email,
+                'seat_numbers' => $b->seat_numbers,
+                'total_fare' => (float) $b->total_fare,
+                'status' => $b->status,
+                'payment_method' => $b->payment_method,
+                'created_at' => optional($b->created_at)->toIso8601String(),
+                'schedule' => [
+                    'departure_time' => optional($b->schedule?->departure_time)->toIso8601String(),
+                    'bus' => [
+                        'operator_name' => $b->schedule?->bus?->operator_name,
+                    ],
+                    'route' => [
+                        'from' => $b->schedule?->route?->departureStation?->name,
+                        'to' => $b->schedule?->route?->arrivalStation?->name,
+                    ],
+                ],
+            ];
+        })->values();
+
+        return response()->json([
+            'bookings' => $formattedBookings,
+            'updated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Get cancel requests logs for Admin.
+     */
+    public function cancelRequestsLogs()
+    {
+        $cancelRequests = Booking::where('status', 'CANCEL_REQUESTED')
+            ->with([
+                'schedule.bus',
+                'schedule.route.departureStation',
+                'schedule.route.arrivalStation',
+            ])
+            ->orderBy('updated_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        $formattedCancelRequests = $cancelRequests->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'pnr' => 'SE' . str_pad($b->id, 5, '0', STR_PAD_LEFT),
+                'passenger_name' => $b->passenger_name,
+                'passenger_phone' => $b->passenger_phone,
+                'passenger_email' => $b->passenger_email,
+                'seat_numbers' => $b->seat_numbers,
+                'total_fare' => (float) $b->total_fare,
+                'status' => $b->status,
+                'created_at' => optional($b->created_at)->toIso8601String(),
+                'updated_at' => optional($b->updated_at)->toIso8601String(),
+                'schedule' => [
+                    'departure_time' => optional($b->schedule?->departure_time)->toIso8601String(),
+                    'bus' => [
+                        'operator_name' => $b->schedule?->bus?->operator_name,
+                    ],
+                    'route' => [
+                        'from' => $b->schedule?->route?->departureStation?->name,
+                        'to' => $b->schedule?->route?->arrivalStation?->name,
+                    ],
+                ],
+            ];
+        })->values();
+
+        return response()->json([
+            'cancel_requests' => $formattedCancelRequests,
+            'updated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Cancel booking as Admin.
+     */
+    public function cancelBooking($id)
+    {
+        $booking = Booking::find($id);
+
+        if (! $booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        if ($booking->status === 'CANCELLED') {
+            return response()->json(['message' => 'Ticket is already cancelled.'], 400);
+        }
+
+        $booking->update(['status' => 'CANCELLED']);
+
+        return response()->json([
+            'message' => 'Booking successfully cancelled and seat released!',
+            'booking_id' => $booking->id,
+            'status' => 'CANCELLED',
+        ]);
+    }
+
+    /**
+     * Approve cancel request as Admin.
+     */
+    public function approveCancelRequest($id)
+    {
+        $booking = Booking::find($id);
+
+        if (! $booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        if ($booking->status !== 'CANCEL_REQUESTED') {
+            return response()->json(['message' => 'This booking has no pending cancellation request.'], 400);
+        }
+
+        $booking->update(['status' => 'CANCELLED']);
+
+        return response()->json([
+            'message' => 'Cancellation request approved successfully. Booking is now cancelled.',
+            'booking_id' => $booking->id,
+            'status' => 'CANCELLED',
+        ]);
+    }
 }

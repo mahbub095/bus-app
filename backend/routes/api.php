@@ -7,6 +7,7 @@ use App\Http\Controllers\API\StationController;
 use App\Http\Controllers\API\UserAuthController;
 use App\Http\Controllers\API\SiteSettingsApiController;
 use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\ScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -67,18 +68,18 @@ Route::middleware(['auth:sanctum', 'admin', \App\Http\Middleware\CheckMaintenanc
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
 
     Route::middleware('menu_permission:coach-services')->group(function () {
-        Route::get('/admin/coach-services/search', [AdminController::class, 'searchCoachServices']);
-        Route::post('/admin/schedules/{id}/seats/toggle-block', [AdminController::class, 'toggleBlockedSeat']);
+        Route::get('/admin/coach-services/search', [ScheduleController::class, 'searchCoachServices']);
+        Route::post('/admin/schedules/{id}/seats/toggle-block', [ScheduleController::class, 'toggleBlockedSeat']);
     });
 
     Route::middleware('menu_permission:bookings')->group(function () {
-        Route::get('/admin/bookings/logs', [AdminController::class, 'bookingLogs']);
-        Route::post('/admin/bookings/{id}/cancel', [AdminController::class, 'cancelBooking']);
+        Route::get('/admin/bookings/logs', [BookingController::class, 'bookingLogs']);
+        Route::post('/admin/bookings/{id}/cancel', [BookingController::class, 'cancelBooking']);
     });
 
     Route::middleware('menu_permission:cancel-requests')->group(function () {
-        Route::get('/admin/cancel-requests/logs', [AdminController::class, 'cancelRequestsLogs']);
-        Route::post('/admin/bookings/{id}/approve-cancel', [AdminController::class, 'approveCancelRequest']);
+        Route::get('/admin/cancel-requests/logs', [BookingController::class, 'cancelRequestsLogs']);
+        Route::post('/admin/bookings/{id}/approve-cancel', [BookingController::class, 'approveCancelRequest']);
     });
 });
 
