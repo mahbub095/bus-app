@@ -20,18 +20,18 @@ export default function AuthModal({
           &times;
         </button>
         <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: '8px' }}>
-          {authMode === 'register' ? 'Create Account' : 
-           authMode === 'forgot' ? 'Forgot Password' : 
-           authMode === 'reset' ? 'Reset Password' : 'Customer Login'}
+          {authMode === 'register' ? 'Create Account' :
+            authMode === 'forgot' ? 'Forgot Password' :
+              authMode === 'reset' ? 'Reset Password' : 'Customer Login'}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
           {authMode === 'register'
             ? 'Register to book and manage your bus tickets online.'
             : authMode === 'forgot'
-            ? 'Enter your email address to receive a 6-digit password reset code.'
-            : authMode === 'reset'
-            ? 'Enter the reset code sent to your email along with your new password.'
-            : 'Sign in to purchase tickets and cancel your own bookings.'}
+              ? 'Enter your email address to receive a 6-digit password reset code.'
+              : authMode === 'reset'
+                ? 'Enter the reset code sent to your email along with your new password.'
+                : 'Sign in to purchase tickets and cancel your own bookings.'}
         </p>
 
         {(authMode === 'login' || authMode === 'register') && (
@@ -67,7 +67,7 @@ export default function AuthModal({
               />
             </div>
           )}
-          
+
           <div className="input-group">
             <label>Email Address</label>
             <input
@@ -95,7 +95,7 @@ export default function AuthModal({
               />
               {devResetCode && (
                 <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px', fontWeight: '500' }}>
-                  [Dev Mode] Reset code: {devResetCode}
+                  {/* [Dev Mode] Reset code: {devResetCode} */}
                 </div>
               )}
             </div>
@@ -117,7 +117,7 @@ export default function AuthModal({
 
           {authMode === 'login' && (
             <div style={{ textAlign: 'right', marginTop: '-6px' }}>
-              <span 
+              <span
                 style={{ fontSize: '12px', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500' }}
                 onClick={() => setAuthMode('forgot')}
               >
@@ -141,15 +141,15 @@ export default function AuthModal({
           )}
 
           <button className="btn btn-primary w-full" type="submit" disabled={isAuthLoading}>
-            {isAuthLoading ? 'Please wait...' : 
-             authMode === 'register' ? 'Create Account' : 
-             authMode === 'forgot' ? 'Send Reset Code' : 
-             authMode === 'reset' ? 'Update Password' : 'Sign In'}
+            {isAuthLoading ? 'Please wait...' :
+              authMode === 'register' ? 'Create Account' :
+                authMode === 'forgot' ? 'Send Reset Code' :
+                  authMode === 'reset' ? 'Update Password' : 'Sign In'}
           </button>
 
           {(authMode === 'forgot' || authMode === 'reset') && (
             <div style={{ textAlign: 'center', marginTop: '6px' }}>
-              <span 
+              <span
                 style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}
                 onClick={() => setAuthMode('login')}
               >
