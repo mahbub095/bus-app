@@ -3,7 +3,7 @@ import { sleep } from 'k6';
 export const DEFAULT_BASE_URL = 'http://sonyabus-app.test';
 
 export const ADMIN_CREDENTIALS = {
-    email: 'admin@sonyabus.com',
+    email: 'superadmin@sonyabus.com',
     password: 'password123',
 };
 

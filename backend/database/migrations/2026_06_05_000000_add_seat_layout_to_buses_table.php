@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('buses', 'seat_layout')) {
+            return;
+        }
+
         Schema::table('buses', function (Blueprint $table) {
             $table->string('seat_layout')->default('2+2')->after('total_seats');
         });

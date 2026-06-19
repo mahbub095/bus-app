@@ -293,9 +293,52 @@ export class ApiClient {
 
     /*
      * ==========================================
-     * Session-based Admin Portal Operations
+     * Session-based Admin Dashboard (/admin/api/*)
+     * Admin AJAX uses Laravel session auth + CSRF (Sanctum /api/admin/* was removed).
      * ==========================================
      */
+
+    adminGetJson(path, checks = {}) {
+        const url = `${this.baseUrl}${path}`;
+        const res = http.get(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        check(res, {
+            [`GET ${path} status is 200`]: (r) => r.status === 200,
+            ...checks,
+        });
+
+        try {
+            return JSON.parse(res.body);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    adminPostJson(path, payload, csrfToken, checks = {}) {
+        const res = this.adminPostForm(path, payload, csrfToken, {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        });
+
+        check(res, checks);
+
+        try {
+            return {
+                status: res.status,
+                body: JSON.parse(res.body),
+            };
+        } catch (e) {
+            return {
+                status: res.status,
+                body: null,
+            };
+        }
+    }
 
     // GET /admin/login (fetches HTML page & CSRF token)
     adminGetLogin() {
@@ -406,24 +449,24 @@ export class ApiClient {
     }
 
     adminCancelBookingApi(bookingId, csrfToken) {
-        const url = `${this.baseUrl}/admin/api/bookings/${bookingId}/cancel`;
         const payload = {
             _token: csrfToken,
         };
 
-        const res = this.adminPostForm(`/admin/api/bookings/${bookingId}/cancel`, payload, csrfToken, {
-            'Accept': 'application/json'
-        });
-
-        check(res, {
+        const result = this.adminPostJson(`/admin/api/bookings/${bookingId}/cancel`, payload, csrfToken, {
             [`POST /admin/api/bookings/${bookingId}/cancel status is 200 or 400`]: (r) => r.status === 200 || r.status === 400,
+            [`POST /admin/api/bookings/${bookingId}/cancel response shape`]: (r) => {
+                try {
+                    const body = JSON.parse(r.body);
+                    return typeof body.message === 'string'
+                        && (r.status !== 200 || (body.booking_id && body.status === 'CANCELLED'));
+                } catch (e) {
+                    return false;
+                }
+            },
         });
 
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return null;
-        }
+        return result.body;
     }
 
     adminApproveCancelRequest(bookingId, csrfToken) {
@@ -432,102 +475,114 @@ export class ApiClient {
         };
 
         const res = this.adminPostForm(`/admin/bookings/${bookingId}/approve-cancel`, payload, csrfToken, {
-            'Accept': 'application/json'
+            'Accept': 'text/html,application/json,*/*',
+            'X-Requested-With': 'XMLHttpRequest',
         });
 
         check(res, {
-            [`POST /admin/bookings/${bookingId}/approve-cancel status is 200 or 302`]: (r) => r.status === 200 || r.status === 302,
+            [`POST /admin/bookings/${bookingId}/approve-cancel status is 302`]: (r) => r.status === 302,
         });
 
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return null;
-        }
+        return { status: res.status };
     }
 
-    // GET /admin/api/bookings/logs
+    // GET /admin/api/bookings/logs (AdminBookingService)
     adminGetBookingLogs() {
-        const url = `${this.baseUrl}/admin/api/bookings/logs`;
-        const res = http.get(url, { headers: { 'Accept': 'application/json' } });
-
-        check(res, {
-            'GET admin/api/bookings/logs status is 200': (r) => r.status === 200,
-        });
-
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // GET /admin/api/cancel-requests/logs
-    adminGetCancelLogs() {
-        const url = `${this.baseUrl}/admin/api/cancel-requests/logs`;
-        const res = http.get(url, { headers: { 'Accept': 'application/json' } });
-
-        check(res, {
-            'GET admin/api/cancel-requests/logs status is 200': (r) => r.status === 200,
-        });
-
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // GET /admin/api/coach-services/search?from=X&to=Y&date=YYYY-MM-DD
-    adminSearchCoachServices(fromId, toId, dateStr) {
-        const url = `${this.baseUrl}/admin/api/coach-services/search?from=${fromId}&to=${toId}&date=${dateStr}`;
-        const res = http.get(url, { headers: { 'Accept': 'application/json' } });
-
-        check(res, {
-            'GET admin/api/coach-services/search status is 200': (r) => r.status === 200,
-        });
-
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return [];
-        }
-    }
-
-    // POST /admin/api/schedules/{id}/seats/toggle-block
-    adminToggleBlockedSeat(scheduleId, seatCode, csrfToken) {
-        const url = `${this.baseUrl}/admin/api/schedules/${scheduleId}/seats/toggle-block`;
-        const payload = {
-            _token: csrfToken,
-            seat: seatCode
-        };
-
-        const params = {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            }
-        };
-
-        const res = http.post(url, payload, params);
-
-        check(res, {
-            'POST toggle-block status is 200': (r) => r.status === 200,
-            'POST toggle-block response message': (r) => {
+        return this.adminGetJson('/admin/api/bookings/logs', {
+            'booking logs has bookings array': (r) => {
                 try {
                     const body = JSON.parse(r.body);
-                    return !!body.message && body.seat === seatCode;
+                    return Array.isArray(body.bookings) && typeof body.updated_at === 'string';
                 } catch (e) {
                     return false;
                 }
-            }
+            },
+            'booking log entries have pnr and schedule': (r) => {
+                try {
+                    const body = JSON.parse(r.body);
+                    if (!body.bookings.length) return true;
+                    const entry = body.bookings[0];
+                    return typeof entry.pnr === 'string'
+                        && typeof entry.passenger_name === 'string'
+                        && entry.schedule
+                        && entry.schedule.route;
+                } catch (e) {
+                    return false;
+                }
+            },
         });
+    }
 
-        try {
-            return JSON.parse(res.body);
-        } catch (e) {
-            return null;
+    // GET /admin/api/cancel-requests/logs (AdminBookingService)
+    adminGetCancelLogs() {
+        return this.adminGetJson('/admin/api/cancel-requests/logs', {
+            'cancel logs has cancel_requests array': (r) => {
+                try {
+                    const body = JSON.parse(r.body);
+                    return Array.isArray(body.cancel_requests) && typeof body.updated_at === 'string';
+                } catch (e) {
+                    return false;
+                }
+            },
+        });
+    }
+
+    // GET /admin/api/coach-services/search (CoachServicesService, includes seat_bookings)
+    adminSearchCoachServices(fromId, toId, dateStr, coachType = null) {
+        let path = `/admin/api/coach-services/search?from=${fromId}&to=${toId}&date=${dateStr}`;
+        if (coachType) {
+            path += `&coach_type=${encodeURIComponent(coachType)}`;
         }
+
+        return this.adminGetJson(path, {
+            'coach search returns array': (r) => {
+                try {
+                    return Array.isArray(JSON.parse(r.body));
+                } catch (e) {
+                    return false;
+                }
+            },
+            'coach search includes admin seat_bookings when schedules exist': (r) => {
+                try {
+                    const body = JSON.parse(r.body);
+                    if (!body.length) return true;
+                    return Object.prototype.hasOwnProperty.call(body[0], 'seat_bookings');
+                } catch (e) {
+                    return false;
+                }
+            },
+        });
+    }
+
+    // POST /admin/api/schedules/{id}/seats/toggle-block (CoachServicesService)
+    adminToggleBlockedSeat(scheduleId, seatCode, csrfToken) {
+        const payload = {
+            _token: csrfToken,
+            seat: seatCode,
+        };
+
+        const result = this.adminPostJson(
+            `/admin/api/schedules/${scheduleId}/seats/toggle-block`,
+            payload,
+            csrfToken,
+            {
+                'POST toggle-block status is 200 or 422': (r) => r.status === 200 || r.status === 422,
+                'POST toggle-block response shape on success': (r) => {
+                    if (r.status !== 200) return true;
+                    try {
+                        const body = JSON.parse(r.body);
+                        return typeof body.message === 'string'
+                            && body.seat === seatCode.toUpperCase()
+                            && typeof body.blocked === 'boolean'
+                            && body.seat_map
+                            && typeof body.available_seats_count === 'number';
+                    } catch (e) {
+                        return false;
+                    }
+                },
+            }
+        );
+
+        return result.body;
     }
 }

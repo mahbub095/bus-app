@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('coach_number');
             $table->enum('coach_type', ['AC', 'Non AC']);
             $table->integer('total_seats')->default(36);
+            $table->string('seat_layout')->default('2+2');
+            $table->longText('seat_layout_grid')->nullable();
             $table->timestamps();
         });
     }

@@ -73,100 +73,56 @@ class AdminApiControllerTest extends TestCase
         ]);
     }
 
-    /**
-     * Test guest cannot access any admin API endpoints.
-     */
-    public function test_guest_cannot_access_admin_api(): void
+    public function test_guest_cannot_access_admin_ajax_endpoints(): void
     {
-        $response = $this->getJson('/api/admin/dashboard');
+        $response = $this->getJson('/admin/api/bookings/logs');
         $response->assertStatus(401);
     }
 
-    /**
-     * Test customer cannot access any admin API endpoints.
-     */
-    public function test_customer_cannot_access_admin_api(): void
+    public function test_customer_cannot_access_admin_ajax_endpoints(): void
     {
         $response = $this->actingAs($this->customer)
-            ->getJson('/api/admin/dashboard');
+            ->getJson('/admin/api/bookings/logs');
         $response->assertStatus(403);
     }
 
-    /**
-     * Test admin can access admin dashboard API.
-     */
-    public function test_admin_can_access_dashboard_api(): void
-    {
-        $response = $this->actingAs($this->adminNoPerms)
-            ->getJson('/api/admin/dashboard');
-
-        $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'metrics' => ['total_sales', 'active_bookings', 'cancelled_bookings', 'total_schedules'],
-            'recentBookings',
-            'cancelRequests',
-            'stations',
-            'buses',
-            'routes',
-            'schedules',
-            'promotions',
-            'siteSettings',
-            'users'
-        ]);
-    }
-
-    /**
-     * Test bookings log menu permission restrictions.
-     */
     public function test_booking_logs_permission_check(): void
     {
-        // Without permission
         $response = $this->actingAs($this->adminNoPerms)
-            ->getJson('/api/admin/bookings/logs');
+            ->getJson('/admin/api/bookings/logs');
         $response->assertStatus(403);
 
-        // With permission
         $response = $this->actingAs($this->adminBookings)
-            ->getJson('/api/admin/bookings/logs');
+            ->getJson('/admin/api/bookings/logs');
         $response->assertStatus(200);
         $response->assertJsonStructure(['bookings', 'updated_at']);
     }
 
-    /**
-     * Test coach services search & seat block permission restrictions.
-     */
     public function test_coach_services_permission_check(): void
     {
         $stationA = Station::first();
         $stationB = Station::skip(1)->first();
 
-        // Without permission: search
         $response = $this->actingAs($this->adminNoPerms)
-            ->getJson("/api/admin/coach-services/search?from={$stationA->id}&to={$stationB->id}&date=" . now()->format('Y-m-d'));
+            ->getJson("/admin/api/coach-services/search?from={$stationA->id}&to={$stationB->id}&date=" . now()->format('Y-m-d'));
         $response->assertStatus(403);
 
-        // With permission: search
         $response = $this->actingAs($this->adminCoach)
-            ->getJson("/api/admin/coach-services/search?from={$stationA->id}&to={$stationB->id}&date=" . now()->format('Y-m-d'));
+            ->getJson("/admin/api/coach-services/search?from={$stationA->id}&to={$stationB->id}&date=" . now()->format('Y-m-d'));
         $response->assertStatus(200);
 
         $schedule = Schedule::first();
 
-        // Without permission: toggle block
         $response = $this->actingAs($this->adminNoPerms)
-            ->postJson("/api/admin/schedules/{$schedule->id}/seats/toggle-block", ['seat' => 'A1']);
+            ->postJson("/admin/api/schedules/{$schedule->id}/seats/toggle-block", ['seat' => 'A1']);
         $response->assertStatus(403);
 
-        // With permission: toggle block
         $response = $this->actingAs($this->adminCoach)
-            ->postJson("/api/admin/schedules/{$schedule->id}/seats/toggle-block", ['seat' => 'E1']);
+            ->postJson("/admin/api/schedules/{$schedule->id}/seats/toggle-block", ['seat' => 'E1']);
         $response->assertStatus(200);
         $response->assertJsonPath('seat', 'E1');
     }
 
-    /**
-     * Test cancel requests logs and approval permission checks.
-     */
     public function test_cancel_requests_permission_check(): void
     {
         $schedule = Schedule::first();
@@ -182,26 +138,23 @@ class AdminApiControllerTest extends TestCase
             'status' => 'CANCEL_REQUESTED',
         ]);
 
-        // Without permission: logs
         $response = $this->actingAs($this->adminNoPerms)
-            ->getJson('/api/admin/cancel-requests/logs');
+            ->getJson('/admin/api/cancel-requests/logs');
         $response->assertStatus(403);
 
-        // With permission: logs
         $response = $this->actingAs($this->adminCancel)
-            ->getJson('/api/admin/cancel-requests/logs');
+            ->getJson('/admin/api/cancel-requests/logs');
         $response->assertStatus(200);
         $response->assertJsonStructure(['cancel_requests', 'updated_at']);
 
-        // Without permission: approve
         $response = $this->actingAs($this->adminNoPerms)
-            ->postJson("/api/admin/bookings/{$booking->id}/approve-cancel");
-        $response->assertStatus(403);
+            ->post("/admin/bookings/{$booking->id}/approve-cancel");
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('message');
 
-        // With permission: approve
         $response = $this->actingAs($this->adminCancel)
-            ->postJson("/api/admin/bookings/{$booking->id}/approve-cancel");
-        $response->assertStatus(200);
+            ->post("/admin/bookings/{$booking->id}/approve-cancel");
+        $response->assertRedirect();
         $this->assertEquals('CANCELLED', $booking->fresh()->status);
     }
 }

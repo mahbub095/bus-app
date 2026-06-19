@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Schedule;
 use App\Services\SeatMapService;
 use App\Services\SmsGatewayService;
+use App\Services\AdminBookingService;
 use Illuminate\Http\Request;
 use App\Services\ZinipayService;
 
@@ -15,7 +16,8 @@ class BookingController extends Controller
     public function __construct(
         protected SmsGatewayService $smsGatewayService,
         protected SeatMapService $seatMapService,
-        protected ZinipayService $zinipayService
+        protected ZinipayService $zinipayService,
+        protected AdminBookingService $adminBookingService
     ) {
     }
 
@@ -162,19 +164,13 @@ class BookingController extends Controller
 
     public function approveCancelRequest(Request $request, $id)
     {
-        $booking = Booking::find($id);
+        $result = $this->adminBookingService->approveCancelRequest((int) $id);
 
-        if (! $booking) {
-            return $this->adminTabRedirect($request)->withErrors(['message' => 'Booking not found.']);
+        if (! $result['success']) {
+            return $this->adminTabRedirect($request)->withErrors(['message' => $result['body']['message']]);
         }
 
-        if ($booking->status !== 'CANCEL_REQUESTED') {
-            return $this->adminTabRedirect($request)->withErrors(['message' => 'This booking has no pending cancellation request.']);
-        }
-
-        $booking->update(['status' => 'CANCELLED']);
-
-        return $this->adminTabRedirect($request)->with('success', 'Cancellation request approved successfully. Booking is now cancelled.');
+        return $this->adminTabRedirect($request)->with('success', $result['body']['message']);
     }
 
     public function payAdmin($id)

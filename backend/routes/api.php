@@ -6,8 +6,6 @@ use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\StationController;
 use App\Http\Controllers\API\UserAuthController;
 use App\Http\Controllers\API\SiteSettingsApiController;
-use App\Http\Controllers\API\AdminController;
-use App\Http\Controllers\API\ScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,30 +54,5 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckMaintenanceMode::cl
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/bookings/mine', [BookingController::class, 'mine']);
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
-});
-
-/*
-|--------------------------------------------------------------------------
-| Authenticated Admin API (Laravel Sanctum + Admin Check)
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth:sanctum', 'admin', \App\Http\Middleware\CheckMaintenanceMode::class])->group(function () {
-    Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
-
-    Route::middleware('menu_permission:coach-services')->group(function () {
-        Route::get('/admin/coach-services/search', [ScheduleController::class, 'searchCoachServices']);
-        Route::post('/admin/schedules/{id}/seats/toggle-block', [ScheduleController::class, 'toggleBlockedSeat']);
-    });
-
-    Route::middleware('menu_permission:bookings')->group(function () {
-        Route::get('/admin/bookings/logs', [BookingController::class, 'bookingLogs']);
-        Route::post('/admin/bookings/{id}/cancel', [BookingController::class, 'cancelBooking']);
-    });
-
-    Route::middleware('menu_permission:cancel-requests')->group(function () {
-        Route::get('/admin/cancel-requests/logs', [BookingController::class, 'cancelRequestsLogs']);
-        Route::post('/admin/bookings/{id}/approve-cancel', [BookingController::class, 'approveCancelRequest']);
-    });
 });
 

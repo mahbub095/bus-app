@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('buses', 'seat_layout_grid')) {
+            return;
+        }
+
         Schema::table('buses', function (Blueprint $table) {
             $table->longText('seat_layout_grid')->nullable()->after('seat_layout');
         });

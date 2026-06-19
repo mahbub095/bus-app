@@ -15,6 +15,7 @@ k6/
     ├── load.js          # Ramps to 100 VUs representing moderate customer traffic
     ├── stress.js        # Ramps to 2000 VUs to determine system limits & bottlenecks under load
     ├── admin.js         # Simulates concurrent admin operators searching services and blocking seats
+    ├── admin_dashboard.js # Full admin dashboard flow including reports and cancel workflows
     └── combined.js      # Multi-scenario run executing both customer and admin traffic in parallel
 ```
 
@@ -60,10 +61,17 @@ k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/stress.js
 ```
 
 ### 4. Admin Scenario (5 VUs)
-Simulates administrative portal operations, checking dashboard stats, pull recent logs, searching coach services, and toggling seat blocks.
+Simulates administrative portal operations: session login, dashboard, `/admin/api/*` AJAX logs/search/toggle, and reports.
 
 ```powershell
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/admin.js
+```
+
+### 4b. Admin Dashboard Scenario (5 VUs)
+Full back-office flow: logs, coach search with `seat_bookings`, seat toggle, reports, cancel approve/cancel API.
+
+```powershell
+k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/admin_dashboard.js
 ```
 
 ### 5. Combined Load Test (Multi-Scenario)
@@ -86,9 +94,10 @@ To prevent database bloating and provide highly realistic load modeling, the sce
   - **2.5% of users** (10% of bookings): Request cancellation of their ticket, invoking database status updates.
   - **2-5 seconds think-time**: Embedded between operations to simulate natural human delays.
 
-- **Admin Journey (`admin.js`)**:
-  - Authenticates dynamically using session cookies and parsing HTML CSRF tokens.
-  - Views the admin dashboard statistics.
-  - Queries active logs (recent bookings and cancellation requests).
-  - Searches coach services using from/to/date parameters.
-  - Toggles (blocks/unblocks) selected seats on schedule details.
+- **Admin Journey (`admin.js` & `admin_dashboard.js`)**:
+  - Authenticates via session cookies (`POST /admin/login`) and parses HTML CSRF tokens.
+  - Views the Blade dashboard (`GET /admin`).
+  - Queries session AJAX endpoints under `/admin/api/*` (booking logs, cancel-request logs, coach search, seat toggle).
+  - Approve-cancel uses form POST to `/admin/bookings/{id}/approve-cancel` (redirect response).
+  - Reports use `/admin/reports/*` preview and export routes.
+  - Note: Sanctum `/api/admin/*` routes were removed; all admin dashboard load tests use session auth only.

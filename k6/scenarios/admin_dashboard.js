@@ -5,7 +5,7 @@
  */
 import { fail } from 'k6';
 import { ApiClient } from '../utils/api.js';
-import { getFutureDateString, randomItem } from '../utils/helpers.js';
+import { getFutureDateString, randomItem, getToggleableSeats } from '../utils/helpers.js';
 import { getBaseUrl, sleepRandom, ADMIN_CREDENTIALS } from '../utils/common.js';
 
 export const options = {
@@ -53,11 +53,10 @@ export default function () {
 
     if (schedules && schedules.length > 0) {
         const targetSchedule = randomItem(schedules);
-        const seatMap = targetSchedule?.seat_map || {};
-        const seats = Object.keys(seatMap);
+        const toggleableSeats = getToggleableSeats(targetSchedule?.seat_map || {});
 
-        if (seats.length > 0 && Math.random() > 0.80) {
-            const randomSeat = randomItem(seats);
+        if (toggleableSeats.length > 0 && Math.random() > 0.80) {
+            const randomSeat = randomItem(toggleableSeats);
             api.adminToggleBlockedSeat(targetSchedule.id, randomSeat, dashCsrf);
             sleepRandom(1, 2);
         }

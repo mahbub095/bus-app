@@ -59,3 +59,11 @@ export function getFutureDateString(days = 1) {
     date.setDate(date.getDate() + days);
     return formatDate(date);
 }
+
+// Seats that can be blocked/unblocked by admin (not sold/booked/pending)
+export function getToggleableSeats(seatMap = {}) {
+    return Object.keys(seatMap).filter((seatCode) => {
+        const status = seatMap[seatCode];
+        return status === 'available' || status === 'blocked';
+    });
+}
