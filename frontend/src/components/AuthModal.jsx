@@ -95,7 +95,7 @@ export default function AuthModal({
               />
               {devResetCode && (
                 <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px', fontWeight: '500' }}>
-                  {/* [Dev Mode] Reset code: {devResetCode} */}
+                  [Dev Mode] Reset code: {devResetCode}
                 </div>
               )}
             </div>
