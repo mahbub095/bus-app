@@ -1,16 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
-class AuthController extends Controller
+class AuthController extends BaseAdminController
 {
-    /**
-     * Show the login screen.
-     */
     public function showLogin()
     {
         if (Auth::check() && Auth::user()->isAdmin()) {
@@ -24,9 +21,6 @@ class AuthController extends Controller
         return view('admin.login');
     }
 
-    /**
-     * Handle authentication login attempt.
-     */
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -48,6 +42,7 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
+
             return redirect()->intended('/admin');
         }
 
@@ -56,9 +51,6 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Log the admin out.
-     */
     public function logout(Request $request)
     {
         Auth::logout();
@@ -68,9 +60,6 @@ class AuthController extends Controller
         return redirect()->route('login')->with('success', 'Logged out successfully.');
     }
 
-    /**
-     * Update signed-in admin password.
-     */
     public function updatePassword(Request $request)
     {
         $validated = $request->validate([
@@ -86,9 +75,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $user->update([
-            'password' => $validated['password'],
-        ]);
+        $user->update(['password' => $validated['password']]);
 
         return $this->adminTabRedirect($request)->with('success', 'Password updated successfully.');
     }

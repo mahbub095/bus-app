@@ -1,21 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Booking;
-use App\Models\Schedule;
-use App\Services\SeatMapService;
-use App\Services\SmsGatewayService;
 use App\Services\AdminBookingService;
-use Illuminate\Http\Request;
+use App\Services\BookingService;
 use App\Services\ZinipayService;
+use Illuminate\Http\Request;
 
-
-class BookingController extends Controller
+class BookingController extends BaseAdminController
 {
     public function __construct(
-        protected SmsGatewayService $smsGatewayService,
-        protected SeatMapService $seatMapService,
+        protected BookingService $bookingService,
         protected ZinipayService $zinipayService,
         protected AdminBookingService $adminBookingService
     ) {
@@ -23,7 +19,7 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'schedule_id' => 'required|exists:schedules,id',
             'passenger_name' => 'required|string|max:100',
             'passenger_phone' => 'required|string|max:20',
@@ -37,71 +33,19 @@ class BookingController extends Controller
             'status' => 'sometimes|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED',
         ]);
 
-        $schedule = Schedule::with('bus')->findOrFail($request->input('schedule_id'));
-        $seats = array_filter(array_map('trim', explode(',', $request->input('seat_numbers'))));
-        $seatCount = max(1, count($seats));
-        $applyGateway = strtolower($request->input('payment_method')) !== 'cash';
-        $pricing = $this->seatMapService->pricingBreakdown($seatCount, (float) $schedule->fare, $applyGateway);
-        $totalFare = $request->input('total_fare', $pricing['total']);
-
-        $boardingPoints = $this->seatMapService->boardingPoints($schedule);
-        $droppingPoints = $this->seatMapService->droppingPoints($schedule);
-
-        $paymentMethod = strtolower($request->input('payment_method'));
-        $isZinipay = $paymentMethod === 'zinipay';
-        $isGateway = in_array($paymentMethod, ['zinipay', 'bkash', 'nagad', 'card']);
-
-        $defaultStatus = 'BOOKED';
-        if ($isZinipay) {
-            $defaultStatus = 'PENDING';
-        } elseif ($isGateway) {
-            $defaultStatus = 'SOLD';
-        }
-
-        $status = $request->input('status', $defaultStatus);
-
-        $booking = Booking::create([
-            'schedule_id' => $schedule->id,
-            'passenger_name' => $request->input('passenger_name'),
-            'passenger_phone' => $request->input('passenger_phone'),
-            'passenger_email' => $request->input('passenger_email'),
-            'passenger_gender' => $request->input('passenger_gender', 'M'),
-            'boarding_point' => $request->input('boarding_point', $boardingPoints[0]['value'] ?? null),
-            'dropping_point' => $request->input('dropping_point', $droppingPoints[0]['value'] ?? null),
-            'seat_class' => $this->seatMapService->seatClassForCoach($schedule->bus->coach_type ?? null),
-            'seat_numbers' => $request->input('seat_numbers'),
-            'total_fare' => $totalFare,
-            'payment_method' => $request->input('payment_method'),
-            'status' => $status,
-        ]);
-
-        $paymentUrl = null;
-        if ($isZinipay && $booking->status === 'PENDING') {
-            $invoice = $this->zinipayService->createInvoice($booking, 'admin');
-            if ($invoice && isset($invoice['payment_url'])) {
-                $booking->update([
-                    'payment_invoice_id' => $invoice['invoice_id']
-                ]);
-                $paymentUrl = $invoice['payment_url'];
-            }
-        }
-
-        $smsResult = ['success' => false, 'message' => 'SMS not sent (booking is not PAID).'];
-        if ($booking->status === 'PAID') {
-            $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
-        }
+        $result = $this->bookingService->createForAdmin($validated);
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'message' => 'Booking created successfully!',
-                'booking' => $booking,
-                'payment_url' => $paymentUrl,
-                'sms' => $smsResult,
+                'booking' => $result['booking'],
+                'payment_url' => $result['payment_url'],
+                'sms' => $result['sms'],
             ], 201);
         }
 
-        if ($paymentUrl) {
-            return redirect($paymentUrl);
+        if ($result['payment_url']) {
+            return redirect($result['payment_url']);
         }
 
         return $this->adminTabRedirect($request)->with('success', 'Booking created successfully!');
@@ -118,7 +62,7 @@ class BookingController extends Controller
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
             'payment_method' => 'required|string|max:50',
-            'status' => 'required|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED'
+            'status' => 'required|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED',
         ]);
 
         $booking->update($request->only([
@@ -182,9 +126,8 @@ class BookingController extends Controller
 
         $invoice = $this->zinipayService->createInvoice($booking, 'admin');
         if ($invoice && isset($invoice['payment_url'])) {
-            $booking->update([
-                'payment_invoice_id' => $invoice['invoice_id']
-            ]);
+            $booking->update(['payment_invoice_id' => $invoice['invoice_id']]);
+
             return redirect($invoice['payment_url']);
         }
 

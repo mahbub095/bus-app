@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Schedule;
 use Illuminate\Http\Request;
 
-class ScheduleController extends Controller
+class ScheduleController extends BaseAdminController
 {
     public function store(Request $request)
     {
@@ -14,7 +14,7 @@ class ScheduleController extends Controller
             'route_id' => 'required|exists:routes,id',
             'departure_time' => 'required|date|after_or_equal:today',
             'arrival_time' => 'required|date|after:departure_time',
-            'fare' => 'required|numeric|min:0'
+            'fare' => 'required|numeric|min:0',
         ]);
 
         Schedule::create($request->only('bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare'));
@@ -31,7 +31,7 @@ class ScheduleController extends Controller
             'route_id' => 'required|exists:routes,id',
             'departure_time' => 'required|date',
             'arrival_time' => 'required|date|after:departure_time',
-            'fare' => 'required|numeric|min:0'
+            'fare' => 'required|numeric|min:0',
         ]);
 
         $schedule->update($request->only('bus_id', 'route_id', 'departure_time', 'arrival_time', 'fare'));

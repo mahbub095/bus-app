@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Services\ExcelExportService;
 use App\Services\ReportDataService;
@@ -8,19 +8,19 @@ use App\Services\ReportFilterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
-class ReportController extends Controller
+class ReportController extends BaseAdminController
 {
     public function __construct(
         protected ReportFilterService $filters,
         protected ReportDataService $data,
         protected ExcelExportService $excel
-    ) {}
+    ) {
+    }
 
     public function sellingPreview(Request $request)
     {
         $this->filters->validateFilters($request);
 
-        // Limit preview to 500 records for performance
         $bookings = $this->data->sellingQuery($request)->limit(500)->get();
         $rows = $bookings->map(fn ($b) => $this->data->formatSellingRow($b))->values();
 
@@ -36,7 +36,6 @@ class ReportController extends Controller
     {
         $this->filters->validateFilters($request);
 
-        // Limit preview to 500 records for performance
         $bookings = $this->data->cancelQuery($request)->limit(500)->get();
         $rows = $bookings->map(fn ($b) => $this->data->formatCancelRow($b))->values();
 
@@ -65,7 +64,7 @@ class ReportController extends Controller
         return $this->excel->download(
             $this->data->sellingHeaders(),
             $rows,
-            'ticket-selling-report-' . now()->format('Y-m-d'),
+            'ticket-selling-report-'.now()->format('Y-m-d'),
             'Ticket Selling Report'
         );
     }
@@ -87,7 +86,7 @@ class ReportController extends Controller
         return $this->excel->download(
             $this->data->cancelHeaders(),
             $rows,
-            'ticket-cancel-report-' . now()->format('Y-m-d'),
+            'ticket-cancel-report-'.now()->format('Y-m-d'),
             'Ticket Cancel Report'
         );
     }
@@ -106,7 +105,7 @@ class ReportController extends Controller
             'generatedAt' => now()->format('M d, Y h:i A'),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('ticket-selling-report-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('ticket-selling-report-'.now()->format('Y-m-d').'.pdf');
     }
 
     public function cancelExportPdf(Request $request)
@@ -123,6 +122,6 @@ class ReportController extends Controller
             'generatedAt' => now()->format('M d, Y h:i A'),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('ticket-cancel-report-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('ticket-cancel-report-'.now()->format('Y-m-d').'.pdf');
     }
 }

@@ -1,22 +1,22 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Station;
 use Illuminate\Http\Request;
 
-class StationController extends Controller
+class StationController extends BaseAdminController
 {
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:100|unique:stations,name',
-            'district' => 'nullable|string|max:100'
+            'district' => 'nullable|string|max:100',
         ]);
 
         Station::create([
             'name' => strtoupper(trim($request->input('name'))),
-            'district' => trim($request->input('district'))
+            'district' => trim($request->input('district')),
         ]);
 
         return $this->adminTabRedirect($request)->with('success', 'Station terminal created successfully!');
@@ -27,13 +27,13 @@ class StationController extends Controller
         $station = Station::findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:100|unique:stations,name,' . $id,
-            'district' => 'nullable|string|max:100'
+            'name' => 'required|string|max:100|unique:stations,name,'.$id,
+            'district' => 'nullable|string|max:100',
         ]);
 
         $station->update([
             'name' => strtoupper(trim($request->input('name'))),
-            'district' => trim($request->input('district'))
+            'district' => trim($request->input('district')),
         ]);
 
         return $this->adminTabRedirect($request)->with('success', 'Station terminal updated successfully!');

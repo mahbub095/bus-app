@@ -1,61 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Services;
 
 use App\Models\Route as RouteModel;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class RouteController extends Controller
+/**
+ * Route (transport line) validation and persistence.
+ */
+class RouteService
 {
-    public function store(Request $request)
-    {
-        $validated = $this->validateRoute($request);
-
-        $exists = RouteModel::where('departure_station_id', $validated['departure_station_id'])
-            ->where('arrival_station_id', $validated['arrival_station_id'])
-            ->first();
-
-        if ($exists) {
-            return $this->adminTabRedirect($request)->withInput()->withErrors([
-                'departure_station_id' => 'A route between these stations already exists.',
-            ]);
-        }
-
-        RouteModel::create($validated);
-
-        return $this->adminTabRedirect($request)->with('success', 'Transport line route connection configured successfully!');
-    }
-
-    public function update(Request $request, $id)
-    {
-        $route = RouteModel::findOrFail($id);
-        $validated = $this->validateRoute($request);
-
-        $exists = RouteModel::where('departure_station_id', $validated['departure_station_id'])
-            ->where('arrival_station_id', $validated['arrival_station_id'])
-            ->where('id', '!=', $id)
-            ->first();
-
-        if ($exists) {
-            return $this->adminTabRedirect($request)->withInput()->withErrors([
-                'departure_station_id' => 'A route between these stations already exists.',
-            ]);
-        }
-
-        $route->update($validated);
-
-        return $this->adminTabRedirect($request)->with('success', 'Route updated successfully!');
-    }
-
-    public function destroy(Request $request, $id)
-    {
-        RouteModel::findOrFail($id)->delete();
-
-        return $this->adminTabRedirect($request)->with('success', 'Route deleted successfully!');
-    }
-
-    protected function validateRoute(Request $request): array
+    public function validateFromRequest(Request $request): array
     {
         $request->validate([
             'departure_station_id' => 'required|exists:stations,id',
@@ -84,7 +40,7 @@ class RouteController extends Controller
         foreach ($boarding as $index => $point) {
             if (empty($point['name'])) {
                 throw ValidationException::withMessages([
-                    'boarding_points_json' => 'Boarding point #' . ($index + 1) . ' requires a name.',
+                    'boarding_points_json' => 'Boarding point #'.($index + 1).' requires a name.',
                 ]);
             }
         }
@@ -92,7 +48,7 @@ class RouteController extends Controller
         foreach ($dropping as $index => $point) {
             if (empty($point['name'])) {
                 throw ValidationException::withMessages([
-                    'dropping_points_json' => 'Dropping point #' . ($index + 1) . ' requires a name.',
+                    'dropping_points_json' => 'Dropping point #'.($index + 1).' requires a name.',
                 ]);
             }
         }
@@ -107,6 +63,19 @@ class RouteController extends Controller
         ];
     }
 
+    public function duplicateExists(int $departureId, int $arrivalId, ?int $exceptId = null): bool
+    {
+        $query = RouteModel::where('departure_station_id', $departureId)
+            ->where('arrival_station_id', $arrivalId);
+
+        if ($exceptId !== null) {
+            $query->where('id', '!=', $exceptId);
+        }
+
+        return $query->exists();
+    }
+
+    /** @return list<array<string, mixed>> */
     protected function parsePointsJson(?string $json): array
     {
         if (! $json) {

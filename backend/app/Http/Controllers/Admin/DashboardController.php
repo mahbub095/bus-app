@@ -1,18 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Services\AdminDashboardService;
 
-class AdminController extends Controller
+class DashboardController extends BaseAdminController
 {
     public function __construct(protected AdminDashboardService $adminDashboardService)
     {
     }
 
-    /**
-     * Render the Blade Admin Dashboard view.
-     */
     public function dashboardView()
     {
         return view('admin.dashboard', $this->adminDashboardService->getDashboardData());

@@ -39,4 +39,10 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /** Ticket reference shown to passengers (e.g. SE00123). */
+    public function getPnrAttribute(): string
+    {
+        return 'SE'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
+    }
 }
