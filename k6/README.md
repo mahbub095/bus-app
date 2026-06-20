@@ -1,103 +1,134 @@
-# Performance & Load Testing Suite with k6
+# k6 Load Testing
 
-This directory contains the k6 performance testing framework for the Sonya Bus Booking Application. The tests simulate realistic customer behaviors including route search, authentication/registration, seat booking, PNR validation, and ticket cancellation, as well as admin back-office operations.
+Performance tests for the SonyaBus booking app. Each **scenario** file is a thin runner; the real logic lives in **flows**.
 
-## Directory Layout
+## Folder structure
 
 ```text
 k6/
-├── README.md            # This documentation
-├── utils/
-│   ├── api.js           # API client wrapper encapsulating both customer and admin endpoints
-│   └── helpers.js       # Random generators for names, emails, phones, and dates
-└── scenarios/
-    ├── smoke.js         # Single VU verification test to check endpoint correctness
-    ├── load.js          # Ramps to 100 VUs representing moderate customer traffic
-    ├── stress.js        # Ramps to 2000 VUs to determine system limits & bottlenecks under load
-    ├── admin.js         # Simulates concurrent admin operators searching services and blocking seats
-    ├── admin_dashboard.js # Full admin dashboard flow including reports and cancel workflows
-    └── combined.js      # Multi-scenario run executing both customer and admin traffic in parallel
+├── config/          # URLs, credentials, shared thresholds
+│   └── index.js
+├── lib/             # HTTP + API clients
+│   ├── http.js          # JSON parsing, headers, CSRF helpers
+│   ├── customer-api.js  # Public REST API  (/api/*)
+│   ├── admin-api.js     # Admin dashboard  (/admin/*, session + CSRF)
+│   └── client.js        # Combined ApiClient (used by flows)
+├── helpers/         # Random data, dates, route/seat pickers
+│   └── index.js
+├── flows/           # Reusable user journeys (the important part)
+│   ├── customer.js      # browse, search, book, cancel…
+│   └── admin.js         # login, logs, reports, seat toggle…
+└── scenarios/       # k6 entry points — options + one flow call
+    ├── smoke.js
+    ├── load.js
+    ├── admin.js
+    └── …
 ```
 
----
+### How to read the code
 
-## Getting Started
+| Layer | Purpose | Example |
+|-------|---------|---------|
+| **scenarios/** | How many users, how long, pass/fail rules | `load.js` → 100 VUs for 4 min |
+| **flows/** | What each virtual user *does* step by step | `customerLoadJourney()` |
+| **lib/** | How to call each API endpoint | `api.customer.search()` |
+| **config/** | Shared constants | `baseUrl()`, `ADMIN.email` |
+| **helpers/** | Test data utilities | `randomEmail()`, `pickRoute()` |
 
-### 1. Install k6
-
-k6 is a standalone CLI binary. On Windows, you can install it using `winget`:
+## Install k6
 
 ```powershell
 winget install GrafanaLabs.k6
 ```
 
-*Note: Restart your terminal after installation to ensure the `k6` executable is in your shell's environment `PATH`.*
+Restart your terminal after install.
 
----
+## Run tests
 
-## Running the Scenarios
-
-By default, the scripts point to `http://sonyabus-app.test`. You can override the target URL using the `BASE_URL` environment variable.
-
-### 1. Smoke Test (Verification)
-Runs 1 virtual user for a single iteration. Use this to ensure all APIs are working and no breaking code exists in the test script.
+Set the target server with `BASE_URL` (default: `http://sonyabus-app.test`).
 
 ```powershell
+# Quick sanity check (1 user, full booking path)
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/smoke.js
-```
 
-### 2. Customer Load Test (Ramps up to 100 VUs)
-Simulates realistic customer workload over ~4 minutes to establish a performance baseline. Ramps up, holds, and ramps down.
-
-```powershell
+# Customer load (ramps to 100 users)
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/load.js
-```
 
-### 3. Stress Test (Ramps up to 2000 VUs)
-Pushes the system to its limits (scaling up to 2000 concurrent users) to test database locking, thread-pool queues, and potential memory leaks.
-
-```powershell
-k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/stress.js
-```
-
-### 4. Admin Scenario (5 VUs)
-Simulates administrative portal operations: session login, dashboard, `/admin/api/*` AJAX logs/search/toggle, and reports.
-
-```powershell
+# Admin back-office
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/admin.js
-```
 
-### 4b. Admin Dashboard Scenario (5 VUs)
-Full back-office flow: logs, coach search with `seat_bookings`, seat toggle, reports, cancel approve/cancel API.
-
-```powershell
+# Full admin dashboard (reports + cancellations)
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/admin_dashboard.js
-```
 
-### 5. Combined Load Test (Multi-Scenario)
-Runs both the customer traffic ramp (up to 100 VUs) and 3 constant admin operators concurrently to model complete real-world activity.
-
-```powershell
+# Customers + admins together
 k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/combined.js
 ```
 
----
+### All scenarios
 
-## Simulating User Journeys
+| File | What it tests |
+|------|---------------|
+| `smoke.js` | One full customer booking path |
+| `load.js` | Realistic customer traffic (100 VUs) |
+| `stress.js` | Ramp to 200 VUs |
+| `soak.js` | Steady 40 VUs over time |
+| `spike.js` | Sudden surge to 100 VUs |
+| `booking_flow.js` | Register → book → cancel |
+| `coach_search.js` | Route search only |
+| `login_api.js` | Register + login throughput |
+| `homepage_load.js` | Landing page + public APIs |
+| `promo_validation.js` | Coupon check endpoint |
+| `seat_layout.js` | Seat map polling |
+| `seat_race.js` | Concurrent booking same seat |
+| `admin.js` | Admin login, logs, search, toggle |
+| `admin_dashboard.js` | Full admin workflow + reports |
+| `combined.js` | Customer + admin in parallel |
 
-To prevent database bloating and provide highly realistic load modeling, the scenarios distribute tasks using **probabilistic branching** and **think-time pacing**:
+## Customer journey (`flows/customer.js`)
 
-- **Customer Journey (`load.js` & `stress.js`)**:
-  - **100% of users**: Query station list, check promotions, and search routes.
-  - **50% of users**: Proceed to register a new account, retrieve their auth profile, and fetch their booking list.
-  - **25% of users**: Filter search results, select 1-2 random available seats, and successfully book a ticket (via Cash).
-  - **2.5% of users** (10% of bookings): Request cancellation of their ticket, invoking database status updates.
-  - **2-5 seconds think-time**: Embedded between operations to simulate natural human delays.
+```
+browseHome → searchRoutes → (50% chance) registerAndMaybeBook
+                                    ↓
+                            tryBookSeat → (10% chance) cancel
+```
 
-- **Admin Journey (`admin.js` & `admin_dashboard.js`)**:
-  - Authenticates via session cookies (`POST /admin/login`) and parses HTML CSRF tokens.
-  - Views the Blade dashboard (`GET /admin`).
-  - Queries session AJAX endpoints under `/admin/api/*` (booking logs, cancel-request logs, coach search, seat toggle).
-  - Approve-cancel uses form POST to `/admin/bookings/{id}/approve-cancel` (redirect response).
-  - Reports use `/admin/reports/*` preview and export routes.
-  - Note: Sanctum `/api/admin/*` routes were removed; all admin dashboard load tests use session auth only.
+## Admin journey (`flows/admin.js`)
+
+```
+adminLogin (CSRF + session)
+    → dashboard
+    → booking logs + cancel logs
+    → coach search
+    → (optional) toggle seat block
+    → (dashboard flow) reports + approve cancel
+```
+
+Admin uses **session cookies** on `/admin/api/*`, not Sanctum tokens.
+
+## Credentials
+
+Default admin user (from database seeder):
+
+- Email: `superadmin@sonyabus.com`
+- Password: `password123`
+
+Change in `config/index.js` if needed.
+
+## Adding a new test
+
+1. Add or reuse a **flow** function in `flows/customer.js` or `flows/admin.js`.
+2. Create a small **scenario** file that sets `options` and calls that flow.
+3. Run with `k6 run k6/scenarios/your_test.js`.
+
+Example scenario:
+
+```javascript
+import { baseUrl, thresholds } from '../config/index.js';
+import { searchOnlyJourney } from '../flows/customer.js';
+
+export const options = { vus: 10, duration: '30s', thresholds: thresholds.normal };
+
+export default function () {
+    searchOnlyJourney(baseUrl());
+}
+```
