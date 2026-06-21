@@ -127,3 +127,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 });
+
+//Test 
