@@ -46,9 +46,19 @@ Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 */
 
 Route::middleware(['auth', 'admin'])->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard & Profile
+    |--------------------------------------------------------------------------
+    */
     Route::get('/admin', [DashboardController::class, 'dashboardView'])->name('admin.dashboard');
     Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin AJAX APIs (session-based)
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('admin/api')->group(function () {
         Route::middleware('menu_permission:coach-services')->group(function () {
             Route::get('/coach-services/search', [AjaxController::class, 'searchCoachServices'])->name('admin.coach-services.search');
@@ -63,6 +73,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
         });
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reports Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:reports')->group(function () {
         Route::get('/admin/reports/selling/preview', [ReportController::class, 'sellingPreview'])->name('admin.reports.selling.preview');
         Route::get('/admin/reports/selling/export/excel', [ReportController::class, 'sellingExportExcel'])->name('admin.reports.selling.excel');
@@ -72,6 +87,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/admin/reports/cancel/export/pdf', [ReportController::class, 'cancelExportPdf'])->name('admin.reports.cancel.pdf');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bookings Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:bookings')->group(function () {
         Route::post('/admin/bookings', [BookingController::class, 'store'])->name('admin.bookings.store');
         Route::put('/admin/bookings/{id}', [BookingController::class, 'update'])->name('admin.bookings.update');
@@ -79,41 +99,76 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/admin/bookings/{id}/pay', [BookingController::class, 'payAdmin'])->name('admin.bookings.pay');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Booking Cancel Requests
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:cancel-requests')->group(function () {
         Route::post('/admin/bookings/{id}/cancel', [BookingController::class, 'cancel'])->name('admin.bookings.cancel');
         Route::post('/admin/bookings/{id}/approve-cancel', [BookingController::class, 'approveCancelRequest'])->name('admin.bookings.approve-cancel');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stations Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:stations')->group(function () {
         Route::post('/admin/stations', [StationController::class, 'store'])->name('admin.stations.store');
         Route::put('/admin/stations/{id}', [StationController::class, 'update'])->name('admin.stations.update');
         Route::delete('/admin/stations/{id}', [StationController::class, 'destroy'])->name('admin.stations.destroy');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Buses Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:buses')->group(function () {
         Route::post('/admin/buses', [BusController::class, 'store'])->name('admin.buses.store');
         Route::put('/admin/buses/{id}', [BusController::class, 'update'])->name('admin.buses.update');
         Route::delete('/admin/buses/{id}', [BusController::class, 'destroy'])->name('admin.buses.destroy');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Routes Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:routes')->group(function () {
         Route::post('/admin/routes', [RouteController::class, 'store'])->name('admin.routes.store');
         Route::put('/admin/routes/{id}', [RouteController::class, 'update'])->name('admin.routes.update');
         Route::delete('/admin/routes/{id}', [RouteController::class, 'destroy'])->name('admin.routes.destroy');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Schedules Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:schedules')->group(function () {
         Route::post('/admin/schedules', [ScheduleController::class, 'store'])->name('admin.schedules.store');
         Route::put('/admin/schedules/{id}', [ScheduleController::class, 'update'])->name('admin.schedules.update');
         Route::delete('/admin/schedules/{id}', [ScheduleController::class, 'destroy'])->name('admin.schedules.destroy');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Promotions Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:promotions')->group(function () {
         Route::post('/admin/promotions', [PromotionController::class, 'store'])->name('admin.promotions.store');
         Route::put('/admin/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
         Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | System Settings & Configuration (Super Admin)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('super_admin')->group(function () {
         Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');
         Route::post('/admin/system/seed', [SystemController::class, 'seed'])->name('admin.system.seed');
@@ -122,8 +177,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Users Management
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('menu_permission:users')->group(function () {
         Route::put('/admin/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 });
+
+//1

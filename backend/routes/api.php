@@ -6,6 +6,7 @@ use App\Http\Controllers\API\SearchController;
 use App\Http\Controllers\API\StationController;
 use App\Http\Controllers\API\UserAuthController;
 use App\Http\Controllers\API\SiteSettingsApiController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,15 +31,25 @@ Route::middleware(\App\Http\Middleware\CheckMaintenanceMode::class)->group(funct
     Route::get('/promotions/check', [PromotionController::class, 'check']);
 });
 
+/*
+|--------------------------------------------------------------------------
+| Customer Authentication (Guest routes)
+|--------------------------------------------------------------------------
+*/
+
 Route::post('/auth/register', [UserAuthController::class, 'register']);
 Route::post('/auth/login', [UserAuthController::class, 'login']);
 Route::post('/auth/forgot-password', [UserAuthController::class, 'forgotPassword']);
 Route::post('/auth/reset-password', [UserAuthController::class, 'resetPassword']);
 
-use App\Http\Controllers\PaymentController;
+/*
+|--------------------------------------------------------------------------
+| Public Webhooks & External callback routes
+|--------------------------------------------------------------------------
+*/
+
 Route::post('/payment/webhook', [PaymentController::class, 'webhook'])->name('payment.webhook');
 Route::get('/bookings/public/{id}', [BookingController::class, 'showPublic'])->name('bookings.show_public');
-
 
 /*
 |--------------------------------------------------------------------------
