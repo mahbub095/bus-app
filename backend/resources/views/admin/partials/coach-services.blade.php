@@ -69,7 +69,6 @@
     const toggleBlockUrlTemplate = @json(route('admin.schedules.seats.toggle-block', ['id' => '__ID__']));
     const bookUrl = @json(route('admin.bookings.store'));
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
     let searchParams = { from: '', to: '', date: '', coachType: 'All' };
     let searchResults = [];
     let searchDone = false;

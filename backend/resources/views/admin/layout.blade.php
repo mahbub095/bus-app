@@ -292,11 +292,6 @@
             margin-top: 2px;
         }
 
-        /* Custom Tabs header panel - legacy, kept for compatibility */
-        .auth-tabs {
-            display: none;
-        }
-
         /* Content panels switcher */
         .admin-tab-content {
             display: none;
@@ -1433,7 +1428,7 @@
                 <span class="sidebar-nav-icon">⚙️</span>
                 Site Settings
             </a>
-            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database" target="_blank" rel="noopener noreferrer">
+            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database">
                 <span class="sidebar-nav-icon">🗄️</span>
                 Database Operations
             </a>
@@ -1576,10 +1571,6 @@
                     adminHeader?.style.setProperty('display', 'none');
                 }
                 
-                if (tabName !== 'dashboard') {
-                    localStorage.setItem('admin_active_tab', tabName);
-                }
-
                 if (updateHash) {
                     window.location.hash = tabName;
                 }
@@ -1611,10 +1602,6 @@
             
             navItems.forEach(item => {
                 item.addEventListener('click', (event) => {
-                    if (item.target === '_blank') {
-                        return;
-                    }
-
                     event.preventDefault();
                     const tabName = item.getAttribute('data-tab');
                     switchTab(tabName, true);
@@ -1676,10 +1663,6 @@
                 if (submitBtn) submitBtn.textContent = config.createSubmitLabel;
                 if (cancelBtn) cancelBtn.classList.remove('visible');
                 if (idInput) idInput.value = '';
-
-                if (formId === 'route-form' && typeof window.loadRoutePointsForm === 'function') {
-                    window.loadRoutePointsForm([], []);
-                }
             }
 
             if (formId === 'booking-form') {

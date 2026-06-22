@@ -23,77 +23,11 @@
                     </tr>
                 </thead>
                 <tbody id="bookings-log-body">
-                    @forelse($recentBookings as $b)
-                        <tr>
-                            <td style="font-weight: bold; color: var(--primary)">
-                                SE{{ str_pad($b->id, 5, '0', STR_PAD_LEFT) }}
-                            </td>
-                            <td style="font-weight: 600;">{{ $b->passenger_name }}</td>
-                            <td>
-                                <div>{{ $b->passenger_phone }}</div>
-                                <div style="font-size: 11px; color: var(--text-secondary)">{{ $b->passenger_email }}</div>
-                            </td>
-                            <td>
-                                @if($b->schedule && $b->schedule->route)
-                                    <div>{{ $b->schedule->route->departureStation->name }} ➔ {{ $b->schedule->route->arrivalStation->name }}</div>
-                                    <div style="font-size: 11px; color: var(--text-secondary)">
-                                        Bus: {{ $b->schedule->bus?->operator_name ?? 'N/A' }}
-                                    </div>
-                                    <div style="font-size: 11px; color: var(--text-secondary)">
-                                        {{ $b->schedule->departure_time->format('D, M d, Y @ h:i A') }}
-                                    </div>
-                                @else
-                                    <span style="color: var(--text-muted)">N/A</span>
-                                @endif
-                            </td>
-                            <td style="font-weight: bold;">{{ $b->seat_numbers }}</td>
-                            <td style="color: var(--gold); font-weight: bold;">BDT {{ number_format($b->total_fare) }}</td>
-                            <td>
-                                <span class="badge-status {{ in_array($b->status, ['PAID', 'SOLD', 'BOOKED']) ? 'paid' : ($b->status === 'PENDING' || $b->status === 'CANCEL_REQUESTED' ? 'pending' : 'cancelled') }}">
-                                    {{ $b->status }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-btns">
-                                    @if($b->status === 'PENDING' && strtolower($b->payment_method) === 'zinipay')
-                                        <a href="{{ route('admin.bookings.pay', $b->id) }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; height: 28px; line-height: 28px; padding: 0 10px; text-decoration: none; font-size: 12px; font-weight: 600;">
-                                            Pay
-                                        </a>
-                                    @endif
-                                    <button type="button" class="btn btn-secondary btn-sm"
-                                        onclick="setCrudFormMode('booking-form', {
-                                            mode: 'edit',
-                                            id: {{ $b->id }},
-                                            action: '{{ route('admin.bookings.update', $b->id) }}',
-                                            title: 'Edit Booking #SE{{ str_pad($b->id, 5, '0', STR_PAD_LEFT) }}',
-                                            submitLabel: 'Update Booking',
-                                            fields: {
-                                                passenger_name: {{ json_encode($b->passenger_name) }},
-                                                passenger_phone: {{ json_encode($b->passenger_phone) }},
-                                                passenger_email: {{ json_encode($b->passenger_email) }},
-                                                seat_numbers: {{ json_encode($b->seat_numbers) }},
-                                                total_fare: {{ json_encode($b->total_fare) }},
-                                                status: {{ json_encode($b->status) }},
-                                                payment_method: {{ json_encode($b->payment_method) }}
-                                            }
-                                        })">
-                                        Edit
-                                    </button>
-                                    <form action="{{ route('admin.bookings.destroy', $b->id) }}" method="POST" onsubmit="return confirm('Permanently delete this booking record?');" style="display:inline-block;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-danger btn-sm" type="submit">Delete</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted)">
-                                No reservation records found.
-                            </td>
-                        </tr>
-                    @endforelse
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                            Open this tab to load live booking logs…
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>

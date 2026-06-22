@@ -16,8 +16,6 @@ class AdminDashboardService
     /**
      * @return array{
      *     metrics: array<string, mixed>,
-     *     recentBookings: \Illuminate\Support\Collection,
-     *     cancelRequests: \Illuminate\Support\Collection,
      *     stations: \Illuminate\Support\Collection,
      *     buses: \Illuminate\Support\Collection,
      *     routes: \Illuminate\Support\Collection,
@@ -36,25 +34,6 @@ class AdminDashboardService
             'total_schedules' => Schedule::count(),
         ];
 
-        $recentBookings = Booking::with([
-            'schedule.bus',
-            'schedule.route.departureStation',
-            'schedule.route.arrivalStation',
-        ])
-            ->orderBy('created_at', 'desc')
-            ->limit(50)
-            ->get();
-
-        $cancelRequests = Booking::with([
-            'schedule.bus',
-            'schedule.route.departureStation',
-            'schedule.route.arrivalStation',
-        ])
-            ->where('status', 'CANCEL_REQUESTED')
-            ->orderBy('updated_at', 'desc')
-            ->limit(50)
-            ->get();
-
         $routes = Route::with(['departureStation', 'arrivalStation'])
             ->limit(100)
             ->get()
@@ -67,8 +46,6 @@ class AdminDashboardService
 
         return [
             'metrics' => $metrics,
-            'recentBookings' => $recentBookings,
-            'cancelRequests' => $cancelRequests,
             'stations' => Station::orderBy('name', 'asc')->get(),
             'buses' => Bus::orderBy('operator_name', 'asc')->get(),
             'routes' => $routes,
