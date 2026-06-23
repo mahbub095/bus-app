@@ -1,6 +1,6 @@
 {{-- Integrations & Gateways Admin Panel --}}
 @php
-    $sms = $smsConfig;
+    $sms = $smsConfig ?? null;
     $mail = $siteSettings ?? [];
     $smsActive = (bool) ($sms?->is_active ?? false);
 @endphp

@@ -8,6 +8,7 @@ use App\Models\Promotion;
 use App\Models\Route;
 use App\Models\Schedule;
 use App\Models\SiteSetting;
+use App\Models\SmsConfig;
 use App\Models\Station;
 use App\Models\User;
 
@@ -22,6 +23,7 @@ class AdminDashboardService
      *     schedules: \Illuminate\Support\Collection,
      *     promotions: \Illuminate\Support\Collection,
      *     siteSettings: array<string, mixed>,
+     *     smsConfig: \App\Models\SmsConfig|null,
      *     users: \Illuminate\Support\Collection
      * }
      */
@@ -54,6 +56,7 @@ class AdminDashboardService
                 ->get(),
             'promotions' => Promotion::orderBy('code', 'asc')->get(),
             'siteSettings' => SiteSetting::getAll(),
+            'smsConfig' => SmsConfig::query()->latest('id')->first(),
             'users' => User::orderBy('created_at', 'desc')->get(),
         ];
     }
