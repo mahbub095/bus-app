@@ -156,10 +156,6 @@ Key backend directories:
 - Standard CRUD for promotion codes and discount values
 - Normalizes code to uppercase
 
-### `App\Http\Controllers\SystemController`
-- Executes migrations, seeding, and fresh seeding via Artisan calls
-- Returns console output or error messages to admin dashboard
-
 ### `App\Http\Controllers\SiteSettingsController`
 - `update()` — bulk updates settings from admin form
 - `uploadFavicon()` — uploads favicon files and stores URL in settings

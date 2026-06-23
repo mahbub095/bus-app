@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\SiteSettingsController;
 use App\Http\Controllers\Admin\GatewaySettingsController;
 use App\Http\Controllers\Admin\StationController;
-use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
@@ -171,9 +170,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('super_admin')->group(function () {
-        Route::post('/admin/system/migrate', [SystemController::class, 'migrate'])->name('admin.system.migrate');
-        Route::post('/admin/system/seed', [SystemController::class, 'seed'])->name('admin.system.seed');
-        Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
         

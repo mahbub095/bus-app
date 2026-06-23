@@ -22,7 +22,6 @@ trait RedirectsToAdminTab
             'schedules',
             'promotions',
             'reports',
-            'database',
             'profile',
             'users',
         ];

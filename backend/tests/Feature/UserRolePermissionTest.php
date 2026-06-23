@@ -67,12 +67,6 @@ class UserRolePermissionTest extends TestCase
         $response->assertRedirect('/admin');
         $response->assertSessionHasErrors();
 
-        // Admin tries to access database migration route
-        $response = $this->actingAs($this->admin)
-            ->post('/admin/system/migrate', []);
-        $response->assertRedirect('/admin');
-        $response->assertSessionHasErrors();
-
         // Admin tries to update another user's details/role without users menu permission
         $this->admin->menu_permissions = ['coach-services'];
         $this->admin->save();

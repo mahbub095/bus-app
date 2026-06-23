@@ -1432,10 +1432,6 @@
                 <span class="sidebar-nav-icon">🔌</span>
                 Integrations & Gateways
             </a>
-            <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database">
-                <span class="sidebar-nav-icon">🗄️</span>
-                Database Operations
-            </a>
             @endif
             <a href="/admin#profile" class="sidebar-nav-item" data-tab="profile">
                 <span class="sidebar-nav-icon">👤</span>
@@ -1450,7 +1446,7 @@
         <section class="admin-header" id="admin-header">
             <div class="admin-title-wrap">
                 <h1>Control Panel Dashboard</h1>
-                <p>Welcome back, {{ Auth::user()->name }}. Manage timetables, seating templates, and database migrations.</p>
+                <p>Welcome back, {{ Auth::user()->name }}. Manage timetables, seating templates, and system settings.</p>
             </div>
         </section>
 
