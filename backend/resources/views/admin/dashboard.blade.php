@@ -107,11 +107,6 @@
     @endif
 
     @if(Auth::user()->isSuperAdmin())
-    <!-- Sub-tab 10: System Database Migrations & Artisan hooks -->
-    <section class="admin-tab-content" id="tab-content-database">
-        @include('admin.partials.database')
-    </section>
-
     <!-- Sub-tab 12: Site Settings (Footer, Title, Favicon, Maintenance, SEO) -->
     <section class="admin-tab-content" id="tab-content-site-settings">
         @include('admin.partials.site-settings')
