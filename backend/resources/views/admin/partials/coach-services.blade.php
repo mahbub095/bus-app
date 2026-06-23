@@ -86,6 +86,7 @@
     let pollTimer = null;
     let isFetching = false;
     let coachListEventsBound = false;
+    let lastFetchedTimeText = '';
 
     const dateInput = document.getElementById('cs-date');
     if (dateInput && !dateInput.value) {
@@ -674,8 +675,12 @@
                         <div class="seats-selector-container">
                             <div class="seat-selection-grid">
                                 <div>
-                                    <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
+                                    <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
                                         Bus Seat Layout
+                                        <span id="cs-seat-map-live-status-${sched.id}" class="live-status" style="font-size: 11px; margin-left: 10px;">
+                                            <span class="live-dot"></span>
+                                            <span id="cs-seat-map-live-text-${sched.id}">${lastFetchedTimeText || 'Live'}</span>
+                                        </span>
                                     </h3>
                                     <div class="seat-map-toolbar">
                                         <button type="button" class="btn btn-secondary cs-block-mode-toggle ${adminBlockMode ? 'active' : ''}"
@@ -906,6 +911,8 @@
 
             if (res.ok) {
                 searchResults = await res.json();
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                lastFetchedTimeText = `Live — last updated ${now} (refreshes every 5s)`;
 
                 if (adminSelectedSeats.length && expandedScheduleId) {
                     const sched = searchResults.find(s => s.id === expandedScheduleId);
@@ -954,8 +961,18 @@
         if (!statusEl || !textEl) return;
 
         statusEl.style.display = 'inline-flex';
-        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        textEl.textContent = `Live — last updated ${now} (refreshes every 5s)`;
+        if (!lastFetchedTimeText) {
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastFetchedTimeText = `Live — last updated ${now} (refreshes every 5s)`;
+        }
+        textEl.textContent = lastFetchedTimeText;
+
+        if (expandedScheduleId) {
+            const subLiveTextEl = document.getElementById(`cs-seat-map-live-text-${expandedScheduleId}`);
+            if (subLiveTextEl) {
+                subLiveTextEl.textContent = lastFetchedTimeText;
+            }
+        }
     }
 
     async function handleSearch() {
@@ -1082,6 +1099,10 @@
 
     function startPolling() {
         stopPolling();
+        const tab = document.getElementById('tab-content-coach-services');
+        if (tab && tab.style.display !== 'none' && searchDone) {
+            fetchCoachServices(true);
+        }
         pollTimer = setInterval(() => {
             const tab = document.getElementById('tab-content-coach-services');
             if (tab && tab.style.display !== 'none' && searchDone) {

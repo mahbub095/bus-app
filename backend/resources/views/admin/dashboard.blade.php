@@ -116,6 +116,11 @@
     <section class="admin-tab-content" id="tab-content-site-settings">
         @include('admin.partials.site-settings')
     </section>
+
+    <!-- Sub-tab 13: Integrations & Gateways (SMS, Mail, ZiniPay) -->
+    <section class="admin-tab-content" id="tab-content-gateways">
+        @include('admin.partials.gateway-settings')
+    </section>
     @endif
 
     <!-- Sub-tab 11: Admin profile -->
