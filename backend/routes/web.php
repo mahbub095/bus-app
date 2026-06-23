@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RouteController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\SiteSettingsController;
+use App\Http\Controllers\Admin\GatewaySettingsController;
 use App\Http\Controllers\Admin\StationController;
 use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\UserController;
@@ -175,6 +176,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/admin/system/migrate-fresh-seed', [SystemController::class, 'migrateFreshSeed'])->name('admin.system.migrate-fresh-seed');
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
+        
+        // Gateways & Integrations separate configuration update routes
+        Route::post('/admin/gateway-settings/sms', [GatewaySettingsController::class, 'updateSms'])->name('admin.gateway-settings.update-sms');
+        Route::post('/admin/gateway-settings/mail', [GatewaySettingsController::class, 'updateMail'])->name('admin.gateway-settings.update-mail');
+        Route::post('/admin/gateway-settings/zinipay', [GatewaySettingsController::class, 'updateZinipay'])->name('admin.gateway-settings.update-zinipay');
+        Route::post('/admin/gateway-settings/test-sms', [GatewaySettingsController::class, 'testSms'])->name('admin.gateway-settings.test-sms');
+        Route::post('/admin/gateway-settings/test-email', [GatewaySettingsController::class, 'testEmail'])->name('admin.gateway-settings.test-email');
     });
 
     /*

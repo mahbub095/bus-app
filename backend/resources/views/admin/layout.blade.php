@@ -1428,6 +1428,10 @@
                 <span class="sidebar-nav-icon">⚙️</span>
                 Site Settings
             </a>
+            <a href="/admin#gateways" class="sidebar-nav-item" data-tab="gateways">
+                <span class="sidebar-nav-icon">🔌</span>
+                Integrations & Gateways
+            </a>
             <a href="/admin#database" class="sidebar-nav-item danger" data-tab="database">
                 <span class="sidebar-nav-icon">🗄️</span>
                 Database Operations
