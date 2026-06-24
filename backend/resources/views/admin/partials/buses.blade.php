@@ -182,16 +182,17 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(11, 11, 20, 0.85);
+    background-color: var(--bg-overlay);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
 }
+
 .layout-designer-content {
-    background-color: #141424;
-    border: 2px solid #2A2A44;
+    background-color: var(--bg-card);
+    border: 2px solid var(--border-seat);
     border-radius: 20px;
     width: 90%;
     max-width: 950px;
@@ -199,20 +200,24 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    box-shadow: var(--shadow-lg);
 }
+
 .modal-header {
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: var(--bg-card);
 }
+
 .modal-header h3 {
     color: var(--text-primary);
     font-family: var(--font-display);
     font-size: 18px;
 }
+
 .close-btn {
     background: none;
     border: none;
@@ -222,17 +227,22 @@
     line-height: 1;
     transition: var(--transition);
 }
+
 .close-btn:hover {
     color: var(--danger);
 }
+
 .modal-body {
     flex: 1;
     overflow: hidden;
+    background-color: var(--bg-card);
 }
+
 .modal-hint {
     color: var(--text-secondary);
     font-size: 13px;
 }
+
 .designer-container {
     display: flex;
     gap: 20px;
@@ -240,17 +250,19 @@
     height: 100%;
     overflow: hidden;
 }
+
 .designer-canvas {
     flex: 1;
     overflow-y: auto;
-    background-color: #0A0A12;
-    border: 1px solid #2A2A44;
+    background-color: var(--designer-canvas-bg);
+    border: 1px solid var(--border-seat);
     border-radius: 12px;
     padding: 20px;
     display: flex;
     justify-content: center;
     align-items: flex-start;
 }
+
 .designer-controls {
     width: 240px;
     display: flex;
@@ -258,48 +270,65 @@
     gap: 16px;
     flex-shrink: 0;
 }
+
 .control-section {
-    background-color: rgba(255,255,255,0.02);
-    border: 1px solid #2A2A44;
+    background-color: var(--designer-control-bg);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 14px;
 }
+
 .control-section h4 {
     color: var(--text-primary);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 6px;
 }
+
 .grid-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
 }
+
 .modal-footer {
     padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    background-color: var(--bg-card);
 }
+
+.deck-title {
+    color: var(--text-primary);
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
 /* Designer blueprint grid styling */
 .designer-grid {
-    background-color: #0D0D19;
-    border: 2px solid #2A2A44;
+    background-color: var(--designer-grid-bg);
+    border: 2px solid var(--border-seat);
     border-radius: 20px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
+
 .designer-cell {
     width: 44px;
     height: 44px;
-    border: 1px dashed rgba(255,255,255,0.15);
-    background-color: rgba(255,255,255,0.02);
+    border: 1px dashed var(--designer-cell-border);
+    background-color: var(--designer-cell-slot-bg);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -311,38 +340,46 @@
     user-select: none;
     position: relative;
 }
+
 .designer-cell.cell-seat {
-    background-color: #fff;
-    border: 1px solid #d1d5db;
+    background-color: #FFFFFF;
+    border: 1px solid #D1D5DB;
     color: #374151;
 }
+
 .designer-cell.cell-driver {
-    background-color: #10B981;
-    border: 1px solid #059669;
-    color: #fff;
+    background-color: var(--success);
+    border: 1px solid var(--success);
+    color: var(--text-inverse);
 }
+
 .designer-cell.cell-engine {
-    background-color: #4b5563;
-    border: 1px solid #1f2937;
-    color: #f3f4f6;
+    background-color: #64748B;
+    border: 1px solid #475569;
+    color: #F8FAFC;
 }
+
 .designer-cell.cell-aisle {
     border: none;
     background-color: transparent;
-    color: rgba(255,255,255,0.2);
+    color: var(--designer-aisle-color);
 }
+
 .designer-cell.cell-aisle::after {
     content: "↕";
 }
+
 .designer-cell.cell-empty {
-    border: 1px dashed rgba(255,255,255,0.15);
+    border: 1px dashed var(--designer-cell-border);
     background-color: transparent;
-    color: rgba(255,255,255,0.1);
+    color: var(--designer-empty-color);
 }
+
 .designer-cell.drag-over {
-    background-color: rgba(99, 102, 241, 0.2);
+    background-color: var(--sidebar-active-bg);
     border-color: var(--primary);
 }
+
 .designer-cell.active-selection {
     outline: 3px solid var(--primary);
     outline-offset: 1px;
@@ -590,7 +627,7 @@ function renderEditorGrid() {
 
 function createDeckDesignerGrid(grid, deckKey, title) {
     const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<h4 class="deck-title" style="margin-bottom:12px;">${title}</h4>`;
+    wrapper.innerHTML = `<h4 class="deck-title">${title}</h4>`;
     
     const gridDiv = document.createElement('div');
     gridDiv.className = 'designer-grid';

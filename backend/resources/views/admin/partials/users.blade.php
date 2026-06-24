@@ -101,7 +101,7 @@
 
                 <div class="input-group">
                     <label>Menu Permissions</label>
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; background: #121223; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; background: var(--bg-panel-alt); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px;">
                         <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
                             <input type="checkbox" name="menu_permissions[]" value="coach-services" style="accent-color: var(--primary);">
                             Coach Services

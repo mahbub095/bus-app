@@ -17,7 +17,7 @@ export default function BookingSuccess({
         Reservation Secured Successfully!
       </div>
 
-      <h2 className="banner-title" style={{ fontSize: '28px', color: '#fff' }}>
+      <h2 className="banner-title" style={{ fontSize: '28px' }}>
         Boarding Pass Invoice
       </h2>
       <p className="banner-subtitle" style={{ fontSize: '14px', marginBottom: '20px' }}>

@@ -225,7 +225,7 @@
 {{-- Styles for settings sections --}}
 <style>
     .settings-section {
-        background-color: #121223;
+        background-color: var(--bg-panel-alt);
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius-sm);
         padding: 24px;
@@ -279,7 +279,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        background-color: rgba(255, 255, 255, 0.03);
+        background-color: var(--sidebar-hover);
         padding: 10px 16px;
         border-radius: var(--border-radius-sm);
         border: 1px solid var(--border-color);

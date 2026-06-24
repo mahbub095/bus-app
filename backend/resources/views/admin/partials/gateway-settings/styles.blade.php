@@ -7,7 +7,7 @@
     }
 
     .gateway-settings-panel .settings-section {
-        background-color: #121223;
+        background-color: var(--bg-panel-alt);
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius-sm);
         padding: 24px;
@@ -179,7 +179,7 @@
     }
 
     .gateway-test-card {
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: var(--bg-input-elevated);
         border: 1px solid var(--border-color);
         padding: 18px;
         border-radius: 8px;

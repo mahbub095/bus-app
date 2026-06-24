@@ -94,7 +94,7 @@ export default function UserProfile({
         ) : (
           <div style={{ maxWidth: '560px', margin: '0 auto' }}>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '18px' }}>
-              Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
+              Signed in as <strong style={{ color: 'var(--text-primary)' }}>{authUser.email}</strong>
             </p>
             <form onSubmit={handleProfilePasswordSubmit} className="booking-form-fields">
               <div className="input-group">

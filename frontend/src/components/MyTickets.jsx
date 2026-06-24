@@ -198,7 +198,7 @@ export default function MyTickets({
               }}
             >
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Signed in as <strong style={{ color: '#fff' }}>{authUser.email}</strong>
+                Signed in as <strong style={{ color: 'var(--text-primary)' }}>{authUser.email}</strong>
               </span>
               <button
                 className="btn btn-secondary btn-sm"
@@ -220,7 +220,7 @@ export default function MyTickets({
                       border: '1px solid var(--border-color)',
                       borderRadius: '12px',
                       padding: '20px',
-                      backgroundColor: '#111124',
+                      backgroundColor: 'var(--bg-card)',
                       marginBottom: '15px'
                     }}
                   >
@@ -249,30 +249,30 @@ export default function MyTickets({
                       }}
                     >
                       <div>
-                        Passenger: <strong style={{ color: '#fff' }}>{b.passenger_name}</strong>
+                        Passenger: <strong style={{ color: 'var(--text-primary)' }}>{b.passenger_name}</strong>
                       </div>
                       <div>
-                        Phone: <strong style={{ color: '#fff' }}>{b.passenger_phone}</strong>
+                        Phone: <strong style={{ color: 'var(--text-primary)' }}>{b.passenger_phone}</strong>
                       </div>
                       <div>
-                        From: <strong style={{ color: '#fff' }}>{b.schedule.route.from}</strong>
+                        From: <strong style={{ color: 'var(--text-primary)' }}>{b.schedule.route.from}</strong>
                       </div>
                       <div>
-                        To: <strong style={{ color: '#fff' }}>{b.schedule.route.to}</strong>
+                        To: <strong style={{ color: 'var(--text-primary)' }}>{b.schedule.route.to}</strong>
                       </div>
                       <div>
                         Bus Name:{' '}
-                        <strong style={{ color: '#fff' }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>
                           {b.schedule?.bus?.operator_name || 'N/A'}
                         </strong>
                       </div>
                       <div>
                         Date:{' '}
-                        <strong style={{ color: '#fff' }}>{formatDate(b.schedule.departure_time)}</strong>
+                        <strong style={{ color: 'var(--text-primary)' }}>{formatDate(b.schedule.departure_time)}</strong>
                       </div>
                       <div>
                         Departure:{' '}
-                        <strong style={{ color: '#fff' }}>{formatTime(b.schedule.departure_time)}</strong>
+                        <strong style={{ color: 'var(--text-primary)' }}>{formatTime(b.schedule.departure_time)}</strong>
                       </div>
                       <div>
                         Seats Reserved:{' '}
@@ -308,7 +308,7 @@ export default function MyTickets({
                       <div
                         style={{
                           marginTop: '15px',
-                          color: '#FBBF24',
+                          color: 'var(--warning)',
                           fontSize: '12px',
                           fontStyle: 'italic',
                           textAlign: 'center'

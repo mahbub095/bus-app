@@ -117,36 +117,47 @@
 <script>
 (function () {
     const analyticsUrl = @json(route('admin.dashboard.analytics'));
-    const themeColors = {
-        primary: '#6366F1',
-        accent: '#A855F7',
-        success: '#10B981',
-        danger: '#EF4444',
-        warning: '#F59E0B',
-        gold: '#F59E0B',
-        muted: '#6B7280',
-        grid: 'rgba(255, 255, 255, 0.06)',
-        text: '#9CA3AF',
-    };
-
-    const palette = [
-        themeColors.primary,
-        themeColors.accent,
-        themeColors.success,
-        themeColors.warning,
-        themeColors.danger,
-        themeColors.gold,
-        '#818CF8',
-        '#34D399',
-    ];
 
     let currentPeriod = @json($analytics['period'] ?? 'this_month');
     let chartInstances = {};
     let initialData = @json($analytics);
+    let lastAnalyticsData = initialData;
 
     const filterRoot = document.getElementById('dashboard-filter');
     const filterBtn = document.getElementById('dashboard-filter-btn');
     const filterMenu = document.getElementById('dashboard-filter-menu');
+
+    function readThemeColors() {
+        const styles = getComputedStyle(document.documentElement);
+        const pick = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+
+        return {
+            primary: pick('--primary', '#6366F1'),
+            accent: pick('--accent', '#8B5CF6'),
+            success: pick('--success', '#10B981'),
+            danger: pick('--danger', '#EF4444'),
+            warning: pick('--warning', '#F59E0B'),
+            gold: pick('--gold', '#F59E0B'),
+            muted: pick('--text-muted', '#94A3B8'),
+            grid: pick('--chart-grid', 'rgba(15, 23, 42, 0.08)'),
+            text: pick('--text-secondary', '#475569'),
+            border: pick('--chart-border', '#FFFFFF'),
+        };
+    }
+
+    function themePalette() {
+        const themeColors = readThemeColors();
+        return [
+            themeColors.primary,
+            themeColors.accent,
+            themeColors.success,
+            themeColors.warning,
+            themeColors.danger,
+            themeColors.gold,
+            '#818CF8',
+            '#34D399',
+        ];
+    }
 
     function formatNumber(value) {
         return Number(value || 0).toLocaleString();
@@ -162,6 +173,7 @@
     }
 
     function baseChartOptions(extra = {}) {
+        const themeColors = readThemeColors();
         return {
             responsive: true,
             maintainAspectRatio: false,
@@ -183,6 +195,8 @@
     function renderCharts(data) {
         destroyCharts();
         const charts = data.charts || {};
+        const themeColors = readThemeColors();
+        const palette = themePalette();
 
         chartInstances.status = new Chart(document.getElementById('chart-booking-status'), {
             type: 'doughnut',
@@ -191,7 +205,7 @@
                 datasets: [{
                     data: charts.booking_status?.data || [],
                     backgroundColor: palette,
-                    borderColor: '#141424',
+                    borderColor: themeColors.border,
                     borderWidth: 2,
                 }],
             },
@@ -205,7 +219,7 @@
                 datasets: [{
                     data: charts.payment_methods?.data || [],
                     backgroundColor: palette,
-                    borderColor: '#141424',
+                    borderColor: themeColors.border,
                     borderWidth: 2,
                 }],
             },
@@ -262,7 +276,7 @@
                 datasets: [{
                     data: charts.coach_types?.data || [],
                     backgroundColor: [themeColors.primary, themeColors.accent, themeColors.muted],
-                    borderColor: '#141424',
+                    borderColor: themeColors.border,
                     borderWidth: 2,
                 }],
             },
@@ -293,6 +307,7 @@
     }
 
     function applyAnalytics(data) {
+        lastAnalyticsData = data;
         document.getElementById('dashboard-period-label').textContent = data.period_label;
         updateMetrics(data.metrics);
         renderCharts(data);
@@ -356,6 +371,12 @@
     document.addEventListener('click', (event) => {
         if (!filterRoot?.contains(event.target)) {
             closeFilterMenu();
+        }
+    });
+
+    window.addEventListener('admin-theme-change', () => {
+        if (lastAnalyticsData) {
+            renderCharts(lastAnalyticsData);
         }
     });
 

@@ -72,7 +72,7 @@ export default function Navbar({
           {authUser ? (
             <>
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Hi, <strong style={{ color: '#fff' }}>{authUser.name}</strong>
+                Hi, <strong style={{ color: 'var(--text-primary)' }}>{authUser.name}</strong>
               </span>
               <button
                 className="btn btn-secondary"

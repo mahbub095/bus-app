@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
+    @include('admin.partials.theme-init')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SonyaBus | Admin Login Portal</title>
@@ -106,7 +107,7 @@
         .coupon-input {
             width: 100%;
             padding: 12px 14px;
-            background-color: #1A1A2E;
+            background-color: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-sm);
             color: var(--text-primary);
@@ -199,9 +200,47 @@
             border: 1px solid rgba(239, 68, 68, 0.2);
             color: #F87171;
         }
+
+        .login-theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .theme-toggle-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .theme-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        [data-theme="light"] .theme-icon-light { display: none; }
+        [data-theme="dark"] .theme-icon-dark { display: none; }
     </style>
 </head>
 <body>
+
+    <div class="login-theme-toggle">
+        @include('admin.partials.theme-toggle')
+    </div>
 
     <div class="auth-container">
         
@@ -281,6 +320,14 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const storageKey = 'sonyabus_admin_theme';
+            document.getElementById('admin-theme-toggle')?.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem(storageKey, next);
+            });
+
             const FLASH_ALERT_MS = 10000;
             document.querySelectorAll('.flash-alert').forEach((el) => {
                 setTimeout(() => {

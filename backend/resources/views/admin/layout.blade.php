@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
+    @include('admin.partials.theme-init')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -78,13 +79,13 @@
         }
 
         .sidebar-nav-item:hover {
-            color: #fff;
-            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            background-color: var(--sidebar-hover);
         }
 
         .sidebar-nav-item.active {
             color: var(--primary);
-            background-color: rgba(99, 102, 241, 0.1);
+            background-color: var(--sidebar-active-bg);
             border-left-color: var(--primary);
         }
 
@@ -153,7 +154,7 @@
 
         /* Header logo navbar */
         .app-header {
-            background-color: rgba(11, 11, 20, 0.85);
+            background-color: var(--bg-header);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-color);
             position: sticky;
@@ -199,7 +200,7 @@
         }
 
         .external-link-btn {
-            background-color: #202038;
+            background-color: var(--bg-btn-secondary);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
             padding: 8px 16px;
@@ -214,8 +215,41 @@
         }
 
         .external-link-btn:hover {
-            background-color: #2B2B4C;
-            border-color: rgba(255,255,255,0.2);
+            background-color: var(--bg-btn-secondary-hover);
+            border-color: var(--border-active);
+        }
+
+        .theme-toggle-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-btn-secondary);
+            color: var(--primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--primary);
+            background-color: var(--sidebar-active-bg);
+        }
+
+        .theme-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        [data-theme="light"] .theme-icon-light {
+            display: none;
+        }
+
+        [data-theme="dark"] .theme-icon-dark {
+            display: none;
         }
 
         /* Banner title block */
@@ -230,9 +264,10 @@
             font-family: var(--font-display);
             font-size: 32px;
             font-weight: 800;
-            background: linear-gradient(to right, #fff, #D1D5DB);
+            background: linear-gradient(to right, var(--title-gradient-start), var(--title-gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .admin-title-wrap p {
@@ -288,7 +323,7 @@
             font-family: var(--font-display);
             font-size: 22px;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-primary);
             margin-top: 2px;
         }
 
@@ -404,7 +439,7 @@
 
         /* Sidebar input forms details (match frontend booking panel) */
         .booking-form-sidebar {
-            background-color: #18182E;
+            background-color: var(--bg-panel-alt);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
             padding: 24px;
@@ -444,7 +479,7 @@
         .coupon-input {
             width: 100%;
             padding: 10px 14px;
-            background-color: #1A1A2E;
+            background-color: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-sm);
             color: var(--text-primary);
@@ -511,13 +546,13 @@
         }
 
         .btn-secondary {
-            background-color: #202038;
+            background-color: var(--bg-btn-secondary);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
         }
 
         .btn-secondary:hover {
-            background-color: #2B2B4C;
+            background-color: var(--bg-btn-secondary-hover);
         }
 
         .btn-sm {
@@ -582,8 +617,8 @@
 
         /* Console Output box styled like terminal */
         .terminal-window {
-            background-color: #05050A;
-            border: 1px solid #1E1E34;
+            background-color: var(--bg-terminal);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-top: 24px;
             overflow: hidden;
@@ -591,8 +626,8 @@
         }
 
         .terminal-header {
-            background-color: #121223;
-            border-bottom: 1px solid #1E1E34;
+            background-color: var(--bg-terminal-header);
+            border-bottom: 1px solid var(--border-color);
             padding: 10px 16px;
             display: flex;
             align-items: center;
@@ -641,7 +676,7 @@
         }
 
         .db-action-card {
-            background-color: #121223;
+            background-color: var(--bg-panel-alt);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-sm);
             padding: 20px;
@@ -658,7 +693,7 @@
         }
 
         .app-footer {
-            background-color: #08080E;
+            background-color: var(--bg-footer);
             border-top: 1px solid var(--border-color);
             padding: 30px 0;
             text-align: center;
@@ -751,7 +786,7 @@
             font-family: var(--font-display);
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-primary);
         }
 
         .time-block, .seats-block, .price-block {
@@ -792,7 +827,7 @@
 
         .seats-selector-container {
             border-top: 1px solid var(--border-color);
-            background-color: #121221;
+            background-color: var(--bg-seat-panel);
             padding: 30px;
         }
 
@@ -809,8 +844,8 @@
         }
 
         .bus-blueprint {
-            background-color: #0A0A12;
-            border: 2px solid #2A2A44;
+            background-color: var(--bg-seat-map);
+            border: 2px solid var(--border-seat);
             border-radius: 20px;
             padding: 24px;
             max-width: 360px;
@@ -821,7 +856,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px dashed #2A2A44;
+            border-bottom: 2px dashed var(--border-seat);
             padding-bottom: 16px;
             margin-bottom: 20px;
         }
@@ -875,7 +910,7 @@
             margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            border-bottom: 1px dashed #2A2A44;
+            border-bottom: 1px dashed var(--border-seat);
             padding-bottom: 6px;
         }
 
@@ -1146,7 +1181,7 @@
             padding: 10px;
             border-radius: var(--border-radius-sm);
             border: 1px solid var(--border-color);
-            background-color: #1F1F38;
+            background-color: var(--bg-input-elevated);
             text-align: center;
             font-size: 13px;
             font-weight: 600;
@@ -1161,8 +1196,8 @@
 
         .payment-toggle.active {
             border-color: var(--primary);
-            background-color: rgba(99, 102, 241, 0.08);
-            color: #fff;
+            background-color: var(--sidebar-active-bg);
+            color: var(--text-primary);
         }
 
         .seat-info-table {
@@ -1472,6 +1507,8 @@
             </a>
             
             <div style="display: flex; align-items: center; gap: 15px;">
+                @include('admin.partials.theme-toggle')
+
                 <a href="http://localhost:5173" target="_blank" class="external-link-btn">
                     🌐 View Booking Site
                 </a>
@@ -1837,6 +1874,19 @@
                 createSubmitLabel: createSubmitLabel
             });
         }
+
+        (function initAdminThemeToggle() {
+            const storageKey = 'sonyabus_admin_theme';
+            const toggleBtn = document.getElementById('admin-theme-toggle');
+
+            toggleBtn?.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem(storageKey, next);
+                window.dispatchEvent(new CustomEvent('admin-theme-change', { detail: { theme: next } }));
+            });
+        })();
     </script>
 </body>
 </html>

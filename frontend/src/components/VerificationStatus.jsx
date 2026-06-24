@@ -13,18 +13,6 @@ export default function VerificationStatus({
       <div
         id="verification-status"
         className="verification-status-box"
-        style={{
-          background: 'rgba(30, 30, 56, 0.85)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          padding: '24px',
-          color: '#fff',
-          textAlign: 'center',
-          marginBottom: '20px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
-        }}
       >
         {verificationStatus.loading ? (
           <div>
@@ -66,7 +54,7 @@ export default function VerificationStatus({
             ) : (
               <div>
                 <div style={{ fontSize: '32px', marginBottom: '10px' }}>❌</div>
-                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F87171' }}>
+                <p style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--danger)' }}>
                   Payment Verification Failed
                 </p>
                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px' }}>
