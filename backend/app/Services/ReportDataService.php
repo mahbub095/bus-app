@@ -63,6 +63,7 @@ class ReportDataService
         }
 
         
+        return $query;
     }
 
     public function formatSellingRow(Booking $booking): array
