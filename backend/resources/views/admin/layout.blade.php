@@ -1320,6 +1320,145 @@
             gap: 16px;
             margin-bottom: 10px;
         }
+
+        /* Dashboard overview */
+        .dashboard-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-period-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .dashboard-filter {
+            position: relative;
+        }
+
+        .dashboard-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dashboard-filter-btn:hover,
+        .dashboard-filter-btn[aria-expanded="true"] {
+            border-color: var(--primary);
+            background-color: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.15);
+        }
+
+        .dashboard-filter-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .dashboard-filter-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .dashboard-filter-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 180px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            box-shadow: var(--shadow-lg);
+            padding: 6px 0;
+            z-index: 50;
+        }
+
+        .dashboard-filter-option {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dashboard-filter-option:hover {
+            background-color: rgba(99, 102, 241, 0.08);
+            color: var(--primary);
+        }
+
+        .dashboard-filter-option.is-active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .dashboard-filter-option.is-active::before {
+            content: '✓';
+            margin-right: 8px;
+            font-size: 12px;
+        }
+
+        .dashboard-filter-option:not(.is-active)::before {
+            content: '';
+            display: inline-block;
+            width: 18px;
+            margin-right: 0;
+        }
+
+        .dashboard-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dashboard-chart-panel {
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-chart-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 16px;
+            color: var(--text-primary);
+        }
+
+        .dashboard-chart-wrap {
+            position: relative;
+            flex: 1;
+            min-height: 240px;
+        }
+
+        .dashboard-chart-wrap-wide {
+            min-height: 260px;
+        }
     </style>
 </head>
 <body>
@@ -1504,7 +1643,7 @@
 
             const navItems = document.querySelectorAll('.sidebar-nav-item');
             const contents = document.querySelectorAll('.admin-tab-content');
-            const dashboardMetrics = document.getElementById('dashboard-metrics');
+            const dashboardOverview = document.getElementById('dashboard-overview');
             const adminHeader = document.getElementById('admin-header');
             function resolveAdminTab() {
                 const path = window.location.pathname.replace(/\/+$/, '');
@@ -1564,10 +1703,10 @@
                 }
 
                 if (tabName === 'dashboard') {
-                    dashboardMetrics?.style.setProperty('display', 'grid');
+                    dashboardOverview?.style.setProperty('display', 'block');
                     adminHeader?.style.setProperty('display', 'block');
                 } else {
-                    dashboardMetrics?.style.setProperty('display', 'none');
+                    dashboardOverview?.style.setProperty('display', 'none');
                     adminHeader?.style.setProperty('display', 'none');
                 }
                 

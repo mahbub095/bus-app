@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\AdminBookingService;
+use App\Services\AdminDashboardAnalyticsService;
 use App\Services\CoachServicesService;
 use Illuminate\Http\Request;
 
@@ -14,8 +15,20 @@ class AjaxController extends Controller
 {
     public function __construct(
         protected CoachServicesService $coachServicesService,
-        protected AdminBookingService $adminBookingService
+        protected AdminBookingService $adminBookingService,
+        protected AdminDashboardAnalyticsService $dashboardAnalyticsService,
     ) {
+    }
+
+    public function dashboardAnalytics(Request $request)
+    {
+        $validated = $request->validate([
+            'period' => 'nullable|string|in:today,last_7_days,this_month,this_year',
+        ]);
+
+        return response()->json(
+            $this->dashboardAnalyticsService->getAnalytics($validated['period'] ?? 'this_month')
+        );
     }
 
     public function bookingLogsApi()

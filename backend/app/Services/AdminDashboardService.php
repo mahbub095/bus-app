@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Booking;
 use App\Models\Bus;
 use App\Models\Promotion;
 use App\Models\Route;
@@ -14,9 +13,15 @@ use App\Models\User;
 
 class AdminDashboardService
 {
+    public function __construct(
+        protected AdminDashboardAnalyticsService $analyticsService,
+    ) {
+    }
+
     /**
      * @return array{
      *     metrics: array<string, mixed>,
+     *     analytics: array<string, mixed>,
      *     stations: \Illuminate\Support\Collection,
      *     buses: \Illuminate\Support\Collection,
      *     routes: \Illuminate\Support\Collection,
@@ -29,10 +34,12 @@ class AdminDashboardService
      */
     public function getDashboardData(): array
     {
+        $analytics = $this->analyticsService->getAnalytics('this_month');
+
         $metrics = [
-            'total_sales' => Booking::whereIn('status', ['PAID', 'SOLD', 'BOOKED'])->sum('total_fare'),
-            'active_bookings' => Booking::whereIn('status', ['PAID', 'SOLD', 'BOOKED'])->count(),
-            'cancelled_bookings' => Booking::where('status', 'CANCELLED')->count(),
+            'total_sales' => $analytics['metrics']['sales_revenue'],
+            'active_bookings' => $analytics['metrics']['confirmed_bookings'],
+            'cancelled_bookings' => $analytics['metrics']['cancelled_bookings'],
             'total_schedules' => Schedule::count(),
         ];
 
@@ -48,6 +55,7 @@ class AdminDashboardService
 
         return [
             'metrics' => $metrics,
+            'analytics' => $analytics,
             'stations' => Station::orderBy('name', 'asc')->get(),
             'buses' => Bus::orderBy('operator_name', 'asc')->get(),
             'routes' => $routes,
