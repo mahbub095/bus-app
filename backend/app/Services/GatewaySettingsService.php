@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Mail;
  */
 class GatewaySettingsService
 {
-    private const SMS_DRIVERS = 'smsnetbd,bulksmsbd,custom,get_query';
-
     private const DEFAULT_TEST_SMS = 'SonyaBus SMS Test: Gateway settings are working correctly.';
 
     public function __construct(
@@ -27,7 +25,7 @@ class GatewaySettingsService
     {
         $validated = $request->validate([
             'gateway_name' => 'required|string|max:255',
-            'gateway_driver' => 'required|string|in:'.self::SMS_DRIVERS,
+            'gateway_driver' => 'required|string|max:50',
             'api_url' => 'required|url',
             'api_key' => 'required|string|max:500',
             'sender_id' => 'nullable|string|max:100',

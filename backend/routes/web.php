@@ -52,6 +52,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/admin', [DashboardController::class, 'dashboardView'])->name('admin.dashboard');
+    Route::get('/admin/api/dashboard/analytics', [AjaxController::class, 'dashboardAnalytics'])->name('admin.dashboard.analytics');
     Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
 
     /*

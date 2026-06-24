@@ -22,13 +22,9 @@
 
             <div class="input-group">
                 <label for="gateway_driver">Provider API Driver</label>
-                @php $driver = old('gateway_driver', $sms?->gateway_driver ?? 'smsnetbd'); @endphp
-                <select name="gateway_driver" id="gateway_driver" class="coupon-input" required>
-                    <option value="smsnetbd" @selected($driver === 'smsnetbd')>SMS.NET.BD (Optimized)</option>
-                    <option value="bulksmsbd" @selected($driver === 'bulksmsbd')>BulkSMSBD</option>
-                    <option value="custom" @selected($driver === 'custom')>Custom HTTP POST Form</option>
-                    <option value="get_query" @selected($driver === 'get_query')>Custom HTTP GET Query</option>
-                </select>
+                <input type="text" name="gateway_driver" id="gateway_driver" class="coupon-input"
+                       value="{{ old('gateway_driver', $sms?->gateway_driver ?? 'smsnetbd') }}"
+                       placeholder="e.g. smsnetbd, bulksmsbd, custom, get_query" required>
             </div>
 
             <div class="input-group">
