@@ -33,10 +33,10 @@ export default function Partners() {
           >
             Visa / MasterCard
           </div>
-          <div className="payment-logo" style={{ color: '#888', fontWeight: '600', fontSize: '16px' }}>
+          <div className="payment-logo" style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '16px' }}>
             Rocket
           </div>
-          <div className="payment-logo" style={{ color: '#888', fontWeight: '600', fontSize: '16px' }}>
+          <div className="payment-logo" style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '16px' }}>
             Upay
           </div>
         </div>

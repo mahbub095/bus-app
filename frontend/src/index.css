@@ -1,45 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 
-:root {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Outfit', sans-serif;
-  
-  /* Color Palette - Premium Space travel & Neon Indigo */
-  --bg-main: #0B0B14;
-  --bg-card: #141424;
-  --bg-card-hover: #1C1C34;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-active: #6366F1;
-  
-  --primary: #6366F1; /* Indigo */
-  --primary-hover: #4F46E5;
-  --primary-glow: rgba(99, 102, 241, 0.25);
-  
-  --accent: #A855F7; /* Purple */
-  --accent-glow: rgba(168, 85, 247, 0.2);
-  
-  --gold: #F59E0B; /* Amber/Gold */
-  --gold-glow: rgba(245, 158, 11, 0.2);
-  
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
-  
-  --success: #10B981;
-  --danger: #EF4444;
-  --warning: #F59E0B;
-  
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --border-radius: 12px;
-  --border-radius-sm: 8px;
-  --border-radius-lg: 20px;
-  
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.5);
-  --shadow-lg: 0 16px 40px rgba(0,0,0,0.7);
-  --shadow-neon: 0 0 15px rgba(99, 102, 241, 0.4);
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -63,7 +23,7 @@ body {
   background: var(--bg-main);
 }
 ::-webkit-scrollbar-thumb {
-  background: #252538;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -91,7 +51,7 @@ a {
 
 /* Header & Navigation */
 .app-header {
-  background-color: rgba(11, 11, 20, 0.85);
+  background-color: var(--bg-header);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
@@ -125,7 +85,7 @@ a {
 
 .logo-icon {
   background: linear-gradient(135deg, var(--primary), var(--accent));
-  color: #fff;
+  color: var(--text-inverse);
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -156,7 +116,7 @@ a {
 
 .nav-link:hover, .nav-link.active {
   color: var(--text-primary);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--nav-link-hover-bg);
 }
 
 .btn {
@@ -175,7 +135,7 @@ a {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--accent));
-  color: #fff;
+  color: var(--text-inverse);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
@@ -185,18 +145,18 @@ a {
 }
 
 .btn-secondary {
-  background-color: #202038;
+  background-color: var(--bg-btn-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background-color: #2B2B4C;
+  background-color: var(--bg-btn-secondary-hover);
 }
 
 .btn-danger {
   background-color: var(--danger);
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .btn-danger:hover {
@@ -206,8 +166,8 @@ a {
 /* Banner / Search Hero */
 .search-banner {
   padding: 80px 0;
-  background: radial-gradient(circle at 70% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
-              radial-gradient(circle at 10% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+  background: radial-gradient(circle at 70% 30%, var(--hero-glow-1) 0%, transparent 60%),
+              radial-gradient(circle at 10% 80%, var(--hero-glow-2) 0%, transparent 50%);
   border-bottom: 1px solid var(--border-color);
   text-align: center;
 }
@@ -218,7 +178,7 @@ a {
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: 12px;
-  background: linear-gradient(to right, #fff, #D1D5DB);
+  background: linear-gradient(to right, var(--title-gradient-start), var(--title-gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -290,7 +250,7 @@ a {
 .input-control {
   width: 100%;
   padding: 12px 14px 12px 42px;
-  background-color: #1A1A2E;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
@@ -320,7 +280,7 @@ a {
 /* Feature Steps */
 .features-section {
   padding: 80px 0;
-  background-color: #0E0E1B;
+  background-color: var(--bg-panel-alt);
 }
 
 .section-title {
@@ -363,7 +323,7 @@ a {
 }
 
 .feature-icon-wrapper {
-  background-color: rgba(99, 102, 241, 0.08);
+  background-color: var(--primary-soft);
   width: 60px;
   height: 60px;
   border-radius: 14px;
@@ -373,7 +333,7 @@ a {
   margin: 0 auto 20px;
   color: var(--primary);
   font-size: 24px;
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  border: 1px solid var(--primary-soft-border);
 }
 
 .feature-card h3 {
@@ -408,9 +368,9 @@ a {
 
 .payment-logo {
   height: 38px;
-  opacity: 0.65;
+  opacity: 0.75;
   transition: var(--transition);
-  filter: grayscale(40%) brightness(1.2);
+  filter: grayscale(30%);
 }
 
 .payment-logo:hover {
@@ -453,7 +413,7 @@ a {
 }
 
 .bus-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-hover);
 }
 
 .bus-main-info {
@@ -481,7 +441,7 @@ a {
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .coach-tag {
@@ -491,14 +451,14 @@ a {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  background-color: rgba(255,255,255,0.06);
+  background-color: var(--coach-tag-bg);
   color: var(--text-secondary);
   width: max-content;
 }
 
 .coach-tag.ac {
-  background-color: rgba(99, 102, 241, 0.15);
-  color: #818CF8;
+  background-color: var(--coach-tag-ac-bg);
+  color: var(--coach-tag-ac-color);
 }
 
 .time-block {
@@ -551,7 +511,7 @@ a {
 /* Expandable Seats Selector Section */
 .seats-selector-container {
   border-top: 1px solid var(--border-color);
-  background-color: #121221;
+  background-color: var(--bg-seat-panel);
   padding: 30px;
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -575,8 +535,8 @@ a {
 
 /* Bus Blueprint / Design Layout */
 .bus-blueprint {
-  background-color: #0A0A12;
-  border: 2px solid #2A2A44;
+  background-color: var(--bg-seat-map);
+  border: 2px solid var(--border-seat);
   border-radius: 20px;
   padding: 24px;
   max-width: 360px;
@@ -588,7 +548,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px dashed #2A2A44;
+  border-bottom: 2px dashed var(--border-seat);
   padding-bottom: 16px;
   margin-bottom: 20px;
 }
@@ -647,7 +607,7 @@ a {
   margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  border-bottom: 1px dashed #2A2A44;
+  border-bottom: 1px dashed var(--border-seat);
   padding-bottom: 6px;
 }
 
@@ -676,7 +636,7 @@ a {
 .seat.selected {
   background-color: #22c55e;
   border-color: #16a34a;
-  color: #fff;
+  color: var(--text-inverse);
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
 }
 
@@ -733,14 +693,14 @@ a {
 .seat.status-sold_m {
   background-color: #ef4444;
   border-color: #b91c1c;
-  color: #fff;
+  color: var(--text-inverse);
   cursor: not-allowed;
 }
 
 .seat.status-sold_f {
   background-color: #ec4899;
   border-color: #be185d;
-  color: #fff;
+  color: var(--text-inverse);
   cursor: not-allowed;
 }
 
@@ -809,10 +769,9 @@ a {
   border-radius: var(--border-radius-sm);
   font-size: 14px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ticket-field-bg);
   color: var(--text-primary);
   box-sizing: border-box;
-  color-scheme: light;
 }
 
 .ticket-booking-panel select.ticket-field option {
@@ -903,7 +862,7 @@ a {
 .btn-ticket-submit {
   width: 100%;
   background: var(--primary);
-  color: #fff;
+  color: var(--text-inverse);
   border: none;
   border-radius: var(--border-radius-sm);
   padding: 12px;
@@ -926,7 +885,7 @@ a {
 
 /* Booking Details Sidebar Form */
 .booking-form-sidebar {
-  background-color: #18182E;
+  background-color: var(--bg-panel-alt);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 24px;
@@ -959,8 +918,8 @@ a {
 }
 
 .selected-seats-badge {
-  background-color: rgba(99, 102, 241, 0.15);
-  color: #818CF8;
+  background-color: var(--coach-tag-ac-bg);
+  color: var(--coach-tag-ac-color);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
@@ -987,7 +946,7 @@ a {
   padding: 10px;
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--border-color);
-  background-color: #1F1F38;
+  background-color: var(--bg-input-elevated);
   text-align: center;
   font-size: 13px;
   font-weight: 600;
@@ -997,13 +956,13 @@ a {
 }
 
 .payment-toggle:hover {
-  border-color: rgba(255,255,255,0.2);
+  border-color: var(--border-hover);
 }
 
 .payment-toggle.active {
   border-color: var(--primary);
-  background-color: rgba(99,102,241,0.08);
-  color: #fff;
+  background-color: var(--primary-soft);
+  color: var(--text-primary);
 }
 
 .coupon-field {
@@ -1014,7 +973,7 @@ a {
 .coupon-input {
   flex-grow: 1;
   padding: 10px 14px;
-  background-color: #121221;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
@@ -1036,7 +995,7 @@ select option {
 select option:checked {
   background: linear-gradient(var(--primary), var(--primary));
   background-color: var(--primary);
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .btn-coupon-apply {
@@ -1081,7 +1040,7 @@ select option:checked {
 .ticket-header {
   background: linear-gradient(135deg, var(--primary), var(--accent));
   padding: 24px;
-  color: #fff;
+  color: var(--text-inverse);
   text-align: left;
   display: flex;
   justify-content: space-between;
@@ -1138,7 +1097,7 @@ select option:checked {
 /* Perforation Divider Line */
 .ticket-divider {
   height: 2px;
-  border-top: 2px dashed rgba(255, 255, 255, 0.1);
+  border-top: 2px dashed var(--divider-dashed);
   margin: 10px 0 24px;
   position: relative;
 }
@@ -1253,7 +1212,7 @@ select option:checked {
 }
 
 .offer-card {
-  background: linear-gradient(135deg, #18182F 0%, #121223 100%);
+  background: var(--offer-card-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow: hidden;
@@ -1263,7 +1222,7 @@ select option:checked {
 
 .offer-header {
   padding: 24px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(99, 102, 241, 0.15));
+  background: var(--offer-header-bg);
   border-bottom: 1px solid var(--border-color);
   position: relative;
 }
@@ -1295,7 +1254,7 @@ select option:checked {
   font-family: var(--font-display);
   font-size: 26px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .offer-body {
@@ -1313,7 +1272,7 @@ select option:checked {
 }
 
 .coupon-pill {
-  background-color: #1E1E34;
+  background-color: var(--offer-coupon-bg);
   border: 1px dashed var(--primary);
   border-radius: 6px;
   padding: 8px 12px;
@@ -1338,7 +1297,7 @@ select option:checked {
 }
 
 .coupon-copy-btn:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* Admin Dashboard View */
@@ -1407,7 +1366,7 @@ select option:checked {
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .admin-sections-layout {
@@ -1469,7 +1428,7 @@ select option:checked {
 }
 
 .admin-table tr:hover {
-  background-color: rgba(255,255,255,0.02);
+  background-color: var(--table-row-hover);
 }
 
 .badge-status {
@@ -1497,7 +1456,7 @@ select option:checked {
 
 /* Footer Section */
 .app-footer {
-  background-color: #08080E;
+  background-color: var(--bg-footer);
   border-top: 1px solid var(--border-color);
   padding: 40px 0;
   text-align: center;
@@ -1510,7 +1469,7 @@ select option:checked {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 
@@ -1523,7 +1482,7 @@ select option:checked {
 }
 
 .footer-links a:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* Modal and Backdrop overlays */
@@ -1533,7 +1492,7 @@ select option:checked {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0,0,0,0.75);
+  background-color: var(--bg-overlay);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -1589,7 +1548,7 @@ select option:checked {
 }
 
 .modal-close-btn:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* Responsive and Helper Styles */
@@ -1603,7 +1562,7 @@ select option:checked {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255,255,255,0.05);
+  border: 3px solid var(--spinner-track);
   border-radius: 50%;
   border-top-color: var(--primary);
   animation: spin 1s ease-in-out infinite;
@@ -1618,7 +1577,7 @@ select option:checked {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  background-color: #1E1E38;
+  background-color: var(--bg-toast);
   border-left: 4px solid var(--primary);
   border-radius: 6px;
   padding: 16px 20px;
@@ -1628,7 +1587,7 @@ select option:checked {
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  color: #fff;
+  color: var(--text-primary);
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1669,10 +1628,10 @@ select option:checked {
   text-align: center;
   max-width: 520px;
   width: 100%;
-  background: rgba(20, 20, 36, 0.6);
+  background: var(--bg-maintenance-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
   padding: 60px 40px 48px;
   box-shadow:
@@ -1732,7 +1691,7 @@ select option:checked {
   font-family: var(--font-display);
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #c084fc 100%);
+  background: var(--maintenance-title-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1763,7 +1722,21 @@ select option:checked {
   font-size: 12px;
   color: var(--text-muted);
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Verification status banner */
+.verification-status-box {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-lg);
 }
 
 /* ZiniPay Modal Custom Styles (Mimics Screenshot 2) */
@@ -2130,7 +2103,7 @@ select option:checked {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  background: rgba(20, 20, 36, 0.6);
+  background: var(--bg-cache-badge);
   padding: 6px 14px;
   border-radius: 30px;
   border: 1px solid var(--border-color);
@@ -2180,8 +2153,8 @@ select option:checked {
 }
 
 .cache-refresh-btn:hover {
-  color: #818CF8;
-  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary-text-soft);
+  background: var(--primary-soft);
   transform: translateY(-0.5px);
 }
 

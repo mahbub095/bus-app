@@ -230,7 +230,7 @@ export default function SeatMap({
               justifyContent: 'space-between',
               alignItems: 'center',
               paddingBottom: '16px',
-              borderBottom: '2px dashed #2A2A44',
+              borderBottom: '2px dashed var(--border-seat)',
               marginBottom: '20px'
             }}
           >
@@ -542,7 +542,7 @@ export default function SeatMap({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} style={{ fontStyle: 'italic', color: '#9ca3af' }}>
+                    <td colSpan={3} style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
                       Select seat(s) from the map
                     </td>
                   </tr>

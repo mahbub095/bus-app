@@ -94,7 +94,7 @@ export default function AuthModal({
                 maxLength={6}
               />
               {devResetCode && (
-                <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px', fontWeight: '500' }}>
+                <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px', fontWeight: '500' }}>
                   [Dev Mode] Reset code: {devResetCode}
                 </div>
               )}
