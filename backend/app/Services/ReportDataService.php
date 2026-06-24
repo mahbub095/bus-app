@@ -6,6 +6,7 @@ use App\Models\Booking;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ReportDataService
 {
@@ -61,7 +62,7 @@ class ReportDataService
             $query->whereHas('schedule.bus', fn ($q) => $q->where('operator_name', $request->operator));
         }
 
-        return $query->orderBy('created_at', 'desc');
+        
     }
 
     public function formatSellingRow(Booking $booking): array
