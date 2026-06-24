@@ -10,7 +10,8 @@ class ReportFilterService
     public function validateFilters(Request $request): array
     {
         return $request->validate([
-            'period' => 'required|in:weekly,monthly,quarterly,yearly,custom',
+                        'group_by' => 'nullable|array',
+            'group_by.*' => 'in:date,operator,route,coach_type,payment_method,status',
             'from_date' => 'required_if:period,custom|nullable|date_format:Y-m-d',
             'to_date' => 'required_if:period,custom|nullable|date_format:Y-m-d|after_or_equal:from_date',
             'coach_type' => 'nullable|string',
