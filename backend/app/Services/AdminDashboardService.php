@@ -15,8 +15,7 @@ class AdminDashboardService
 {
     public function __construct(
         protected AdminDashboardAnalyticsService $analyticsService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{
@@ -44,28 +43,43 @@ class AdminDashboardService
         ];
 
         $routes = Route::with(['departureStation', 'arrivalStation'])
-            ->limit(100)
-            ->get()
-            ->map(function ($route) {
+            ->orderBy('id', 'desc')
+            ->paginate(15)
+            ->through(function ($route) {
                 $route->from = $route->departureStation->name ?? '';
                 $route->to = $route->arrivalStation->name ?? '';
-
                 return $route;
             });
+
+        $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
+            ->orderBy('id', 'desc')
+            ->paginate(15);
+
+        $promotions = Promotion::orderBy('code', 'asc')
+            ->paginate(15);
+
+        $buses = Bus::orderBy('operator_name', 'asc')
+            ->paginate(15);
+
+        $stations = Station::orderBy('name', 'asc')
+            ->paginate(15);
+
+        $allStations = Station::orderBy('name', 'asc')->get();
+
+        $users = User::orderBy('created_at', 'desc')->get();
 
         return [
             'metrics' => $metrics,
             'analytics' => $analytics,
-            'stations' => Station::orderBy('name', 'asc')->get(),
-            'buses' => Bus::orderBy('operator_name', 'asc')->get(),
+            'stations' => $stations,
+            'allStations' => $allStations,
+            'buses' => $buses,
             'routes' => $routes,
-            'schedules' => Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
-                ->limit(100)
-                ->get(),
-            'promotions' => Promotion::orderBy('code', 'asc')->get(),
+            'schedules' => $schedules,
+            'promotions' => $promotions,
             'siteSettings' => SiteSetting::getAll(),
             'smsConfig' => SmsConfig::query()->latest('id')->first(),
-            'users' => User::orderBy('created_at', 'desc')->get(),
+            'users' => $users,
         ];
     }
 }

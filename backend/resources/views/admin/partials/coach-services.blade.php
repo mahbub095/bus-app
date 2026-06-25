@@ -8,7 +8,7 @@
                 <label>From Station</label>
                 <select id="cs-from" class="coupon-input" required>
                     <option value="">Select departure...</option>
-                    @foreach($stations as $st)
+                    @foreach($allStations as $st)
                         <option value="{{ $st->id }}">{{ $st->name }}</option>
                     @endforeach
                 </select>
@@ -17,7 +17,7 @@
                 <label>To Station</label>
                 <select id="cs-to" class="coupon-input" required>
                     <option value="">Select destination...</option>
-                    @foreach($stations as $st)
+                    @foreach($allStations as $st)
                         <option value="{{ $st->id }}">{{ $st->name }}</option>
                     @endforeach
                 </select>
@@ -63,7 +63,7 @@
 
 <script>
 (function () {
-    const stations = @json($stations->map(fn($s) => ['id' => $s->id, 'name' => $s->name]));
+    const stations = @json($allStations->map(fn($s) => ['id' => $s->id, 'name' => $s->name]));
     const searchUrl = @json(route('admin.coach-services.search'));
     const cancelUrlTemplate = @json(route('admin.bookings.cancel.api', ['id' => '__ID__']));
     const toggleBlockUrlTemplate = @json(route('admin.schedules.seats.toggle-block', ['id' => '__ID__']));

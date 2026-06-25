@@ -65,6 +65,7 @@
                     @endforelse
                 </tbody>
             </table>
+            {{ $buses->links() }}
         </div>
     </div>
 

@@ -51,6 +51,7 @@
                     @endforelse
                 </tbody>
             </table>
+            {{ $stations->links() }}
         </div>
     </div>
 
