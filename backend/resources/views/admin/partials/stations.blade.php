@@ -51,7 +51,7 @@
                     @endforelse
                 </tbody>
             </table>
-            {{ $stations->links() }}
+            {{ $stations->links('admin.partials.pagination') }}
         </div>
     </div>
 

@@ -65,7 +65,8 @@
                         </tr>
                     @endforelse
                 </tbody>
-            </table>
+                        </table>
+            {{ $users->links('admin.partials.pagination') }}
         </div>
     </div>
 

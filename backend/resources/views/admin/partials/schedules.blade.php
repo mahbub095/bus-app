@@ -64,6 +64,7 @@
                     @endforelse
                 </tbody>
             </table>
+            {{ $schedules->links('admin.partials.pagination') }}
         </div>
     </div>
 

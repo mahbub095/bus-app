@@ -50,6 +50,7 @@
                     @endforelse
                 </tbody>
             </table>
+            {{ $promotions->links('admin.partials.pagination') }}
         </div>
     </div>
 

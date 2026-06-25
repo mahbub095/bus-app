@@ -66,7 +66,7 @@ class AdminDashboardService
 
         $allStations = Station::orderBy('name', 'asc')->get();
 
-        $users = User::orderBy('created_at', 'desc')->get();
+        $users = User::orderBy('created_at', 'desc')->paginate(15);
 
         return [
             'metrics' => $metrics,
