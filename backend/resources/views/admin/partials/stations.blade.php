@@ -22,21 +22,21 @@
                             <td style="color: var(--text-secondary)">{{ $st->created_at->format('M d, Y') }}</td>
                             <td>
                                 <div class="action-btns">
-                                    <button type="button" class="btn btn-secondary btn-sm"
-                                        onclick="setCrudFormMode('station-form', {
-                                            mode: 'edit',
-                                            id: {{ $st->id }},
-                                            action: '{{ route('admin.stations.update', $st->id) }}',
-                                            title: 'Edit Station #{{ $st->id }}',
-                                            submitLabel: 'Update Station',
-                                            fields: {
-                                                name: {{ json_encode($st->name) }},
-                                                district: {{ json_encode($st->district ?? '') }}
-                                            }
-                                        })">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="setCrudFormMode('station-form', {
+                                                mode: 'edit',
+                                                id: {{ $st->id }},
+                                                action: '{{ route('admin.stations.update', $st->id) }}',
+                                                title: 'Edit Station #{{ $st->id }}',
+                                                submitLabel: 'Update Station',
+                                                fields: {
+                                                    name: {{ json_encode($st->name) }},
+                                                    district: {{ json_encode($st->district ?? '') }}
+                                                }
+                                            })">
                                         Edit
                                     </button>
-                                    <form action="{{ route('admin.stations.destroy', $st->id) }}" method="POST" onsubmit="return confirm('Delete this station?');">
+                                    <form action="{{ route('admin.stations.destroy', $st->id) }}" method="POST"
+                                        onsubmit="return confirm('Delete this station?');">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-danger btn-sm" type="submit">Delete</button>
@@ -46,12 +46,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted)">No stations found.</td>
+                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted)">No stations
+                                found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-            {{ $stations->links('admin.partials.pagination') }}
         </div>
     </div>
 
@@ -63,13 +63,16 @@
             <input type="hidden" name="_edit_id" value="">
             <div class="input-group">
                 <label>Terminal City Name (e.g. SYLHET)</label>
-                <input type="text" name="name" class="coupon-input" placeholder="Name" required value="{{ old('name') }}">
+                <input type="text" name="name" class="coupon-input" placeholder="Name" required
+                    value="{{ old('name') }}">
             </div>
             <div class="input-group">
                 <label>District Location (e.g. Sylhet)</label>
-                <input type="text" name="district" class="coupon-input" placeholder="District" value="{{ old('district') }}">
+                <input type="text" name="district" class="coupon-input" placeholder="District"
+                    value="{{ old('district') }}">
             </div>
-            <button class="btn btn-primary" id="station-form-submit" type="submit" style="height: 42px; margin-top: 10px;">
+            <button class="btn btn-primary" id="station-form-submit" type="submit"
+                style="height: 42px; margin-top: 10px;">
                 Create Station Terminal
             </button>
             <button type="button" class="btn btn-secondary form-cancel-btn" id="station-form-cancel"

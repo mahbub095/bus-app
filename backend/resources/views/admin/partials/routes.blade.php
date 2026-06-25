@@ -61,7 +61,7 @@
                     @endforelse
                 </tbody>
             </table>
-        {{ $routes->links('admin.partials.pagination') }}
+
         
 </div>
     </div>
