@@ -53,6 +53,7 @@
                 </tbody>
             </table>
         </div>
+        {{ $promotions->links('admin.partials.pagination') }}
     </div>
 
     <div class="booking-form-sidebar">

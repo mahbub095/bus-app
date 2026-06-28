@@ -53,6 +53,7 @@
                 </tbody>
             </table>
         </div>
+        {{ $stations->links('admin.partials.pagination') }}
     </div>
 
     <div class="booking-form-sidebar">

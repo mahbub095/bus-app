@@ -351,6 +351,70 @@
             border-radius: var(--border-radius);
             padding: 24px;
             box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-panel .table-wrapper {
+            flex: 1;
+        }
+
+        /* Custom Pagination Styling */
+        .custom-pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .pagination-list {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .page-item {
+            display: inline-flex;
+        }
+
+        .page-link, .page-ellipsis {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-btn-secondary);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .page-link:hover {
+            border-color: var(--border-active);
+            background-color: var(--bg-btn-secondary-hover);
+            color: var(--primary);
+        }
+
+        .page-item.active .page-link {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .page-item.disabled .page-link, .page-ellipsis {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: var(--border-color);
+            background-color: transparent;
+            color: var(--text-muted);
         }
 
         .admin-panel-title {

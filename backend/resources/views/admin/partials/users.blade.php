@@ -65,9 +65,9 @@
                         </tr>
                     @endforelse
                 </tbody>
-                        </table>
-            {{ $users->links('admin.partials.pagination') }}
+            </table>
         </div>
+        {{ $users->links('admin.partials.pagination') }}
     </div>
 
     @if(Auth::user()->isAdmin())

@@ -65,6 +65,7 @@
                 </tbody>
             </table>
         </div>
+        {{ $buses->links('admin.partials.pagination') }}
     </div>
 
     <div class="booking-form-sidebar">

@@ -61,9 +61,8 @@
                     @endforelse
                 </tbody>
             </table>
-
-        
-</div>
+        </div>
+        {{ $routes->links('admin.partials.pagination') }}
     </div>
 
     <div class="booking-form-sidebar route-form-sidebar">
