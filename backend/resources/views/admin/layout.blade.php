@@ -1805,6 +1805,11 @@
             }
             
             const switchTab = (tabName, updateHash = false) => {
+                const preloadStyle = document.getElementById('tab-preload-style');
+                if (preloadStyle) {
+                    preloadStyle.remove();
+                }
+
                 navItems.forEach(item => {
                     if (item.getAttribute('data-tab') === tabName) {
                         item.classList.add('active');
@@ -1863,8 +1868,27 @@
             
             navItems.forEach(item => {
                 item.addEventListener('click', (event) => {
-                    event.preventDefault();
                     const tabName = item.getAttribute('data-tab');
+                    if (!tabName) return;
+
+                    const searchParams = new URLSearchParams(window.location.search);
+                    let hasPageParams = false;
+                    for (const key of Array.from(searchParams.keys())) {
+                        if (key === 'page' || key.endsWith('_page')) {
+                            searchParams.delete(key);
+                            hasPageParams = true;
+                        }
+                    }
+
+                    if (hasPageParams) {
+                        event.preventDefault();
+                        const newSearch = searchParams.toString();
+                        const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + '#' + tabName;
+                        window.location.href = newUrl;
+                        return;
+                    }
+
+                    event.preventDefault();
                     switchTab(tabName, true);
                 });
             });
