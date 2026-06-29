@@ -9,16 +9,18 @@
 @if (isset($paginator) && $paginator->hasPages())
     @php
 
+    // Retrieve page parameter name from paginator (defaults to 'page')
+    $pageName = method_exists($paginator, 'getPageName') ? $paginator->getPageName() : 'page';
     // Preserve existing query parameters except the page number.
-    $query = request()->except('page');
+    $query = request()->except($pageName);
     // Get the base URL without query string.
     $baseUrl = request()->url();
     // Retrieve the fragment (hash) from the full URL, if present.
     $fullUrl = request()->fullUrl();
     $fragment = parse_url($fullUrl, PHP_URL_FRAGMENT);
     // Build pagination URLs, appending the fragment when it exists.
-    $buildUrl = function($page) use ($baseUrl, $query, $fragment) {
-        $url = $baseUrl . '?' . http_build_query(array_merge($query, ['page' => $page]));
+    $buildUrl = function($page) use ($baseUrl, $query, $fragment, $pageName) {
+        $url = $baseUrl . '?' . http_build_query(array_merge($query, [$pageName => $page]));
         return $fragment ? $url . "#{$fragment}" : $url;
     };
 @endphp

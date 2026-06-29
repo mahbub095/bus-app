@@ -44,7 +44,7 @@ class AdminDashboardService
 
         $routes = Route::with(['departureStation', 'arrivalStation'])
             ->orderBy('id', 'desc')
-            ->paginate(15)
+            ->paginate(15, ['*'], 'routes_page')
             ->through(function ($route) {
                 $route->from = $route->departureStation->name ?? '';
                 $route->to = $route->arrivalStation->name ?? '';
@@ -53,20 +53,20 @@ class AdminDashboardService
 
         $schedules = Schedule::with(['bus', 'route.departureStation', 'route.arrivalStation'])
             ->orderBy('id', 'desc')
-            ->paginate(15);
+            ->paginate(15, ['*'], 'schedules_page');
 
         $promotions = Promotion::orderBy('code', 'asc')
-            ->paginate(15);
+            ->paginate(15, ['*'], 'promotions_page');
 
         $buses = Bus::orderBy('operator_name', 'asc')
-            ->paginate(15);
+            ->paginate(15, ['*'], 'buses_page');
 
         $stations = Station::orderBy('name', 'asc')
-            ->paginate(15);
+            ->paginate(15, ['*'], 'stations_page');
 
         $allStations = Station::orderBy('name', 'asc')->get();
 
-        $users = User::orderBy('created_at', 'desc')->paginate(15);
+        $users = User::orderBy('created_at', 'desc')->paginate(15, ['*'], 'users_page');
 
         return [
             'metrics' => $metrics,

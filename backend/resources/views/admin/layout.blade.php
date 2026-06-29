@@ -1758,11 +1758,32 @@
                     return hashTab;
                 }
 
+                const searchParams = new URLSearchParams(window.location.search);
+                const knownTabs = ['stations', 'buses', 'routes', 'schedules', 'promotions', 'users', 'coach-services', 'bookings', 'cancel-requests', 'reports', 'site-settings', 'gateways', 'profile'];
+                for (const tab of knownTabs) {
+                    if (searchParams.has(`${tab}_page`)) {
+                        return tab;
+                    }
+                }
+
                 if (path === '/admin' && !hashTab) {
                     return 'dashboard';
                 }
 
                 return 'dashboard';
+            }
+
+            function syncPaginationLinks() {
+                contents.forEach(section => {
+                    const tabName = section.id.replace('tab-content-', '');
+                    section.querySelectorAll('.custom-pagination a.page-link').forEach(link => {
+                        let href = link.getAttribute('href');
+                        if (href) {
+                            const [baseUrlAndQuery] = href.split('#');
+                            link.setAttribute('href', baseUrlAndQuery + '#' + tabName);
+                        }
+                    });
+                });
             }
 
             function getCurrentAdminTab() {
@@ -1848,6 +1869,7 @@
                 });
             });
             
+            syncPaginationLinks();
             switchTab(activeTab);
 
             document.querySelector('.admin-main')?.addEventListener('submit', (event) => {
