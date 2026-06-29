@@ -17,7 +17,7 @@
                     @forelse($stations as $st)
                         <tr>
                             <td>#{{ $st->id }}</td>
-                            <td style="font-weight: bold; color: #fff;">{{ $st->name }}</td>
+                            <td style="color: var(--text-secondary)">{{ $st->name }}</td>
                             <td>{{ $st->district ?? 'N/A' }}</td>
                             <td style="color: var(--text-secondary)">{{ $st->created_at->format('M d, Y') }}</td>
                             <td>
