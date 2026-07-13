@@ -1,12 +1,19 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const maintenanceToggle = document.getElementById('maintenance_toggle');
-    const maintenanceStatus = document.getElementById('maintenance_status');
+/**
+ * site-settings.js
+ *
+ * Site Settings panel: updates the maintenance mode status label in real time
+ * as the admin toggles the checkbox, before the form is saved.
+ */
 
-    if (maintenanceToggle && maintenanceStatus) {
-        maintenanceToggle.addEventListener('change', function () {
-            maintenanceStatus.textContent = this.checked
-                ? '🔴 Maintenance Mode is ACTIVE'
-                : '🟢 Website is LIVE';
-        });
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle      = document.getElementById('maintenance_toggle');
+    const statusLabel = document.getElementById('maintenance_status');
+
+    if (!toggle || !statusLabel) return;
+
+    toggle.addEventListener('change', () => {
+        statusLabel.textContent = toggle.checked
+            ? '🔴 Maintenance Mode is ACTIVE'
+            : '🟢 Website is LIVE';
+    });
 });
