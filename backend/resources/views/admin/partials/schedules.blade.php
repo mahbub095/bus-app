@@ -20,7 +20,8 @@
                             <td>#{{ $sch->id }}</td>
                             <td>
                                 <div>{{ $sch->bus->operator_name }}</div>
-                                <div style="font-size: 11px; color: var(--text-secondary)">{{ $sch->bus->coach_number }} ({{ $sch->bus->coach_type }})</div>
+                                <div style="font-size: 11px; color: var(--text-secondary)">{{ $sch->bus->coach_number }}
+                                    ({{ $sch->bus->coach_type }})</div>
                             </td>
                             <td>{{ $sch->route->departureStation->name }} ➔ {{ $sch->route->arrivalStation->name }}</td>
                             <td>
@@ -32,24 +33,24 @@
                             <td style="color: var(--gold); font-weight: bold;">BDT {{ number_format($sch->fare) }}</td>
                             <td>
                                 <div class="action-btns">
-                                    <button type="button" class="btn btn-secondary btn-sm"
-                                        onclick="setCrudFormMode('schedule-form', {
-                                            mode: 'edit',
-                                            id: {{ $sch->id }},
-                                            action: '{{ route('admin.schedules.update', $sch->id) }}',
-                                            title: 'Edit Schedule #{{ $sch->id }}',
-                                            submitLabel: 'Update Schedule',
-                                            fields: {
-                                                bus_id: {{ json_encode($sch->bus_id) }},
-                                                route_id: {{ json_encode($sch->route_id) }},
-                                                departure_time: {{ json_encode($sch->departure_time->format('Y-m-d\TH:i')) }},
-                                                arrival_time: {{ json_encode($sch->arrival_time->format('Y-m-d\TH:i')) }},
-                                                fare: {{ json_encode($sch->fare) }}
-                                            }
-                                        })">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="setCrudFormMode('schedule-form', {
+                                                mode: 'edit',
+                                                id: {{ $sch->id }},
+                                                action: '{{ route('admin.schedules.update', $sch->id) }}',
+                                                title: 'Edit Schedule #{{ $sch->id }}',
+                                                submitLabel: 'Update Schedule',
+                                                fields: {
+                                                    bus_id: {{ json_encode($sch->bus_id) }},
+                                                    route_id: {{ json_encode($sch->route_id) }},
+                                                    departure_time: {{ json_encode($sch->departure_time->format('Y-m-d\TH:i')) }},
+                                                    arrival_time: {{ json_encode($sch->arrival_time->format('Y-m-d\TH:i')) }},
+                                                    fare: {{ json_encode($sch->fare) }}
+                                                }
+                                            })">
                                         Edit
                                     </button>
-                                    <form action="{{ route('admin.schedules.destroy', $sch->id) }}" method="POST" onsubmit="return confirm('Delete this schedule? Related bookings will also be removed.');">
+                                    <form action="{{ route('admin.schedules.destroy', $sch->id) }}" method="POST"
+                                        onsubmit="return confirm('Delete this schedule? Related bookings will also be removed.');">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-danger btn-sm" type="submit">Delete</button>
@@ -59,17 +60,20 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted)">No schedules found.</td>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted)">No schedules
+                                found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        {{ $schedules->links('admin.partials.pagination') }}
     </div>
 
     <div class="booking-form-sidebar">
         <h3 class="booking-summary-title" id="schedule-form-title">Schedule Coach Run</h3>
-        <form class="booking-form-fields" id="schedule-form" action="{{ route('admin.schedules.store') }}" method="POST">
+        <form class="booking-form-fields" id="schedule-form" action="{{ route('admin.schedules.store') }}"
+            method="POST">
             @csrf
             @method('POST')
             <input type="hidden" name="_edit_id" value="">
@@ -78,7 +82,8 @@
                 <select name="bus_id" class="coupon-input" required>
                     <option value="">Select bus coach...</option>
                     @foreach($buses as $bus)
-                        <option value="{{ $bus->id }}">{{ $bus->operator_name }} ({{ $bus->coach_number }} - {{ $bus->coach_type }})</option>
+                        <option value="{{ $bus->id }}">{{ $bus->operator_name }} ({{ $bus->coach_number }} -
+                            {{ $bus->coach_type }})</option>
                     @endforeach
                 </select>
             </div>
@@ -103,7 +108,8 @@
                 <label>Fare Price BDT</label>
                 <input type="number" name="fare" class="coupon-input" placeholder="900" required min="0">
             </div>
-            <button class="btn btn-primary" id="schedule-form-submit" type="submit" style="height: 42px; margin-top: 10px;">
+            <button class="btn btn-primary" id="schedule-form-submit" type="submit"
+                style="height: 42px; margin-top: 10px;">
                 Schedule Coach Run
             </button>
             <button type="button" class="btn btn-secondary form-cancel-btn" id="schedule-form-cancel"
