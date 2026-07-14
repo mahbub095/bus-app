@@ -344,4 +344,4 @@
 </style>
 
 {{-- Script for toggle label --}}
-<script src="{{ asset('js/admin/site-settings.js') }}"></script>
+@vite('resources/js/admin/site-settings.js')

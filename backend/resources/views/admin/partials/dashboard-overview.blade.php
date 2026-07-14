@@ -121,4 +121,4 @@
         initialData: @json($analytics),
     };
 </script>
-<script src="{{ asset('js/admin/dashboard-overview.js') }}"></script>
+@vite('resources/js/admin/dashboard-overview.js')

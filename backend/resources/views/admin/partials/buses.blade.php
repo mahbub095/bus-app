@@ -403,4 +403,4 @@
     }
 </style>
 
-<script src="{{ asset('js/admin/buses.js') }}"></script>
+@vite('resources/js/admin/buses.js')

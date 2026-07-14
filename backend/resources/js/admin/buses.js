@@ -487,11 +487,6 @@ function updateSelectedCellLabel(label) {
 
 // ─── Seat Layout Designer — grid resize ──────────────────────────────────────
 
-/**
- * Helpers for modifying both sleeper decks at once or a single deck/flat grid.
- * @param {string|null} deck — 'lower', 'upper', or null (all / flat)
- */
-
 function addDesignerRow(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
 
@@ -619,3 +614,17 @@ function saveLayoutDesign() {
 
     closeLayoutDesigner();
 }
+
+// ─── Global exports (required for inline onclick handlers in blade templates) ──
+window.adjustDefaultSeats      = adjustDefaultSeats;
+window.handleEditBusClick      = handleEditBusClick;
+window.openLayoutDesigner      = openLayoutDesigner;
+window.closeLayoutDesigner     = closeLayoutDesigner;
+window.resetToDefaultLayout    = resetToDefaultLayout;
+window.saveLayoutDesign        = saveLayoutDesign;
+window.updateSelectedCellType  = updateSelectedCellType;
+window.updateSelectedCellLabel = updateSelectedCellLabel;
+window.addDesignerRow          = addDesignerRow;
+window.removeDesignerRow       = removeDesignerRow;
+window.addDesignerColumn       = addDesignerColumn;
+window.removeDesignerColumn    = removeDesignerColumn;

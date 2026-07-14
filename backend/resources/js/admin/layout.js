@@ -253,6 +253,13 @@ function resetCrudForm(formId, createAction, createTitle, createSubmitLabel) {
     setCrudFormMode(formId, { mode: 'create', createAction, createTitle, createSubmitLabel });
 }
 
+// ─── Global exports (required for inline onclick handlers in blade templates) ──
+// Vite bundles each file as an isolated module, so plain function declarations
+// are NOT automatically global. Any function called via onclick="..." in a
+// blade template must be explicitly assigned to window.
+window.setCrudFormMode = setCrudFormMode;
+window.resetCrudForm   = resetCrudForm;
+
 // ─── Theme toggle ─────────────────────────────────────────────────────────────
 
 (function initAdminThemeToggle() {

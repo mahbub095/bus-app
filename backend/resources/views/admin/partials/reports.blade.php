@@ -46,4 +46,4 @@
         },
     };
 </script>
-<script src="{{ asset('js/admin/reports.js') }}"></script>
+@vite('resources/js/admin/reports.js')

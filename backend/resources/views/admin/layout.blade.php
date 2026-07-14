@@ -1730,6 +1730,6 @@
             serverTab: @json(old('admin_tab'))
         };
     </script>
-    <script src="{{ asset('js/admin/layout.js') }}"></script>
+    @vite('resources/js/admin/layout.js')
 </body>
 </html>

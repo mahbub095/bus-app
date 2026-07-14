@@ -15,16 +15,19 @@ class BookingController extends BaseController
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'schedule_id' => 'required|exists:schedules,id',
-            'passenger_name' => 'required|string|max:100',
-            'passenger_phone' => 'required|string|max:20',
-            'passenger_email' => 'required|email|max:100',
-            'seat_numbers' => 'required|string',
-            'payment_method' => 'required|string',
+            'schedule_id'      => 'required|exists:schedules,id',
+            'passenger_name'   => 'required|string|max:100',
+            'passenger_phone'  => 'required|string|max:20',
+            'passenger_email'  => 'required|email|max:100',
+            'seat_numbers'     => 'required|string|max:255',
+            'payment_method'   => 'required|string|max:50',
+            'total_fare'       => 'nullable|numeric|min:0',
             'passenger_gender' => 'nullable|in:M,F',
-            'boarding_point' => 'nullable|string|max:150',
-            'dropping_point' => 'nullable|string|max:150',
-            'promo_code' => 'nullable|string',
+            'boarding_point'   => 'nullable|string|max:150',
+            'dropping_point'   => 'nullable|string|max:150',
+            'promo_code'       => 'nullable|string',
+            // Admin users may set an explicit status via the mobile/API client
+            'status'           => 'sometimes|in:PENDING,PAID,SOLD,BOOKED,CANCEL_REQUESTED,CANCELLED',
         ]);
 
         $result = $this->bookingService->createForCustomer($validated, $request->user());

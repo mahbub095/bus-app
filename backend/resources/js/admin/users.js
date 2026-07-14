@@ -135,3 +135,7 @@ function resetUserForm() {
         emailInput.removeAttribute('title');
     }
 }
+
+// ─── Global exports (required for inline onclick handlers in blade templates) ──
+window.editUser      = editUser;
+window.resetUserForm = resetUserForm;

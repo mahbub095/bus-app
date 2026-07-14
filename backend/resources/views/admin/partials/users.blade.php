@@ -161,7 +161,7 @@
                 isSuperAdmin: {{ Auth::user()->isSuperAdmin() ? 'true' : 'false' }},
             };
         </script>
-        <script src="{{ asset('js/admin/users.js') }}"></script>
+        @vite('resources/js/admin/users.js')
     @endif
 
 </div>
