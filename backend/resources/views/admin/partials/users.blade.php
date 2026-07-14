@@ -101,8 +101,14 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Menu Permissions</label>
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; background: var(--bg-panel-alt); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px;">
+                    <label>Menu Permissions
+                        <span id="user-permissions-required-hint"
+                              style="display:none; color:var(--danger); font-size:11px; font-weight:normal; margin-left:6px;">
+                            (required for Admin role)
+                        </span>
+                    </label>
+                    <div id="user-permissions-box"
+                         style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px; background: var(--bg-panel-alt); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 12px;">
                         <label style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-transform: none; font-size: 13px; font-weight: normal; cursor: pointer;">
                             <input type="checkbox" name="menu_permissions[]" value="coach-services" style="accent-color: var(--primary);">
                             Coach Services
@@ -143,6 +149,12 @@
                             <input type="checkbox" name="menu_permissions[]" value="reports" style="accent-color: var(--primary);">
                             Ticket Reports
                         </label>
+                    </div>
+                    <div id="user-permissions-error"
+                         style="display:none; color:var(--danger); font-size:12px; margin-top:6px; padding: 8px 10px;
+                                background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3);
+                                border-radius:var(--border-radius-sm);">
+                        At least one menu permission must be selected for Admin users.
                     </div>
                 </div>
                 

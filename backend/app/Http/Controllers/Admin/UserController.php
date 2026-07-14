@@ -25,6 +25,25 @@ class UserController extends BaseAdminController
             $rules['role'] = 'required|string|in:super_admin,admin,user';
         }
 
+        $validMenus = [
+            'coach-services', 'bookings', 'cancel-requests', 'stations',
+            'buses', 'routes', 'schedules', 'promotions', 'users', 'reports',
+        ];
+
+        if ($currentUser->isAdmin()) {
+            // Determine the role that will be saved after this request.
+            // If the super admin is changing the role, use the submitted value;
+            // otherwise use the existing role on the user record.
+            $effectiveRole = $canEditRole
+                ? $request->input('role', $user->role)
+                : $user->role;
+
+            if ($effectiveRole === 'admin') {
+                $rules['menu_permissions']   = 'required|array|min:1';
+                $rules['menu_permissions.*'] = 'in:' . implode(',', $validMenus);
+            }
+        }
+
         $request->validate($rules);
 
         $updateData = ['name' => trim($request->input('name'))];
@@ -41,7 +60,6 @@ class UserController extends BaseAdminController
             if ($request->has('menu_permissions')) {
                 $permissions = $request->input('menu_permissions');
                 if (is_array($permissions)) {
-                    $validMenus = ['coach-services', 'bookings', 'cancel-requests', 'stations', 'buses', 'routes', 'schedules', 'promotions', 'users', 'reports'];
                     $updateData['menu_permissions'] = array_values(array_intersect($permissions, $validMenus));
                 } else {
                     $updateData['menu_permissions'] = [];

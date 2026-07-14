@@ -2,15 +2,102 @@
  * users.js
  *
  * User account edit form: populates the form with a selected user's data,
- * enforces role/email read-only rules, and provides a reset function.
+ * enforces role/email read-only rules, validates menu permissions, and
+ * provides a reset function.
  *
  * Data contract (set in users.blade.php before this file loads):
  *   window.AdminUsers.isSuperAdmin — boolean, whether the logged-in user is a super admin
+ *
+ * Validation rule:
+ *   Admin-role users must have at least one menu permission selected.
+ *   Attempting to save with zero permissions shows an inline error and
+ *   blocks submission. The server enforces the same rule as a second layer.
  *
  * Public API (called from users.blade.php onclick handlers):
  *   editUser(config)   — populate the form for editing a specific user
  *   resetUserForm()    — clear the form back to its default empty state
  */
+
+// ─── Permission validation helpers ───────────────────────────────────────────
+
+/**
+ * Return true when the current role value requires at least one permission.
+ * Only 'admin' is constrained — super_admin bypasses permissions entirely,
+ * and 'user' role has no dashboard access regardless of permissions.
+ */
+function roleRequiresPermissions() {
+    const roleSelect = document.getElementById('user-role-select');
+    const hiddenRole = document.querySelector('#user-form input[type="hidden"][name="role"]');
+    const role = (roleSelect?.disabled ? hiddenRole?.value : roleSelect?.value) || '';
+    return role === 'admin';
+}
+
+/** Return true when at least one permission checkbox is checked. */
+function hasPermissionChecked() {
+    return [...document.querySelectorAll('#user-form input[name="menu_permissions[]"]')]
+        .some(cb => cb.checked);
+}
+
+/**
+ * Show or hide the permissions error banner and highlight the checkbox area.
+ * Also toggles the "(required for Admin role)" hint next to the label.
+ */
+function setPermissionsError(show) {
+    const errorEl = document.getElementById('user-permissions-error');
+    const hintEl  = document.getElementById('user-permissions-required-hint');
+    const boxEl   = document.getElementById('user-permissions-box');
+
+    if (errorEl) errorEl.style.display = show ? 'block' : 'none';
+
+    // The hint is only relevant for admin-role users — always derive from
+    // the current role, not from the `show` flag.
+    if (hintEl) hintEl.style.display = roleRequiresPermissions() ? 'inline' : 'none';
+
+    // Always reset the border first; only apply the error colour when
+    // we are actively showing an error AND the role actually requires permissions.
+    if (boxEl) {
+        boxEl.style.borderColor = (show && roleRequiresPermissions())
+            ? 'rgba(239,68,68,0.6)'
+            : 'var(--border-color)';
+    }
+}
+
+/**
+ * Validate permissions on the fly whenever a checkbox changes.
+ * Shows the error when the last box is unchecked (for admin role),
+ * and clears it as soon as at least one box is checked.
+ */
+function bindPermissionLiveValidation() {
+    document.querySelectorAll('#user-form input[name="menu_permissions[]"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (roleRequiresPermissions()) {
+                setPermissionsError(!hasPermissionChecked());
+            }
+        });
+    });
+}
+
+// ─── Form submit guard ────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('user-form');
+    if (!form) return;
+
+    form.addEventListener('submit', e => {
+        if (roleRequiresPermissions() && !hasPermissionChecked()) {
+            e.preventDefault();
+            setPermissionsError(true);
+
+            // Scroll the error into view smoothly
+            document.getElementById('user-permissions-error')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+
+    bindPermissionLiveValidation();
+});
+
+// ─── Edit form ────────────────────────────────────────────────────────────────
 
 /**
  * Populate the user form with an existing user's data.
@@ -48,6 +135,9 @@ function editUser(config) {
         cb.checked = permissions.includes(cb.value);
     });
 
+    // Clear any stale validation state from a previous edit session
+    setPermissionsError(false);
+
     // ── Role selector restrictions ────────────────────────────────────────────
     const roleSelect   = document.getElementById('user-role-select');
     const isSuperAdmin = window.AdminUsers.isSuperAdmin;
@@ -76,6 +166,10 @@ function editUser(config) {
         form.querySelector('input[type="hidden"][name="role"]')?.remove();
     }
 
+    // Show the "(required for Admin role)" hint when editing an admin user
+    const hintEl = document.getElementById('user-permissions-required-hint');
+    if (hintEl) hintEl.style.display = targetRole === 'admin' ? 'inline' : 'none';
+
     // ── Email field restrictions ───────────────────────────────────────────────
     // Super admin email is immutable — changing it could lock out the account.
     const emailInput = document.getElementById('user-email-input');
@@ -92,6 +186,8 @@ function editUser(config) {
     }
 }
 
+// ─── Reset form ───────────────────────────────────────────────────────────────
+
 /**
  * Reset the user form back to its blank default state
  * (clears all inputs, unchecks permissions, re-enables role/email).
@@ -103,7 +199,7 @@ function resetUserForm() {
     form.reset();
     form.action = '';
 
-    const titleEl  = document.getElementById('user-form-title');
+    const titleEl   = document.getElementById('user-form-title');
     const submitBtn = document.getElementById('user-form-submit');
     const cancelBtn = document.getElementById('user-form-cancel');
     const idInput   = form.querySelector('[name="_edit_id"]');
@@ -113,10 +209,11 @@ function resetUserForm() {
     if (cancelBtn) cancelBtn.classList.remove('visible');
     if (idInput)   idInput.value = '';
 
-    // Uncheck all permission checkboxes
+    // Uncheck all permission checkboxes and clear validation state
     form.querySelectorAll('input[name="menu_permissions[]"]').forEach(cb => {
         cb.checked = false;
     });
+    setPermissionsError(false);
 
     // Re-enable the role selector and remove any lingering hidden role input
     const roleSelect = document.getElementById('user-role-select');
