@@ -148,4 +148,4 @@
 
 </div>
 
-<script src="{{ asset('js/admin/routes.js') }}"></script>
+@vite('resources/js/admin/routes.js')

@@ -39,5 +39,5 @@
         approveCancelRouteTemplate: @json(route('admin.bookings.approve-cancel', ['id' => '__ID__'])),
     };
 </script>
-<script src="{{ asset('js/admin/cancel-requests.js') }}"></script>
+@vite('resources/js/admin/cancel-requests.js')
 

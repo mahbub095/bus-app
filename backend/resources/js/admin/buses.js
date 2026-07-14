@@ -487,11 +487,6 @@ function updateSelectedCellLabel(label) {
 
 // ─── Seat Layout Designer — grid resize ──────────────────────────────────────
 
-/**
- * Helpers for modifying both sleeper decks at once or a single deck/flat grid.
- * @param {string|null} deck — 'lower', 'upper', or null (all / flat)
- */
-
 function addDesignerRow(deck = null) {
     const isSleeper = currentGridState.lower !== undefined;
 

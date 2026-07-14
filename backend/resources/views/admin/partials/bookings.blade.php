@@ -112,4 +112,4 @@
         destroyRouteTemplate: @json(route('admin.bookings.destroy', ['id' => '__ID__'])),
     };
 </script>
-<script src="{{ asset('js/admin/bookings.js') }}"></script>
+@vite('resources/js/admin/bookings.js')

@@ -23,4 +23,4 @@
 
 @include('admin.partials.gateway-settings.styles')
 
-<script src="{{ asset('js/admin/gateway-settings.js') }}"></script>
+@vite('resources/js/admin/gateway-settings.js')

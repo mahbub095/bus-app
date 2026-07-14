@@ -30,25 +30,12 @@
 
     // ─── Module state ─────────────────────────────────────────────────────────
 
-    // Current search parameters (from/to/date/coachType)
     let searchParams = { from: '', to: '', date: '', coachType: 'All' };
-
-    // Schedules returned by the last search
     let searchResults = [];
-
-    // Whether a search has been performed (gates polling)
     let searchDone = false;
-
-    // ID of the schedule whose seat map is currently expanded
     let expandedScheduleId = null;
-
-    // Seat booking data being viewed (clicking a booked seat), or null
     let selectedSeatBooking = null;
-
-    // Seats the admin has selected for a new booking
     let adminSelectedSeats = [];
-
-    // Booking form field state (persisted across re-renders)
     let adminBoardingPoint  = '';
     let adminDroppingPoint  = '';
     let adminPassengerPhone = '';
@@ -56,18 +43,10 @@
     let adminPassengerEmail = '';
     let adminGender         = 'M';
     let adminPaymentMethod  = 'Cash';
-
-    // Whether block-mode is active (clicking seats blocks/unblocks them)
     let adminBlockMode = false;
-
-    // Polling internals
     let pollTimer  = null;
     let isFetching = false;
-
-    // Tracks whether the click listener has been attached to the results list
     let coachListEventsBound = false;
-
-    // Last-fetched timestamp text shown in the live indicator
     let lastFetchedTimeText = '';
 
     // Default the date input to today on load
@@ -78,25 +57,21 @@
 
     // ─── General helpers ──────────────────────────────────────────────────────
 
-    /** Look up a station name by its ID. */
     function stationName(id) {
         return stations.find(s => s.id === parseInt(id, 10))?.name || '';
     }
 
-    /** Format an ISO time string to HH:MM (e.g. "09:30 AM"). */
     function formatTime(iso) {
         if (!iso) return '';
         return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    /** Safely escape a value for HTML output. */
     function escapeHtml(str) {
         const el = document.createElement('div');
         el.textContent = str ?? '';
         return el.innerHTML;
     }
 
-    /** Format a number as a Bengali Taka amount with two decimal places. */
     function formatBdt(amount) {
         return '৳ ' + Number(amount || 0).toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -106,11 +81,6 @@
 
     // ─── Seat map helpers ─────────────────────────────────────────────────────
 
-    /**
-     * Return the seat-status map for a schedule.
-     * If the API already returned a seat_map object, use it directly.
-     * Otherwise, derive a simple available/sold_m map from booked_seats.
-     */
     function getSeatMap(schedule) {
         if (schedule.seat_map) return schedule.seat_map;
 
@@ -145,7 +115,6 @@
                 }
             }
         } else {
-            // Standard 2+2
             outer: for (const r of LETTERS) {
                 for (let n = 1; n <= 4; n++) {
                     if (codes.length >= total) break outer;
@@ -159,7 +128,6 @@
         return map;
     }
 
-    /** Calculate the fare breakdown for a booking. */
     function calcPricing(schedule, seatCount, paymentMethod) {
         const fare         = Number(schedule.fare || 0);
         const p            = schedule.pricing || {};
@@ -175,7 +143,6 @@
         return { seatFare, serviceCharge, gatewayCharge, scDiscount, gcDiscount, total };
     }
 
-    /** Map a seat status key to a human-readable tooltip label. */
     function seatStatusLabel(status) {
         const labels = {
             available: 'Available', selected: 'Selected', blocked: 'Blocked',
@@ -185,7 +152,6 @@
         return labels[status] || status;
     }
 
-    /** Build the seat legend HTML shown below each seat map. */
     function renderSeatLegend() {
         const items = [
             ['booked_m', 'Booked (M)'], ['booked_f', 'Booked (F)'], ['blocked', 'Blocked'],
@@ -202,11 +168,6 @@
 
     // ─── Booking form state ───────────────────────────────────────────────────
 
-    /**
-     * Read current values from the visible booking form inputs into module state.
-     * Called before any action that might re-render the form (seat click, toggle map, etc.)
-     * to prevent the user's typed values being lost.
-     */
     function captureBookingFormState() {
         const byId = id => document.getElementById(id);
         const phone    = byId('cs-booking-phone');
@@ -224,7 +185,6 @@
         if (gender)   adminGender         = gender.value;
     }
 
-    /** Build the payment method toggle button row. */
     function renderPaymentToggles() {
         return ['Cash', 'bKash', 'Nagad', 'Card'].map(method => `
             <button type="button"
@@ -235,7 +195,6 @@
         ).join('');
     }
 
-    /** Build the seat breakdown and fare summary table for the booking sidebar. */
     function renderBookingExtrasHtml(schedule) {
         const seatClass = schedule.seat_class || 'E-Class';
         const pricing   = calcPricing(schedule, Math.max(1, adminSelectedSeats.length), adminPaymentMethod);
@@ -267,7 +226,6 @@
             </div>`;
     }
 
-    /** Re-render only the fare summary portion of the expanded sidebar. */
     function updateBookingExtras(schedule) {
         const el = document.getElementById(`cs-booking-extras-${schedule.id}`);
         if (el) el.innerHTML = renderBookingExtrasHtml(schedule);
@@ -275,12 +233,6 @@
 
     // ─── Seat map rendering ───────────────────────────────────────────────────
 
-    /**
-     * Generate a default seat grid for the seat-map viewer.
-     * Mirrors generateDefaultGrid() from buses.js but is kept separate to
-     * avoid a cross-file dependency — the viewer only needs seat codes, not
-     * the full designer model.
-     */
     function generateDefaultGrid(layout, totalSeats) {
         const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -343,7 +295,6 @@
         return grid;
     }
 
-    /** SVG icon for driver seats inside the rendered seat map. */
     const DRIVER_SVG = `
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/>
@@ -354,27 +305,20 @@
             <line x1="15" y1="14"  x2="20" y2="18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>`;
 
-    /**
-     * Build the HTML string for a single clickable seat cell.
-     * Handles selected, viewing, block-mode, and various status classes.
-     */
     function renderSeatCell(schedule, seatCode, seatMap) {
         const status     = seatMap[seatCode] || 'available';
         const isPicking  = adminSelectedSeats.includes(seatCode) && status === 'available';
         const isViewing  = selectedSeatBooking?.seat === seatCode;
 
-        // Determine CSS classes
         const cssClasses = isPicking ? ['selected'] : [`status-${status}`];
         if (isViewing) cssClasses.push('viewing-booking');
 
-        // A seat is selectable if it can be clicked for some purpose
         const canBlock   = status === 'blocked' || (adminBlockMode && status === 'available');
         const selectable = isPicking
             || (status === 'available' && !adminBlockMode)
             || canBlock
             || (isViewing && status !== 'available' && status !== 'blocked');
 
-        // Determine tooltip text
         let titleStatus = isPicking ? 'selected' : status;
         if (status === 'blocked') {
             titleStatus = adminBlockMode ? 'Blocked — click to unblock' : 'Blocked';
@@ -389,13 +333,11 @@
                      title="${seatStatusLabel(titleStatus)}">${seatCode}</div>`;
     }
 
-    /** Build the full seat map HTML for one schedule. */
     function renderSeatMap(schedule) {
         const seatMap    = getSeatMap(schedule);
         const layout     = schedule.bus?.seat_layout || '2+2';
         const totalSeats = schedule.bus?.total_seats || 36;
 
-        // Parse the saved custom grid or fall back to the generated default
         let grid = schedule.bus?.seat_layout_grid;
         if (typeof grid === 'string') {
             try { grid = JSON.parse(grid); } catch { grid = null; }
@@ -407,7 +349,6 @@
         const isSleeper = grid.lower !== undefined;
 
         function renderDeckHtml(deckGrid, hasDriver) {
-            // Find driver/engine cells in the first row for the bus-head section
             let driverCell = null;
             let engineCell = null;
             if (hasDriver) {
@@ -417,7 +358,7 @@
                 }));
             }
 
-            const engineHtml   = engineCell
+            const engineHtml = engineCell
                 ? `<div class="seat" title="Engine cover"
                         style="cursor:not-allowed;background-color:#374151;border-color:#1f2937;
                                color:#9ca3af;font-size:9px;font-weight:bold;display:flex;
@@ -445,9 +386,7 @@
                     <div class="bus-body-seats">`;
 
             deckGrid.forEach(row => {
-                // Skip header rows that only contain driver/engine cells
                 if (row.some(c => c.type === 'driver' || c.type === 'engine')) return;
-
                 html += `<div class="seat-row">`;
                 row.forEach(cell => {
                     if      (cell.type === 'seat')  html += renderSeatCell(schedule, cell.label, seatMap);
@@ -481,13 +420,7 @@
 
     // ─── Booking sidebar ──────────────────────────────────────────────────────
 
-    /**
-     * Build the sidebar HTML shown next to the seat map.
-     * Shows booking details when a booked seat is selected, or the new-booking
-     * form when empty seats are being chosen.
-     */
     function renderBookingSidebar(schedule) {
-        // Viewing an existing booking
         if (selectedSeatBooking) {
             const b = selectedSeatBooking;
             return `
@@ -524,7 +457,6 @@
                 </div>`;
         }
 
-        // New booking form
         const boardingOpts = (schedule.boarding_points || []).map(bp => `
             <option value="${escapeHtml(bp.value)}" ${adminBoardingPoint === bp.value ? 'selected' : ''}>
                 ${escapeHtml(bp.label)} — Reporting: ${escapeHtml(bp.reporting_time || '—')},
@@ -603,11 +535,6 @@
 
     // ─── Results list rendering ───────────────────────────────────────────────
 
-    /**
-     * Re-render the full schedule results list.
-     * Resets coachListEventsBound so the single delegated listener is re-attached
-     * after innerHTML is replaced.
-     */
     function renderResults() {
         const listEl  = document.getElementById('cs-bus-list');
         const countEl = document.getElementById('cs-results-count');
@@ -724,11 +651,6 @@
         bindCoachListEvents();
     }
 
-    /**
-     * Optimised refresh: when polling silently and only the seat map needs
-     * updating (no booking is being viewed), replace just the seat map HTML
-     * instead of re-rendering the entire results list.
-     */
     function refreshSeatMapOnly() {
         if (!expandedScheduleId || selectedSeatBooking) { renderResults(); return; }
 
@@ -743,31 +665,23 @@
 
     // ─── Event binding ────────────────────────────────────────────────────────
 
-    /**
-     * Attach a single delegated click listener (plus input/change listeners) to
-     * the results list. Uses event delegation so listeners survive re-renders.
-     * Only called once after each full renderResults() call.
-     */
     function bindCoachListEvents() {
         const listEl = document.getElementById('cs-bus-list');
         if (!listEl || coachListEventsBound) return;
         coachListEventsBound = true;
 
         listEl.addEventListener('click', e => {
-            // ── Toggle seat map open/close ────────────────────────────────────
             const toggleBtn = e.target.closest('.cs-toggle-map');
             if (toggleBtn) {
                 captureBookingFormState();
                 const id = parseInt(toggleBtn.dataset.id, 10);
 
                 if (expandedScheduleId === id) {
-                    // Closing the current map
                     expandedScheduleId  = null;
                     selectedSeatBooking = null;
                     adminSelectedSeats  = [];
                     adminBlockMode      = false;
                 } else {
-                    // Opening a new map — reset booking form state for the new schedule
                     expandedScheduleId  = id;
                     selectedSeatBooking = null;
                     adminSelectedSeats  = [];
@@ -786,7 +700,6 @@
                 return;
             }
 
-            // ── Payment method toggle ─────────────────────────────────────────
             const payBtn = e.target.closest('.payment-toggle[data-payment]');
             if (payBtn) {
                 captureBookingFormState();
@@ -799,39 +712,34 @@
                 return;
             }
 
-            // ── Submit new booking ────────────────────────────────────────────
             if (e.target.id === 'cs-booking-submit') {
                 const sched = searchResults.find(s => s.id === expandedScheduleId);
                 if (sched) handleBookingSubmit(sched);
                 return;
             }
 
-            // ── Cancel existing booking ───────────────────────────────────────
             if (e.target.id === 'cs-cancel-booking-btn' && selectedSeatBooking) {
                 handleCancelBooking(selectedSeatBooking.booking_id);
                 return;
             }
 
-            // ── "Book New Seat" back button ───────────────────────────────────
             if (e.target.id === 'cs-back-to-book-btn') {
                 selectedSeatBooking = null;
                 renderResults();
                 return;
             }
 
-            // ── Block mode toggle ─────────────────────────────────────────────
             const blockBtn = e.target.closest('.cs-block-mode-toggle');
             if (blockBtn) {
                 const schedId = parseInt(blockBtn.dataset.scheduleId, 10);
                 if (expandedScheduleId === schedId) {
                     adminBlockMode = !adminBlockMode;
-                    if (adminBlockMode) adminSelectedSeats = []; // clear any picked seats
+                    if (adminBlockMode) adminSelectedSeats = [];
                     renderResults();
                 }
                 return;
             }
 
-            // ── Seat click ────────────────────────────────────────────────────
             const seatEl = e.target.closest('.seat[data-seat]');
             if (!seatEl) return;
 
@@ -842,7 +750,6 @@
             const schedule   = searchResults.find(s => s.id === scheduleId);
             if (!schedule) return;
 
-            // Block / unblock action
             if (status === 'blocked' || (adminBlockMode && status === 'available')) {
                 if (!adminBlockMode && status === 'blocked') {
                     alert('Turn on "Manage blocked seats" to unblock this seat.');
@@ -852,7 +759,6 @@
                 return;
             }
 
-            // Click a booked seat to view its booking details
             if (status !== 'available') {
                 if (schedule.seat_bookings?.[seatCode]) {
                     selectedSeatBooking = { seat: seatCode, ...schedule.seat_bookings[seatCode] };
@@ -862,7 +768,6 @@
                 return;
             }
 
-            // Toggle available seat selection
             if (adminSelectedSeats.includes(seatCode)) {
                 adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
             } else {
@@ -872,7 +777,6 @@
             refreshSeatMapOnly();
         });
 
-        // Keep booking form state in sync as the user types
         listEl.addEventListener('input', e => {
             if (e.target.id === 'cs-booking-phone') adminPassengerPhone = e.target.value;
             if (e.target.id === 'cs-booking-name')  adminPassengerName  = e.target.value;
@@ -909,7 +813,6 @@
 
     // ─── API actions ──────────────────────────────────────────────────────────
 
-    /** Toggle the blocked/unblocked state of a single seat via the API. */
     async function toggleSeatBlock(scheduleId, seat) {
         const url = toggleBlockUrlTemplate.replace('__ID__', String(scheduleId));
         try {
@@ -922,13 +825,11 @@
 
             if (!res.ok) { alert(data.message || 'Could not update blocked seat.'); return; }
 
-            // Patch the local schedule data with the updated seat map from the server
             const sched = searchResults.find(s => s.id === scheduleId);
             if (sched && data.seat_map) {
                 sched.seat_map              = data.seat_map;
                 sched.booked_seats          = data.booked_seats || sched.booked_seats;
                 sched.available_seats_count = data.available_seats_count ?? sched.available_seats_count;
-                // Drop any selected seats that are no longer available
                 adminSelectedSeats = adminSelectedSeats.filter(
                     s => (data.seat_map[s] || 'available') === 'available'
                 );
@@ -941,11 +842,6 @@
         }
     }
 
-    /**
-     * Fetch search results from the API and refresh the display.
-     * @param {boolean} silent — when true, skips the "Searching…" button label
-     *                           and suppresses console errors (used for background polls)
-     */
     async function fetchCoachServices(silent = false) {
         if (isFetching || !searchDone) return;
         isFetching = true;
@@ -969,7 +865,6 @@
             const time          = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             lastFetchedTimeText = `Live — last updated ${time} (refreshes every 5s)`;
 
-            // If a seat the admin had selected was just booked by someone else, drop it
             if (adminSelectedSeats.length && expandedScheduleId) {
                 const sched = searchResults.find(s => s.id === expandedScheduleId);
                 if (sched) {
@@ -982,7 +877,6 @@
                 }
             }
 
-            // Refresh the viewed booking data if a booked seat is selected
             if (selectedSeatBooking && expandedScheduleId) {
                 const sched = searchResults.find(s => s.id === expandedScheduleId);
                 selectedSeatBooking = sched?.seat_bookings?.[selectedSeatBooking.seat]
@@ -990,7 +884,6 @@
                     : null;
             }
 
-            // Optimised path: only refresh the seat map element on background polls
             if (silent && expandedScheduleId && !selectedSeatBooking) {
                 refreshSeatMapOnly();
             } else {
@@ -1008,7 +901,6 @@
         }
     }
 
-    /** Update the live status badge in the search bar and inside the expanded seat map. */
     function updateLiveStatusIndicator() {
         const statusEl = document.getElementById('cs-live-status');
         const textEl   = document.getElementById('cs-live-text');
@@ -1017,14 +909,12 @@
         statusEl.style.display = 'inline-flex';
         textEl.textContent     = lastFetchedTimeText;
 
-        // Also update the live indicator inside the expanded seat map header
         if (expandedScheduleId) {
             const subText = document.getElementById(`cs-seat-map-live-text-${expandedScheduleId}`);
             if (subText) subText.textContent = lastFetchedTimeText;
         }
     }
 
-    /** Handle the search form submission. */
     async function handleSearch() {
         const from      = document.getElementById('cs-from').value;
         const to        = document.getElementById('cs-to').value;
@@ -1051,7 +941,6 @@
         startPolling();
     }
 
-    /** Validate and submit the new booking form. */
     async function handleBookingSubmit(schedule) {
         captureBookingFormState();
         const errorEl = document.getElementById('cs-booking-error');
@@ -1093,7 +982,6 @@
 
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                // Clear form state after success
                 adminSelectedSeats  = [];
                 selectedSeatBooking = null;
                 adminPassengerPhone = '';
@@ -1111,7 +999,6 @@
         }
     }
 
-    /** Cancel an existing booking after confirmation. */
     async function handleCancelBooking(bookingId) {
         if (!confirm('Cancel this booking and release all seats?')) return;
 
@@ -1134,7 +1021,6 @@
         }
     }
 
-    /** Show an error message inside the booking form. */
     function showBookingError(el, message) {
         if (!el) return;
         el.style.display = 'block';
@@ -1146,7 +1032,6 @@
     function startPolling() {
         stopPolling();
 
-        // Fire once immediately if the tab is visible and a search has been done
         const tab = document.getElementById('tab-content-coach-services');
         if (tab && tab.style.display !== 'none' && searchDone) {
             fetchCoachServices(true);

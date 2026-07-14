@@ -70,4 +70,4 @@
         bookUrl: @json(route('admin.bookings.store')),
     };
 </script>
-<script src="{{ asset('js/admin/coach-services.js') }}"></script>
+@vite('resources/js/admin/coach-services.js')
