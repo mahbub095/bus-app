@@ -16,6 +16,7 @@ export default defineConfig({
                 'resources/js/admin/coach-services.js',
                 'resources/js/admin/gateway-settings.js',
                 'resources/js/admin/reports.js',
+                'resources/js/admin/report-detail.js',
                 'resources/js/admin/routes.js',
                 'resources/js/admin/site-settings.js',
                 'resources/js/admin/users.js',

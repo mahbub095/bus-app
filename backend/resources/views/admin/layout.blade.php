@@ -1558,6 +1558,162 @@
         .dashboard-chart-wrap-wide {
             min-height: 260px;
         }
+
+        /* ── Report Card Gallery ─────────────────────────────────── */
+        .report-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .report-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .report-card:hover {
+            border-color: var(--border-active);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(99,102,241,0.18);
+        }
+
+        .report-card-body {
+            padding: 22px 20px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .report-card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .report-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .report-card-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+
+        .report-card-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .report-card-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(99,102,241,0.03);
+        }
+
+        .report-card-footer span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .report-card-footer svg {
+            width: 16px;
+            height: 16px;
+            color: var(--primary);
+        }
+
+        /* ── Report Detail Page ───────────────────────────────────── */
+        .report-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .report-detail-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background-color: var(--bg-btn-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .report-detail-back:hover {
+            border-color: var(--border-active);
+            color: var(--text-primary);
+            background-color: var(--bg-btn-secondary-hover);
+        }
+
+        .report-detail-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .report-detail-title-block h1 {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--title-gradient-start), var(--title-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .report-detail-title-block p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .notice-info-box {
+            background: rgba(99,102,241,0.07);
+            border: 1px dashed rgba(99,102,241,0.25);
+            border-radius: var(--border-radius-sm);
+            padding: 18px 22px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
