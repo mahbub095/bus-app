@@ -317,7 +317,6 @@
             listEl.innerHTML = `<div class="search-card" style="padding:60px;text-align:center;"><h3>No Coaches Scheduled</h3><p style="color:var(--text-secondary);margin-top:8px;">No scheduled buses match this criteria.</p></div>`;
             return;
         }
-        coachListEventsBound = false;
         listEl.innerHTML = searchResults.map(sched => {
             const isExpanded = expandedScheduleId === sched.id;
             const availColor = sched.available_seats_count === 0 ? 'var(--danger)' : 'var(--success)';
