@@ -335,7 +335,7 @@
         /* Two column layout list/form */
         .admin-sections-layout {
             display: grid;
-            grid-template-columns: 1.6fr 1fr;
+            grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
             gap: 30px;
         }
 
@@ -353,6 +353,7 @@
             box-shadow: var(--shadow-lg);
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .admin-panel .table-wrapper {
@@ -455,6 +456,8 @@
             border-bottom: 1px solid var(--border-color);
             color: var(--text-primary);
             vertical-align: middle;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .admin-table tr:hover {

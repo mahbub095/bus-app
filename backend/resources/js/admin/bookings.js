@@ -17,6 +17,7 @@
  * Public API (called from rendered row buttons):
  *   window.editBookingFromLog(bookingId)
  */
+import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.js';
 
 (function () {
     const { logsUrl, updateRouteTemplate, destroyRouteTemplate } = window.BookingsLogs;
@@ -29,43 +30,6 @@
     let isFetching  = false;
     // Keyed by booking ID so edit buttons can look up the full record without re-fetching
     let bookingsMap = {};
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    /** Format an ISO datetime string into a human-readable short form. */
-    function formatDateTime(iso) {
-        if (!iso) return 'N/A';
-        return new Date(iso).toLocaleString([], {
-            weekday: 'short',
-            month:   'short',
-            day:     '2-digit',
-            year:    'numeric',
-            hour:    '2-digit',
-            minute:  '2-digit',
-        });
-    }
-
-    /** Substitute the '__ID__' placeholder in a route template with a real ID. */
-    function buildUrl(template, id) {
-        return template.replace('__ID__', encodeURIComponent(id));
-    }
-
-    /** Safely escape a value for HTML output. */
-    function escapeHtml(str) {
-        const el = document.createElement('div');
-        el.textContent = str ?? '';
-        return el.innerHTML;
-    }
-
-    /**
-     * Map a booking status string to its badge CSS class.
-     * Paid/Sold/Booked → 'paid', Pending/CancelRequested → 'pending', else → 'cancelled'
-     */
-    function statusBadgeClass(status) {
-        if (['PAID', 'SOLD', 'BOOKED'].includes(status))                    return 'paid';
-        if (status === 'PENDING' || status === 'CANCEL_REQUESTED')          return 'pending';
-        return 'cancelled';
-    }
 
     /** Update the "live" indicator text next to the panel title. */
     function setLiveText(text) {

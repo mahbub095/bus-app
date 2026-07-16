@@ -1,3 +1,5 @@
+import { escapeAttr } from './utils.js';
+
 /**
  * routes.js
  *
@@ -59,13 +61,7 @@
             </tr>`;
     }
 
-    /** Escape a string for use in an HTML attribute value. */
-    function escapeAttr(str) {
-        return String(str ?? '')
-            .replace(/&/g,  '&amp;')
-            .replace(/"/g,  '&quot;')
-            .replace(/</g,  '&lt;');
-    }
+    // escapeAttr is imported from utils.js
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
