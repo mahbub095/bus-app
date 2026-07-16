@@ -1187,7 +1187,7 @@
             border-radius: var(--border-radius-sm);
             font-size: 14px;
             margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--bg-input);
             color: var(--text-primary);
             box-sizing: border-box;
         }
@@ -1228,7 +1228,7 @@
         .ticket-booking-panel input.ticket-field:-webkit-autofill:hover,
         .ticket-booking-panel input.ticket-field:-webkit-autofill:focus {
             -webkit-text-fill-color: var(--text-primary);
-            -webkit-box-shadow: 0 0 0 1000px #1c1c34 inset;
+            -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
             transition: background-color 5000s ease-in-out 0s;
         }
 
