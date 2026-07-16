@@ -63,7 +63,7 @@ class BookingService
                     ->lockForUpdate()
                     ->get();
 
-                $seatMap = $this->seatMapService->buildSeatMap($schedule, $activeBookings);
+                $seatMap = $this->seatMapService->buildSeatMap($schedule, $activeBookings, $user->id);
 
                 foreach ($requestedSeats as $reqSeat) {
                     $status = $seatMap[$reqSeat] ?? 'available';
@@ -100,6 +100,15 @@ class BookingService
                     'payment_method' => $input['payment_method'],
                     'status' => $this->resolveStatus($paymentMethod),
                 ]);
+
+                // Clean up active seat holds for this user/seats
+                $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$schedule->id}", []);
+                foreach ($requestedSeats as $reqSeat) {
+                    if (isset($holds[$reqSeat]) && $holds[$reqSeat]['user_id'] === $user->id) {
+                        unset($holds[$reqSeat]);
+                    }
+                }
+                \Illuminate\Support\Facades\Cache::put("schedule_holds:{$schedule->id}", $holds, now()->addMinutes(10));
 
                 if ($paymentMethod === 'zinipay') {
                     return $this->attachZinipayInvoice($booking, $schedule, 'frontend');

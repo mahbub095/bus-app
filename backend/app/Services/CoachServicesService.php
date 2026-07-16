@@ -46,7 +46,7 @@ class CoachServicesService
         }
 
         return $schedules->map(function ($schedule) use ($includeSeatBookings) {
-            $seatPayload = $this->seatMapService->formatSchedulePayload($schedule, $schedule->bookings);
+            $seatPayload = $this->seatMapService->formatSchedulePayload($schedule, $schedule->bookings, auth('sanctum')->id());
             $availableCount = count(array_filter(
                 $seatPayload['seat_map'],
                 fn ($status) => $status === 'available'

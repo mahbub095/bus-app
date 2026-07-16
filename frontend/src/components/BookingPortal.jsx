@@ -38,6 +38,7 @@ export default function BookingPortal({
   // Booking & Selection States
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const [seatExpirations, setSeatExpirations] = useState({});
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [passengerDetails, setPassengerDetails] = useState({
@@ -96,6 +97,176 @@ export default function BookingPortal({
   useEffect(() => {
     fetchStations();
   }, []);
+
+  const prevScheduleIdRef = React.useRef(null);
+  const prevSeatsRef = React.useRef([]);
+
+  useEffect(() => {
+    prevSeatsRef.current = selectedSeats;
+  }, [selectedSeats]);
+
+  // Release holds when schedule changes or collapses
+  useEffect(() => {
+    const prevScheduleId = prevScheduleIdRef.current;
+    const prevSeats = prevSeatsRef.current;
+
+    if (prevScheduleId && prevScheduleId !== selectedSchedule?.id && prevSeats.length > 0) {
+      prevSeats.forEach(async (seat) => {
+        try {
+          await fetch(`${API_BASE}/seats/release`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              schedule_id: prevScheduleId,
+              seat_number: seat
+            })
+          });
+        } catch {
+          // silent
+        }
+      });
+    }
+    prevScheduleIdRef.current = selectedSchedule?.id;
+  }, [selectedSchedule?.id, authToken]);
+
+  // Release holds on page unload / tab close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const scheduleId = prevScheduleIdRef.current;
+      const seats = prevSeatsRef.current;
+      if (scheduleId && seats.length > 0) {
+        const url = `${API_BASE}/seats/release`;
+        seats.forEach(seat => {
+          try {
+            const client = new XMLHttpRequest();
+            client.open("POST", url, false); // synchronous XHR
+            client.setRequestHeader("Content-Type", "application/json");
+            client.setRequestHeader("Accept", "application/json");
+            if (authToken) {
+              client.setRequestHeader("Authorization", `Bearer ${authToken}`);
+            }
+            client.send(JSON.stringify({ schedule_id: scheduleId, seat_number: seat }));
+          } catch {
+            // ignore
+          }
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [authToken]);
+
+  // Expiration checking effect
+  useEffect(() => {
+    const checkExpirations = async () => {
+      const now = new Date();
+      const expired = [];
+
+      Object.entries(seatExpirations).forEach(([seat, expiresAt]) => {
+        if (new Date(expiresAt) <= now) {
+          expired.push(seat);
+        }
+      });
+
+      if (expired.length > 0) {
+        setSelectedSeats(prev => prev.filter(s => !expired.includes(s)));
+        setSeatExpirations(prev => {
+          const next = { ...prev };
+          expired.forEach(s => delete next[s]);
+          return next;
+        });
+
+        expired.forEach(seat => {
+          showToast(`Hold reservation for seat ${seat} has expired.`, 'error');
+        });
+
+        // Release holds on backend
+        for (const seat of expired) {
+          try {
+            await fetch(`${API_BASE}/seats/release`, {
+              method: 'POST',
+              headers: authHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({
+                schedule_id: selectedSchedule.id,
+                seat_number: seat
+              })
+            });
+          } catch {
+            // silent
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkExpirations, 1000);
+    return () => clearInterval(interval);
+  }, [seatExpirations, selectedSchedule?.id]);
+
+  const handleSeatClick = async (seat, status) => {
+    if (!requireAuth()) return;
+
+    if (selectedSeats.includes(seat)) {
+      // Release hold
+      try {
+        const res = await fetch(`${API_BASE}/seats/release`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            schedule_id: selectedSchedule.id,
+            seat_number: seat
+          })
+        });
+
+        if (res.ok) {
+          setSelectedSeats(prev => prev.filter(s => s !== seat));
+          setSeatExpirations(prev => {
+            const next = { ...prev };
+            delete next[seat];
+            return next;
+          });
+        } else {
+          showToast('Failed to release seat.', 'error');
+        }
+      } catch {
+        showToast('Connection error. Could not release seat.', 'error');
+      }
+    } else {
+      // Check limit
+      if (selectedSeats.length >= 4) {
+        window.alert('You can select a maximum of 4 seats per booking.');
+        return;
+      }
+
+      // Try holding seat
+      try {
+        const res = await fetch(`${API_BASE}/seats/hold`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            schedule_id: selectedSchedule.id,
+            seat_number: seat
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setSelectedSeats(prev => [...prev, seat]);
+          setSeatExpirations(prev => ({
+            ...prev,
+            [seat]: data.expires_at
+          }));
+        } else {
+          showToast(data.message || 'Seat is not available.', 'error');
+        }
+      } catch {
+        showToast('Connection error. Could not reserve seat.', 'error');
+      }
+    }
+  };
 
   // Handle Search Submission
   const handleSearch = async (e, forceRefresh = false) => {
@@ -422,7 +593,8 @@ export default function BookingPortal({
             selectedSchedule={selectedSchedule}
             setSelectedSchedule={setSelectedSchedule}
             selectedSeats={selectedSeats}
-            setSelectedSeats={setSelectedSeats}
+            handleSeatClick={handleSeatClick}
+            seatExpirations={seatExpirations}
             setAppliedPromo={setAppliedPromo}
             setPromoInput={setPromoInput}
             authUser={authUser}

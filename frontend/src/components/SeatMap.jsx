@@ -25,8 +25,26 @@ export default function SeatMap({
   appliedPromo,
   handleApplyPromo,
   handleConfirmBooking,
-  isBooking
+  isBooking,
+  seatExpirations = {}
 }) {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatRemainingTime = (expiresAt) => {
+    if (!expiresAt) return '00:00';
+    const diff = new Date(expiresAt) - new Date();
+    if (diff <= 0) return '00:00';
+    const seconds = Math.floor((diff / 1000) % 60);
+    const minutes = Math.floor((diff / 1000 / 60) % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
   const generateDefaultGrid = (layout, totalSeats) => {
     const rowLetters = [
       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -529,6 +547,7 @@ export default function SeatMap({
                   <th>Seats</th>
                   <th>Class</th>
                   <th>Fare</th>
+                  <th>Hold</th>
                 </tr>
               </thead>
               <tbody>
@@ -538,11 +557,14 @@ export default function SeatMap({
                       <td>{seat}</td>
                       <td>{seatClass}</td>
                       <td>{formatBdt(sched.fare)}</td>
+                      <td style={{ color: 'var(--danger)', fontWeight: 'bold', fontSize: '11px' }}>
+                        {formatRemainingTime(seatExpirations[seat])}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                    <td colSpan={4} style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
                       Select seat(s) from the map
                     </td>
                   </tr>

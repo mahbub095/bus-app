@@ -8,6 +8,8 @@ export default function ScheduleList({
   setSelectedSchedule,
   selectedSeats,
   setSelectedSeats,
+  handleSeatClick,
+  seatExpirations,
   setAppliedPromo,
   setPromoInput,
   authUser,
@@ -188,18 +190,8 @@ export default function ScheduleList({
                   <SeatMap
                     sched={sched}
                     selectedSeats={selectedSeats}
-                    handleSeatClick={(seat, status) => {
-                      if (!isSeatSelectable(status)) return;
-                      if (selectedSeats.includes(seat)) {
-                        setSelectedSeats((prev) => prev.filter((s) => s !== seat));
-                      } else {
-                        if (selectedSeats.length >= 4) {
-                          window.alert('You can select a maximum of 4 seats per booking.');
-                          return;
-                        }
-                        setSelectedSeats((prev) => [...prev, seat]);
-                      }
-                    }}
+                    handleSeatClick={handleSeatClick}
+                    seatExpirations={seatExpirations}
                     seatMapLastSync={seatMapLastSync}
                     boardingPoint={boardingPoint}
                     setBoardingPoint={setBoardingPoint}

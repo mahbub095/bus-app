@@ -17,6 +17,9 @@
  *   window.coachServicesModule.stopPolling()
  */
 
+import { escapeHtml, formatTime, formatBdt } from './utils.js';
+import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
+
 (function () {
     const { stations, searchUrl, cancelUrlTemplate, toggleBlockUrlTemplate, bookUrl } = window.CoachServices;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -61,19 +64,6 @@
 
     // ─── General helpers ───────────────────────────────────────────────────────
     const stationName = id => stations.find(s => s.id === parseInt(id, 10))?.name || '';
-
-    const formatTime = iso => iso
-        ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '';
-
-    function escapeHtml(str) {
-        const el = document.createElement('div');
-        el.textContent = str ?? '';
-        return el.innerHTML;
-    }
-
-    const formatBdt = amount =>
-        '৳ ' + Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // ─── Seat map helpers ──────────────────────────────────────────────────────
     function getSeatMap(schedule) {
@@ -140,39 +130,7 @@
     }
 
     // ─── Grid generation ───────────────────────────────────────────────────────
-    function generateDefaultGrid(layout, totalSeats) {
-        const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        if (layout === '2+2_last5') {
-            const grid = [[{type:'engine',label:'Engine'},{type:'empty'},{type:'aisle'},{type:'empty'},{type:'driver',label:'Driver'}]];
-            const nr = Math.ceil((totalSeats - 5) / 4);
-            for (let r = 0; r < nr; r++) grid.push([{type:'seat',label:`${L[r]}1`},{type:'seat',label:`${L[r]}2`},{type:'aisle'},{type:'seat',label:`${L[r]}3`},{type:'seat',label:`${L[r]}4`}]);
-            grid.push([1,2,3,4,5].map(n => ({type:'seat',label:`${L[nr]}${n}`})));
-            return grid;
-        }
-        if (layout === '1+2') {
-            const grid = [[{type:'engine',label:'Engine'},{type:'aisle'},{type:'empty'},{type:'driver',label:'Driver'}]];
-            const rows = Math.ceil(totalSeats / 3);
-            for (let r = 0; r < rows; r++) grid.push([{type:'seat',label:`${L[r]}1`},{type:'aisle'},{type:'seat',label:`${L[r]}2`},{type:'seat',label:`${L[r]}3`}]);
-            return grid;
-        }
-        if (layout === 'sleeper') {
-            const lc = Math.ceil(totalSeats / 2), uc = totalSeats - lc;
-            function sleeperDeck(count, prefix, hasDriver) {
-                const deck = [hasDriver ? [{type:'engine',label:'Engine'},{type:'aisle'},{type:'empty'},{type:'driver',label:'Driver'}] : [{type:'empty'},{type:'aisle'},{type:'empty'},{type:'empty'}]];
-                const nr = Math.max(0, Math.ceil((count - 4) / 3));
-                for (let r = 0; r < nr; r++) deck.push([{type:'seat',label:`${prefix}${L[r]}1`},{type:'aisle'},{type:'seat',label:`${prefix}${L[r]}2`},{type:'seat',label:`${prefix}${L[r]}3`}]);
-                deck.push([1,2,3,4].map(n => ({type:'seat',label:`${prefix}${L[nr]}${n}`})));
-                return deck;
-            }
-            return { lower: sleeperDeck(lc, 'L-', true), upper: sleeperDeck(uc, 'U-', false) };
-        }
-        const grid = [[{type:'engine',label:'Engine'},{type:'empty'},{type:'aisle'},{type:'empty'},{type:'driver',label:'Driver'}]];
-        const rows = Math.ceil(totalSeats / 4);
-        for (let r = 0; r < rows; r++) grid.push([{type:'seat',label:`${L[r]}1`},{type:'seat',label:`${L[r]}2`},{type:'aisle'},{type:'seat',label:`${L[r]}3`},{type:'seat',label:`${L[r]}4`}]);
-        return grid;
-    }
-
-    const DRIVER_SVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/><line x1="12" y1="8.5" x2="12" y2="2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="14" x2="4" y2="18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="14" x2="20" y2="18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    // generateDefaultGrid and DRIVER_SVG are imported from bus-layout-helper.js
 
     function renderSeatMap(schedule) {
         const seatMap    = getSeatMap(schedule);

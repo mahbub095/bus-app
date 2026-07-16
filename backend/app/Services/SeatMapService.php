@@ -191,7 +191,7 @@ class SeatMapService
     /**
      * @return array<string, string> seat code => status key
      */
-    public function buildSeatMap(Schedule $schedule, iterable $bookings): array
+    public function buildSeatMap(Schedule $schedule, iterable $bookings, ?int $currentUserId = null): array
     {
         $map = [];
         foreach ($this->allSeatCodesForBus($schedule->bus) as $seat) {
@@ -202,6 +202,19 @@ class SeatMapService
         foreach ($blocked as $seat) {
             if (isset($map[$seat])) {
                 $map[$seat] = 'blocked';
+            }
+        }
+
+        // Apply active holds from other users
+        $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$schedule->id}", []);
+        $now = now()->timestamp;
+        foreach ($holds as $seat => $hold) {
+            if (isset($hold['expires_at']) && $hold['expires_at'] > $now) {
+                if ($hold['user_id'] !== $currentUserId) {
+                    if (isset($map[$seat]) && $map[$seat] === 'available') {
+                        $map[$seat] = 'blocked';
+                    }
+                }
             }
         }
 
@@ -349,10 +362,10 @@ class SeatMapService
         ];
     }
 
-    public function formatSchedulePayload(Schedule $schedule, iterable $bookings): array
+    public function formatSchedulePayload(Schedule $schedule, iterable $bookings, ?int $currentUserId = null): array
     {
         $schedule->loadMissing('route.departureStation', 'route.arrivalStation');
-        $seatMap = $this->buildSeatMap($schedule, $bookings);
+        $seatMap = $this->buildSeatMap($schedule, $bookings, $currentUserId);
         $bookedSeats = array_keys(array_filter($seatMap, fn ($s) => $s !== 'available'));
         $routePoints = $this->routePoints($schedule);
 
@@ -482,6 +495,80 @@ class SeatMapService
             'blocked' => true,
             'blocked_seats' => $blocked,
         ];
+    }
+
+    public function holdSeat(int $scheduleId, string $seatNumber, int $userId): array
+    {
+        $schedule = Schedule::with('bus')->find($scheduleId);
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found.'];
+        }
+
+        $seatNumber = strtoupper(trim($seatNumber));
+        if (!$this->isValidSeatCode($seatNumber, $schedule->bus)) {
+            return ['success' => false, 'message' => 'Invalid seat code.'];
+        }
+
+        // Fetch paid/booked bookings to ensure the seat isn't booked already
+        $bookings = $schedule->bookings()
+            ->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
+            ->get();
+        $seatMap = $this->buildSeatMap($schedule, $bookings);
+        if (($seatMap[$seatNumber] ?? 'available') !== 'available') {
+            return ['success' => false, 'message' => 'Seat is not available.'];
+        }
+
+        // Now check cache-based holds
+        $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$scheduleId}", []);
+        $now = now()->timestamp;
+
+        // Clean up expired holds
+        $holds = array_filter($holds, function ($h) use ($now) {
+            return isset($h['expires_at']) && $h['expires_at'] > $now;
+        });
+
+        // Check if held by another user
+        if (isset($holds[$seatNumber])) {
+            if ($holds[$seatNumber]['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Seat is temporarily reserved by another user.'];
+            }
+        }
+
+        // Set hold for 2 minutes
+        $expiresAt = now()->addMinutes(2);
+        $holds[$seatNumber] = [
+            'seat_number' => $seatNumber,
+            'user_id' => $userId,
+            'expires_at' => $expiresAt->timestamp,
+        ];
+
+        \Illuminate\Support\Facades\Cache::put("schedule_holds:{$scheduleId}", $holds, now()->addMinutes(10));
+
+        return [
+            'success' => true,
+            'expires_at' => $expiresAt->toIso8601String(),
+        ];
+    }
+
+    public function releaseSeat(int $scheduleId, string $seatNumber, int $userId): array
+    {
+        $seatNumber = strtoupper(trim($seatNumber));
+        $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$scheduleId}", []);
+        $now = now()->timestamp;
+
+        // Clean up expired and search for matching seat
+        $holds = array_filter($holds, function ($h) use ($now) {
+            return isset($h['expires_at']) && $h['expires_at'] > $now;
+        });
+
+        if (isset($holds[$seatNumber])) {
+            if ($holds[$seatNumber]['user_id'] === $userId) {
+                unset($holds[$seatNumber]);
+                \Illuminate\Support\Facades\Cache::put("schedule_holds:{$scheduleId}", $holds, now()->addMinutes(10));
+            }
+        }
+
+        return ['success' => true];
     }
 
     protected function parseSeatList(?string $value): array

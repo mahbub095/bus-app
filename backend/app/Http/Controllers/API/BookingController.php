@@ -8,8 +8,10 @@ use Illuminate\Http\Request;
 
 class BookingController extends BaseController
 {
-    public function __construct(protected BookingService $bookingService)
-    {
+    public function __construct(
+        protected BookingService $bookingService,
+        protected \App\Services\SeatMapService $seatMapService
+    ) {
     }
 
     public function store(Request $request)
@@ -69,5 +71,41 @@ class BookingController extends BaseController
         $booking = Booking::findOrFail($id);
 
         return response()->json($this->bookingService->formatForApi($booking));
+    }
+
+    public function holdSeat(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'seat_number' => 'required|string',
+        ]);
+
+        $result = $this->seatMapService->holdSeat(
+            (int) $validated['schedule_id'],
+            $validated['seat_number'],
+            $request->user()->id
+        );
+
+        if ($result['success']) {
+            return response()->json($result, 200);
+        }
+
+        return response()->json(['message' => $result['message']], 422);
+    }
+
+    public function releaseSeat(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'seat_number' => 'required|string',
+        ]);
+
+        $result = $this->seatMapService->releaseSeat(
+            (int) $validated['schedule_id'],
+            $validated['seat_number'],
+            $request->user()->id
+        );
+
+        return response()->json($result, 200);
     }
 }

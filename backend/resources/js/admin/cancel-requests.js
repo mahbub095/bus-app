@@ -14,6 +14,8 @@
  *   window.cancelRequestsLogsModule.stopPolling()
  */
 
+import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
+
 (function () {
     const { logsUrl, approveCancelRouteTemplate } = window.CancelRequests;
 
@@ -23,33 +25,6 @@
 
     let pollTimer  = null;
     let isFetching = false;
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    /** Format an ISO datetime string into a human-readable short form. */
-    function formatDateTime(iso) {
-        if (!iso) return 'N/A';
-        return new Date(iso).toLocaleString([], {
-            weekday: 'short',
-            month:   'short',
-            day:     '2-digit',
-            year:    'numeric',
-            hour:    '2-digit',
-            minute:  '2-digit',
-        });
-    }
-
-    /** Substitute the '__ID__' placeholder in a route template with a real ID. */
-    function buildUrl(template, id) {
-        return template.replace('__ID__', encodeURIComponent(id));
-    }
-
-    /** Safely escape a value for HTML output. */
-    function escapeHtml(str) {
-        const el = document.createElement('div');
-        el.textContent = str ?? '';
-        return el.innerHTML;
-    }
 
     /** Update the "live" indicator text next to the panel title. */
     function setLiveText(text) {
