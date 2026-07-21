@@ -210,7 +210,14 @@ export default function BookingPortal({
     if (!requireAuth()) return;
 
     if (selectedSeats.includes(seat)) {
-      // Release hold
+      // Optimistic deselect — update UI immediately, then confirm with server
+      setSelectedSeats(prev => prev.filter(s => s !== seat));
+      setSeatExpirations(prev => {
+        const next = { ...prev };
+        delete next[seat];
+        return next;
+      });
+
       try {
         const res = await fetch(`${API_BASE}/seats/release`, {
           method: 'POST',
@@ -221,27 +228,29 @@ export default function BookingPortal({
           })
         });
 
-        if (res.ok) {
-          setSelectedSeats(prev => prev.filter(s => s !== seat));
-          setSeatExpirations(prev => {
-            const next = { ...prev };
-            delete next[seat];
-            return next;
-          });
-        } else {
+        if (!res.ok) {
+          // Roll back if server rejected
+          setSelectedSeats(prev => [...prev, seat]);
           showToast('Failed to release seat.', 'error');
         }
       } catch {
+        // Roll back on network error
+        setSelectedSeats(prev => [...prev, seat]);
         showToast('Connection error. Could not release seat.', 'error');
       }
     } else {
-      // Check limit
+      // Check limit before doing anything
       if (selectedSeats.length >= 4) {
         window.alert('You can select a maximum of 4 seats per booking.');
         return;
       }
 
-      // Try holding seat
+      // Optimistic select — mark seat immediately with a placeholder expiry so the
+      // UI responds at once; the real expiry is patched in once the server replies
+      const optimisticExpiry = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+      setSelectedSeats(prev => [...prev, seat]);
+      setSeatExpirations(prev => ({ ...prev, [seat]: optimisticExpiry }));
+
       try {
         const res = await fetch(`${API_BASE}/seats/hold`, {
           method: 'POST',
@@ -254,15 +263,26 @@ export default function BookingPortal({
 
         const data = await res.json();
         if (res.ok && data.success) {
-          setSelectedSeats(prev => [...prev, seat]);
-          setSeatExpirations(prev => ({
-            ...prev,
-            [seat]: data.expires_at
-          }));
+          // Replace placeholder expiry with the real server-issued one
+          setSeatExpirations(prev => ({ ...prev, [seat]: data.expires_at }));
         } else {
+          // Roll back optimistic selection
+          setSelectedSeats(prev => prev.filter(s => s !== seat));
+          setSeatExpirations(prev => {
+            const next = { ...prev };
+            delete next[seat];
+            return next;
+          });
           showToast(data.message || 'Seat is not available.', 'error');
         }
       } catch {
+        // Roll back on network error
+        setSelectedSeats(prev => prev.filter(s => s !== seat));
+        setSeatExpirations(prev => {
+          const next = { ...prev };
+          delete next[seat];
+          return next;
+        });
         showToast('Connection error. Could not reserve seat.', 'error');
       }
     }

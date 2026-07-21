@@ -42,6 +42,52 @@ class AdminBookingService
     }
 
     /**
+     * Set a booking to CANCEL_REQUESTED so it appears in the cancel-requests queue.
+     *
+     * @return array{success: bool, status: int, body: array<string, mixed>}
+     */
+    public function requestCancellation(int $id): array
+    {
+        $booking = Booking::find($id);
+
+        if (! $booking) {
+            return [
+                'success' => false,
+                'status' => 404,
+                'body' => ['message' => 'Booking not found.'],
+            ];
+        }
+
+        if ($booking->status === 'CANCELLED') {
+            return [
+                'success' => false,
+                'status' => 400,
+                'body' => ['message' => 'Ticket is already cancelled.'],
+            ];
+        }
+
+        if ($booking->status === 'CANCEL_REQUESTED') {
+            return [
+                'success' => false,
+                'status' => 400,
+                'body' => ['message' => 'Cancellation request already submitted.'],
+            ];
+        }
+
+        $booking->update(['status' => 'CANCEL_REQUESTED']);
+
+        return [
+            'success' => true,
+            'status' => 200,
+            'body' => [
+                'message' => 'Cancellation request submitted successfully.',
+                'booking_id' => $booking->id,
+                'status' => 'CANCEL_REQUESTED',
+            ],
+        ];
+    }
+
+    /**
      * @return array{success: bool, status: int, body: array<string, mixed>}
      */
     public function cancelBooking(int $id): array

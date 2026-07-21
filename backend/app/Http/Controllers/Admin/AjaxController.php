@@ -78,4 +78,11 @@ class AjaxController extends Controller
 
         return response()->json($result['body'], $result['status']);
     }
+
+    public function requestCancelApi($id)
+    {
+        $result = $this->adminBookingService->requestCancellation((int) $id);
+
+        return response()->json($result['body'], $result['status']);
+    }
 }

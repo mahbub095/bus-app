@@ -6,9 +6,10 @@
  * then pauses when the tab is hidden.
  *
  * Data contract (set in bookings.blade.php before this file loads):
- *   window.BookingsLogs.logsUrl            — API endpoint returning { bookings: [...] }
- *   window.BookingsLogs.updateRouteTemplate — URL template with '__ID__' placeholder
- *   window.BookingsLogs.destroyRouteTemplate — URL template with '__ID__' placeholder
+ *   window.BookingsLogs.logsUrl                    — API endpoint returning { bookings: [...] }
+ *   window.BookingsLogs.updateRouteTemplate         — URL template with '__ID__' placeholder
+ *   window.BookingsLogs.destroyRouteTemplate        — URL template with '__ID__' placeholder
+ *   window.BookingsLogs.requestCancelRouteTemplate  — URL template with '__ID__' placeholder
  *
  * Public API (consumed by layout.js):
  *   window.bookingsLogsModule.startPolling()
@@ -20,7 +21,7 @@
 import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.js';
 
 (function () {
-    const { logsUrl, updateRouteTemplate, destroyRouteTemplate } = window.BookingsLogs;
+    const { logsUrl, updateRouteTemplate, destroyRouteTemplate, requestCancelRouteTemplate } = window.BookingsLogs;
 
     const bodyEl     = document.getElementById('bookings-log-body');
     const liveTextEl = document.getElementById('bookings-live-text');
@@ -73,6 +74,19 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
                    </a>`
                 : '';
 
+            // Show the Cancel button for any status that isn't already cancelled/requested
+            const isCancellable = !['CANCELLED', 'CANCEL_REQUESTED'].includes(b.status);
+            const cancelUrl = buildUrl(requestCancelRouteTemplate, b.id);
+            const cancelButton = isCancellable
+                ? `<button type="button" class="btn btn-sm request-cancel-btn"
+                           data-booking-id="${b.id}"
+                           data-cancel-url="${escapeHtml(cancelUrl)}"
+                           style="background-color:rgba(245,158,11,0.15);color:#FBBF24;
+                                  border:1px solid rgba(245,158,11,0.3);">
+                       Cancel
+                   </button>`
+                : '';
+
             return `
                 <tr>
                     <td style="font-weight:bold; color:var(--primary);">${escapeHtml(b.pnr)}</td>
@@ -98,6 +112,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
                                     data-booking-id="${b.id}">
                                 Edit
                             </button>
+                            ${cancelButton}
                             <form action="${escapeHtml(destroyUrl)}" method="POST"
                                   onsubmit="return confirm('Permanently delete this booking record?');"
                                   style="display:inline-block;">
@@ -111,6 +126,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         }).join('');
 
         bindEditButtons();
+        bindCancelButtons();
     }
 
     /** Attach click listeners to all "Edit" buttons after a re-render. */
@@ -119,6 +135,45 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
             btn.addEventListener('click', () => {
                 const id = parseInt(btn.dataset.bookingId, 10);
                 if (!Number.isNaN(id)) window.editBookingFromLog(id);
+            });
+        });
+    }
+
+    /** Attach click listeners to all "Cancel" buttons after a re-render. */
+    function bindCancelButtons() {
+        document.querySelectorAll('.request-cancel-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id  = btn.dataset.bookingId;
+                const url = btn.dataset.cancelUrl;
+                if (!confirm(`Submit a cancellation request for booking #${id}? It will appear in Cancel Requests for approval.`)) return;
+
+                btn.disabled = true;
+                btn.textContent = '...';
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        // Refresh the table to reflect the new status
+                        fetchLogs();
+                    } else {
+                        alert(data.message || 'Failed to submit cancellation request.');
+                        btn.disabled = false;
+                        btn.textContent = 'Cancel';
+                    }
+                } catch {
+                    alert('Network error. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Cancel';
+                }
             });
         });
     }
