@@ -20,6 +20,9 @@ return new class extends Migration
             $table->string('seat_layout')->default('2+2');
             $table->longText('seat_layout_grid')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->index('coach_number');
         });
     }
 
