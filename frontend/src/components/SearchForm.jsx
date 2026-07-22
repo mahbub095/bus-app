@@ -31,7 +31,7 @@ export default function SearchForm({
                   <option value="">&nbsp;&nbsp;Select departure...</option>
                   {stations.map((st) => (
                     <option key={st.id} value={st.id}>
-                      &nbsp;&nbsp;{st.name} ({st.district})
+                      &nbsp;&nbsp;{st.name}
                     </option>
                   ))}
                 </select>
@@ -51,7 +51,7 @@ export default function SearchForm({
                   <option value="">&nbsp;&nbsp;Select arrival...</option>
                   {stations.map((st) => (
                     <option key={st.id} value={st.id}>
-                      &nbsp;&nbsp;{st.name} ({st.district})
+                      &nbsp;&nbsp;{st.name}
                     </option>
                   ))}
                 </select>

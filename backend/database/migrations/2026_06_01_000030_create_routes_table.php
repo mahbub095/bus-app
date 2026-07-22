@@ -17,7 +17,14 @@ return new class extends Migration
             $table->foreignId('arrival_station_id')->constrained('stations')->onDelete('cascade');
             $table->string('distance')->nullable();
             $table->string('duration')->nullable();
+            $table->json('boarding_points')->nullable();
+            $table->json('dropping_points')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->index('departure_station_id');
+            $table->index('arrival_station_id');
+            $table->index(['departure_station_id', 'arrival_station_id']);
         });
     }
 

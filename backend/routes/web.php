@@ -67,6 +67,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         });
         Route::middleware('menu_permission:bookings')->group(function () {
             Route::post('/bookings/{id}/cancel', [AjaxController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
+            Route::post('/bookings/{id}/request-cancel', [AjaxController::class, 'requestCancelApi'])->name('admin.bookings.request-cancel.api');
             Route::get('/bookings/logs', [AjaxController::class, 'bookingLogsApi'])->name('admin.bookings.logs.api');
         });
         Route::middleware('menu_permission:cancel-requests')->group(function () {

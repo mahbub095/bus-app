@@ -110,6 +110,7 @@
         logsUrl: @json(route('admin.bookings.logs.api')),
         updateRouteTemplate: @json(route('admin.bookings.update', ['id' => '__ID__'])),
         destroyRouteTemplate: @json(route('admin.bookings.destroy', ['id' => '__ID__'])),
+        requestCancelRouteTemplate: @json(route('admin.bookings.request-cancel.api', ['id' => '__ID__'])),
     };
 </script>
 @vite('resources/js/admin/bookings.js')

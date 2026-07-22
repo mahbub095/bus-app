@@ -18,7 +18,15 @@ return new class extends Migration
             $table->dateTime('departure_time');
             $table->dateTime('arrival_time');
             $table->decimal('fare', 8, 2);
+            $table->text('blocked_seats')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->index('bus_id');
+            $table->index('route_id');
+            $table->index('departure_time');
+            $table->index(['route_id', 'departure_time']);
+            $table->index(['bus_id', 'departure_time']);
         });
     }
 

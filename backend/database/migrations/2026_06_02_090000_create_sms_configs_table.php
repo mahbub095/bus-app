@@ -14,12 +14,17 @@ return new class extends Migration
         Schema::create('sms_configs', function (Blueprint $table) {
             $table->id();
             $table->string('gateway_name')->default('Generic Bangladesh SMS Gateway');
+            $table->string('gateway_driver', 50)->default('custom');
             $table->string('api_url')->nullable();
             $table->string('api_key')->nullable();
             $table->string('sender_id')->nullable();
             $table->boolean('is_active')->default(false);
             $table->text('message_template')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->index('is_active');
+            $table->index('gateway_name');
         });
     }
 
