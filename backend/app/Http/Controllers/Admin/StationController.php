@@ -11,12 +11,10 @@ class StationController extends BaseAdminController
     {
         $request->validate([
             'name' => 'required|string|max:100|unique:stations,name',
-            'district' => 'nullable|string|max:100',
         ]);
 
         Station::create([
             'name' => strtoupper(trim($request->input('name'))),
-            'district' => trim($request->input('district')),
         ]);
 
         return $this->adminTabRedirect($request)->with('success', 'Station terminal created successfully!');
@@ -28,12 +26,10 @@ class StationController extends BaseAdminController
 
         $request->validate([
             'name' => 'required|string|max:100|unique:stations,name,'.$id,
-            'district' => 'nullable|string|max:100',
         ]);
 
         $station->update([
             'name' => strtoupper(trim($request->input('name'))),
-            'district' => trim($request->input('district')),
         ]);
 
         return $this->adminTabRedirect($request)->with('success', 'Station terminal updated successfully!');

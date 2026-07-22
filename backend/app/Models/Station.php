@@ -9,7 +9,7 @@ class Station extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'district'];
+    protected $fillable = ['name'];
 
     public function departureRoutes()
     {
