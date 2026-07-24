@@ -8,7 +8,6 @@
                     <tr>
                         <th>ID</th>
                         <th>Terminal Station Name</th>
-                        <th>District Location</th>
                         <th>Created Date</th>
                         <th>Operations</th>
                     </tr>
@@ -18,7 +17,6 @@
                         <tr>
                             <td>#{{ $st->id }}</td>
                             <td style="color: var(--text-secondary)">{{ $st->name }}</td>
-                            <td>{{ $st->district ?? 'N/A' }}</td>
                             <td style="color: var(--text-secondary)">{{ $st->created_at->format('M d, Y') }}</td>
                             <td>
                                 <div class="action-btns">
@@ -29,8 +27,7 @@
                                                 title: 'Edit Station #{{ $st->id }}',
                                                 submitLabel: 'Update Station',
                                                 fields: {
-                                                    name: {{ json_encode($st->name) }},
-                                                    district: {{ json_encode($st->district ?? '') }}
+                                                    name: {{ json_encode($st->name) }}
                                                 }
                                             })">
                                         Edit
@@ -46,8 +43,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted)">No stations
-                                found.</td>
+                            <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted)">No stations found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -66,11 +62,6 @@
                 <label>Terminal City Name (e.g. SYLHET)</label>
                 <input type="text" name="name" class="coupon-input" placeholder="Name" required
                     value="{{ old('name') }}">
-            </div>
-            <div class="input-group">
-                <label>District Location (e.g. Sylhet)</label>
-                <input type="text" name="district" class="coupon-input" placeholder="District"
-                    value="{{ old('district') }}">
             </div>
             <button class="btn btn-primary" id="station-form-submit" type="submit"
                 style="height: 42px; margin-top: 10px;">
