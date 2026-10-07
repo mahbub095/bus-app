@@ -85,9 +85,11 @@ export async function handleZiniPayRedirect({
     });
 
     try {
-      const apiKey = import.meta.env.VITE_ZINIPAY_API_KEY || "90e76eb23cdf5ec69fe8820a5007b8713844626087a8fb86";
+      const apiKey = import.meta.env.VITE_ZINIPAY_API_KEY;
+      if (!apiKey) {
+        throw new Error('VITE_ZINIPAY_API_KEY is not configured. Please set it in your .env file.');
+      }
       const response = await ziniPayVerifyPayment(invoiceId, null, apiKey);
-      console.log("response from verify payment:", response);
 
       if (response.status === "COMPLETED") {
         // Call backend webhook to update status in DB securely

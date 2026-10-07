@@ -1,0 +1,51 @@
+SonyaBus — Changelog
+====================
+
+Version 1.0.0 — Initial Release
+---------------------------------
+Release date: 2026-10-07
+
+Features included in this release:
+
+CUSTOMER APP (React 19 + Vite)
+  - Schedule search by origin, destination, date, and coach type
+  - Interactive seat map with gender-coded seat status (sold_m, sold_f, booked_m, booked_f)
+  - 2-minute seat hold to prevent conflicts during checkout
+  - Online payment via ZiniPay with redirect callback and async webhook
+  - Promo code / coupon support with flat discount
+  - Booking confirmation with PNR reference
+  - My Tickets — view and cancel bookings
+  - Customer authentication (register, login, forgot/reset password via email)
+  - Maintenance mode — full-page message from admin settings
+  - Site-wide SEO, favicon, and footer configuration from admin
+
+ADMIN DASHBOARD (Laravel 12 + Blade)
+  - Session-based authentication with role protection (super_admin, admin, user)
+  - Menu permission system — fine-grained access control per admin account
+  - Coach Services — live schedule viewer with admin seat-block toggle
+  - Bookings management — create, edit, cancel, approve cancel requests
+  - Stations, Coaches, Routes, Schedules CRUD
+  - Promotional coupons management
+  - Users & Roles management
+  - 11 report types with filter by period, route, coach type, payment method, operator
+  - Excel export for all reports
+  - PDF export for all reports (DomPDF)
+  - Site Settings — site name, favicon upload, maintenance mode, SEO, footer
+  - Integrations — SMS gateway, mail (SMTP), ZiniPay configuration with live test
+  - Dark/light theme toggle (persisted per browser)
+  - Admin analytics dashboard with charts (daily, weekly, monthly, yearly periods)
+
+PAYMENTS & NOTIFICATIONS
+  - ZiniPay payment gateway (create invoice, redirect callback, async webhook)
+  - Booking confirmation SMS via SMS.NET.BD, BulkSmsBD, or custom gateway
+  - Password reset by 6-digit email code
+  - Queue-based SMS dispatch (database driver)
+
+TECHNICAL
+  - Laravel Sanctum — token authentication for the customer API
+  - DB-level seat locking (SELECT ... FOR UPDATE) to prevent double-booking
+  - Configurable charges and discounts via .env (booking.service_charge, etc.)
+  - All gateway settings editable at runtime via Admin panel (writes to DB + .env)
+  - PHPUnit feature test suite (65 tests, 236 assertions)
+  - APP_FRONTEND_URL configurable for any deployment domain
+
