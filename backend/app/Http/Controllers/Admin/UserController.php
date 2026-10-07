@@ -39,7 +39,8 @@ class UserController extends BaseAdminController
                 : $user->role;
 
             if ($effectiveRole === 'admin') {
-                $rules['menu_permissions']   = 'required|array|min:1';
+                // nullable — no menu_permissions means full admin access (null in DB)
+                $rules['menu_permissions']   = 'nullable|array';
                 $rules['menu_permissions.*'] = 'in:' . implode(',', $validMenus);
             }
         }
@@ -59,14 +60,14 @@ class UserController extends BaseAdminController
         if ($currentUser->isAdmin()) {
             if ($request->has('menu_permissions')) {
                 $permissions = $request->input('menu_permissions');
-                if (is_array($permissions)) {
+                if (is_array($permissions) && count($permissions) > 0) {
                     $updateData['menu_permissions'] = array_values(array_intersect($permissions, $validMenus));
                 } else {
+                    // Empty array submitted → no permissions
                     $updateData['menu_permissions'] = [];
                 }
-            } else {
-                $updateData['menu_permissions'] = [];
             }
+            // If 'menu_permissions' key is absent from the request, preserve existing value (do not overwrite)
         }
 
         $user->update($updateData);

@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\CheckMaintenanceMode::cl
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/bookings/mine', [BookingController::class, 'mine']);
     Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+    Route::post('/bookings/{id}/pay', [BookingController::class, 'pay']);
 
     Route::post('/seats/hold', [BookingController::class, 'holdSeat']);
     Route::post('/seats/release', [BookingController::class, 'releaseSeat']);
