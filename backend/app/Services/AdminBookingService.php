@@ -163,7 +163,7 @@ class AdminBookingService
     {
         return [
             'id' => $booking->id,
-            'pnr' => 'SE' . str_pad((string) $booking->id, 5, '0', STR_PAD_LEFT),
+            'pnr' => $booking->pnr,
             'passenger_name' => $booking->passenger_name,
             'passenger_phone' => $booking->passenger_phone,
             'passenger_email' => $booking->passenger_email,

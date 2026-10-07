@@ -1,0 +1,65 @@
+SonyaBus — License Information
+================================
+
+This item is sold under the Envato Regular License.
+https://codecanyon.net/licenses/standard
+
+REGULAR LICENSE
+  - You may use this item in one end product.
+  - The end product may be used for free or charged to end users.
+  - You may not resell or redistribute the item as a standalone product or template.
+  - You may not claim authorship of the original item.
+
+For use in multiple end products, a separate license must be purchased for each.
+For SaaS products where end users are charged and the item is a core component,
+an Extended License is required.
+
+Full Envato license terms: https://codecanyon.net/licenses
+
+
+THIRD-PARTY OPEN SOURCE LICENSES
+==================================
+
+The following open-source packages are included or used in this product.
+All are compatible with commercial distribution under their respective licenses.
+
+Laravel Framework
+  License : MIT
+  URL     : https://laravel.com
+
+React
+  License : MIT
+  URL     : https://react.dev
+
+Vite
+  License : MIT
+  URL     : https://vitejs.dev
+
+Laravel Sanctum
+  License : MIT
+  URL     : https://github.com/laravel/sanctum
+
+barryvdh/laravel-dompdf
+  License : MIT
+  URL     : https://github.com/barryvdh/laravel-dompdf
+
+DomPDF
+  License : LGPL 2.1
+  URL     : https://github.com/dompdf/dompdf
+
+PhpSpreadsheet (via maatwebsite/excel or direct)
+  License : MIT
+  URL     : https://github.com/PHPOffice/PhpSpreadsheet
+
+PHPUnit
+  License : BSD 3-Clause
+  URL     : https://phpunit.de
+
+Chart.js (if used in admin dashboard)
+  License : MIT
+  URL     : https://www.chartjs.org
+
+All other Composer and npm packages retain their original licenses.
+A full list of backend packages is in backend/composer.json.
+A full list of frontend packages is in frontend/package.json.
+

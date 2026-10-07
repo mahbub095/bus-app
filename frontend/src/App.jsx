@@ -15,7 +15,7 @@ import BookingPortal from './components/BookingPortal';
 import Maintenance from './components/Maintenance';
 import PaymentFailed from './components/PaymentFailed';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
 const AUTH_USER_KEY = 'sonyabus_auth_user';
 
@@ -244,7 +244,7 @@ function App() {
       // If it's a relative URL, prepend the backend origin
       link.href = siteSettings.favicon_url.startsWith('http')
         ? siteSettings.favicon_url
-        : `http://localhost:8000${siteSettings.favicon_url}`;
+        : `${import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '') || ''}${siteSettings.favicon_url}`;
     }
 
     // Update SEO meta tags

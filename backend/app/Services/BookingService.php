@@ -174,8 +174,8 @@ class BookingService
             }
         }
 
-        $smsResult = ['success' => false, 'message' => 'SMS not sent (booking is not PAID).'];
-        if ($booking->status === 'PAID') {
+        $smsResult = ['success' => false, 'message' => 'SMS not sent (booking is not confirmed).'];
+        if (in_array($booking->status, ['PAID', 'SOLD', 'BOOKED'])) {
             $smsResult = $this->smsGatewayService->sendBookingVerification($booking);
         }
 
@@ -315,7 +315,7 @@ class BookingService
             return 'PENDING';
         }
 
-        if (in_array($paymentMethod, ['zinipay', 'bkash', 'nagad', 'card'])) {
+        if (in_array($paymentMethod, ['bkash', 'nagad', 'card'])) {
             return 'SOLD';
         }
 

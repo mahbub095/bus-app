@@ -254,4 +254,50 @@ class ZinipayPaymentTest extends TestCase
         $booking->refresh();
         $this->assertEquals('CANCELLED', $booking->status); // must be CANCELLED so seat is released
     }
+
+    public function test_customer_can_pay_pending_booking_via_api()
+    {
+        $schedule = Schedule::first();
+        $customer = \App\Models\User::create([
+            'name' => 'Test Customer',
+            'email' => 'customer_pay@test.com',
+            'password' => bcrypt('password123'),
+            'role' => 'user',
+        ]);
+
+        $booking = Booking::create([
+            'user_id' => $customer->id,
+            'schedule_id' => $schedule->id,
+            'passenger_name' => 'Alice Doe',
+            'passenger_phone' => '01712345678',
+            'passenger_email' => 'alice@example.com',
+            'passenger_gender' => 'F',
+            'seat_numbers' => 'D3',
+            'total_fare' => 450.00,
+            'payment_method' => 'ZiniPay',
+            'status' => 'PENDING',
+        ]);
+
+        $this->mock(ZinipayService::class, function ($mock) use ($booking) {
+            $mock->shouldReceive('createInvoice')
+                ->once()
+                ->with(\Mockery::on(function ($b) use ($booking) {
+                    return $b->id === $booking->id;
+                }), 'frontend')
+                ->andReturn([
+                    'payment_url' => 'https://mock.zinipay.com/pay/invoice_999',
+                    'invoice_id' => 'invoice_999',
+                ]);
+        });
+
+        $response = $this->actingAs($customer)
+            ->postJson("/api/bookings/{$booking->id}/pay");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('payment_url', 'https://mock.zinipay.com/pay/invoice_999')
+            ->assertJsonPath('invoice_id', 'invoice_999');
+
+        $booking->refresh();
+        $this->assertEquals('invoice_999', $booking->payment_invoice_id);
+    }
 }

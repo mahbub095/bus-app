@@ -191,7 +191,7 @@ class SeatMapService
     /**
      * @return array<string, string> seat code => status key
      */
-    public function buildSeatMap(Schedule $schedule, iterable $bookings, ?int $currentUserId = null): array
+    public function buildSeatMap(Schedule $schedule, iterable $bookings, ?int $currentUserId = null, bool $applyHolds = true): array
     {
         $map = [];
         foreach ($this->allSeatCodesForBus($schedule->bus) as $seat) {
@@ -206,13 +206,15 @@ class SeatMapService
         }
 
         // Apply active holds from other users
-        $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$schedule->id}", []);
-        $now = now()->timestamp;
-        foreach ($holds as $seat => $hold) {
-            if (isset($hold['expires_at']) && $hold['expires_at'] > $now) {
-                if ($hold['user_id'] !== $currentUserId) {
-                    if (isset($map[$seat]) && $map[$seat] === 'available') {
-                        $map[$seat] = 'blocked';
+        if ($applyHolds) {
+            $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$schedule->id}", []);
+            $now = now()->timestamp;
+            foreach ($holds as $seat => $hold) {
+                if (isset($hold['expires_at']) && $hold['expires_at'] > $now) {
+                    if ($hold['user_id'] !== $currentUserId) {
+                        if (isset($map[$seat]) && $map[$seat] === 'available') {
+                            $map[$seat] = 'blocked';
+                        }
                     }
                 }
             }
@@ -410,7 +412,7 @@ class SeatMapService
             foreach ($this->parseSeatList($booking->seat_numbers) as $seat) {
                 $details[$seat] = [
                     'booking_id' => $booking->id,
-                    'pnr' => 'SE' . str_pad((string) $booking->id, 5, '0', STR_PAD_LEFT),
+                    'pnr' => $booking->pnr,
                     'passenger_name' => $booking->passenger_name,
                     'passenger_phone' => $booking->passenger_phone,
                     'passenger_email' => $booking->passenger_email,
@@ -509,16 +511,24 @@ class SeatMapService
             return ['success' => false, 'message' => 'Invalid seat code.'];
         }
 
-        // Fetch paid/booked bookings to ensure the seat isn't booked already
+        // Fetch active bookings (paid + recent pending) to ensure the seat isn't taken
         $bookings = $schedule->bookings()
-            ->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
+            ->where(function ($q) {
+                $q->whereIn('status', ['PAID', 'SOLD', 'BOOKED'])
+                  ->orWhere(function ($qp) {
+                      $qp->where('status', 'PENDING')
+                         ->where('created_at', '>=', now()->subMinutes(10));
+                  });
+            })
             ->get();
-        $seatMap = $this->buildSeatMap($schedule, $bookings);
-        if (($seatMap[$seatNumber] ?? 'available') !== 'available') {
+        // Check if seat is booked in DB (PAID/SOLD/BOOKED or recent PENDING)
+        // Build seat map WITHOUT cache holds so we get the pure DB availability
+        $dbSeatMap = $this->buildSeatMap($schedule, $bookings, null, false);
+        if (($dbSeatMap[$seatNumber] ?? 'available') !== 'available') {
             return ['success' => false, 'message' => 'Seat is not available.'];
         }
 
-        // Now check cache-based holds
+        // Now check cache-based holds separately so we can give precise messages
         $holds = \Illuminate\Support\Facades\Cache::get("schedule_holds:{$scheduleId}", []);
         $now = now()->timestamp;
 

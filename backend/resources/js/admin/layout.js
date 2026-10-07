@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const path    = window.location.pathname.replace(/\/+$/, '');
         const hashTab = window.location.hash.replace(/^#/, '').trim();
 
+        // On standalone report detail pages (/admin/reports/*), highlight "reports" in sidebar
+        if (/^\/admin\/reports\//.test(path)) return 'reports';
+
         if (hashTab === 'dashboard') return 'dashboard';
         if (hashTab && document.getElementById(`tab-content-${hashTab}`)) return hashTab;
 
@@ -132,6 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const tabName = item.getAttribute('data-tab');
             if (!tabName) return;
 
+            // On standalone pages that have no tab-content panels (e.g. report detail
+            // pages), let the browser follow the href (/admin#tabName) naturally so
+            // the user is taken back to the dashboard with the correct tab open.
+            const hasTabPanels = document.querySelector('.admin-tab-content') !== null;
+            if (!hasTabPanels) {
+                // Natural navigation — do NOT call preventDefault()
+                return;
+            }
+
             // If there are active pagination query params, strip them before navigating
             const query = new URLSearchParams(window.location.search);
             let hadPageParams = false;
@@ -162,7 +174,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     syncPaginationLinks();
-    switchTab(activeTab);
+
+    // Only run the full tab-switching logic on the main dashboard page.
+    // On report detail pages (and any other non-dashboard page) there are no
+    // .admin-tab-content panels, so we only need to mark the correct sidebar
+    // item as active and leave the page content untouched.
+    const hasTabPanels = document.querySelector('.admin-tab-content') !== null;
+    if (hasTabPanels) {
+        switchTab(activeTab);
+    } else {
+        // Standalone page: just highlight the matching sidebar item
+        navItems.forEach(item => {
+            item.classList.toggle('active', item.getAttribute('data-tab') === activeTab);
+        });
+    }
 
     // Before any POST form submits, inject a hidden admin_tab field so the
     // server knows which tab to redirect back to after processing.

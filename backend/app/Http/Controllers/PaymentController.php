@@ -81,7 +81,7 @@ class PaymentController extends Controller
                 ->withErrors(['Payment was cancelled.']);
         }
 
-        return redirect('http://localhost:5173/?payment=cancelled&booking_id=' . ($booking ? $booking->id : ''));
+        return redirect(rtrim(config('app.frontend_url', 'http://localhost:5173'), '/') . '/?payment=cancelled&booking_id=' . ($booking ? $booking->id : ''));
     }
 
     /**
@@ -122,7 +122,7 @@ class PaymentController extends Controller
                 'message' => 'Payment verified and booking completed',
                 'booking' => [
                     'id' => $booking->id,
-                    'pnr' => 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
+                    'pnr' => $booking->pnr,
                     'status' => 'SOLD'
                 ]
             ], 200);
@@ -144,8 +144,8 @@ class PaymentController extends Controller
         }
 
         // For frontend, redirect back to React application with success flags
-        $pnr = 'SE' . str_pad($booking->id, 5, '0', STR_PAD_LEFT);
-        return redirect('http://localhost:5173/?payment=success&pnr=' . $pnr . '&booking_id=' . $booking->id);
+        $frontendUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
+        return redirect($frontendUrl . '/?payment=success&pnr=' . $booking->pnr . '&booking_id=' . $booking->id);
     }
 
     protected function handleRedirectWithError(string $source, string $error)
@@ -156,6 +156,6 @@ class PaymentController extends Controller
                 ->withErrors([$error]);
         }
 
-        return redirect('http://localhost:5173/?payment=failed&error=' . urlencode($error));
+        return redirect(rtrim(config('app.frontend_url', 'http://localhost:5173'), '/') . '/?payment=failed&error=' . urlencode($error));
     }
 }

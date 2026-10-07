@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>SonyaBus | Admin Dashboard Portal</title>
+    <title>@yield('title', 'SonyaBus | Admin Dashboard Portal')</title>
     
     @include('admin.partials.fonts')
 
@@ -1718,6 +1718,7 @@
             margin-top: 10px;
         }
     </style>
+    @stack('styles')
 </head>
 <body>
 
@@ -1748,95 +1749,7 @@
 
     <div class="admin-shell">
         <!-- Left Sidebar Navigation -->
-        <aside class="admin-sidebar">
-            <div class="sidebar-section-label">Overview</div>
-            <a href="/admin" class="sidebar-nav-item active" data-tab="dashboard">
-                <span class="sidebar-nav-icon">📊</span>
-                Dashboard
-            </a>
-
-            <div class="sidebar-section-label">Management</div>
-            @if(Auth::user()->hasMenuPermission('coach-services'))
-            <a href="/admin#coach-services" class="sidebar-nav-item" data-tab="coach-services">
-                <span class="sidebar-nav-icon">🚌</span>
-                Coach Services
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('bookings'))
-            <a href="/admin#bookings" class="sidebar-nav-item" data-tab="bookings">
-                <span class="sidebar-nav-icon">📋</span>
-                Bookings Logs
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('cancel-requests'))
-            <a href="/admin#cancel-requests" class="sidebar-nav-item" data-tab="cancel-requests">
-                <span class="sidebar-nav-icon">📝</span>
-                Cancel Requests
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('stations'))
-            <a href="/admin#stations" class="sidebar-nav-item" data-tab="stations">
-                <span class="sidebar-nav-icon">🚉</span>
-                Stations
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('buses'))
-            <a href="/admin#buses" class="sidebar-nav-item" data-tab="buses">
-                <span class="sidebar-nav-icon">🚌</span>
-                Coaches
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('routes'))
-            <a href="/admin#routes" class="sidebar-nav-item" data-tab="routes">
-                <span class="sidebar-nav-icon">🛣️</span>
-                Routes
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('schedules'))
-            <a href="/admin#schedules" class="sidebar-nav-item" data-tab="schedules">
-                <span class="sidebar-nav-icon">📅</span>
-                Schedules
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('promotions'))
-            <a href="/admin#promotions" class="sidebar-nav-item" data-tab="promotions">
-                <span class="sidebar-nav-icon">🎟️</span>
-                Coupons
-            </a>
-            @endif
-            @if(Auth::user()->hasMenuPermission('users'))
-            <a href="/admin#users" class="sidebar-nav-item" data-tab="users">
-                <span class="sidebar-nav-icon">👥</span>
-                Users & Roles
-            </a>
-            @endif
-
-            <div class="sidebar-section-label">Reports</div>
-            @if(Auth::user()->hasMenuPermission('reports'))
-            <a href="/admin#reports" class="sidebar-nav-item" data-tab="reports">
-                <span class="sidebar-nav-icon">📊</span>
-                Ticket Reports
-            </a>
-            @endif
-
-            <div class="sidebar-spacer"></div>
-
-            <div class="sidebar-section-label">System</div>
-            @if(Auth::user()->isSuperAdmin())
-            <a href="/admin#site-settings" class="sidebar-nav-item" data-tab="site-settings">
-                <span class="sidebar-nav-icon">⚙️</span>
-                Site Settings
-            </a>
-            <a href="/admin#gateways" class="sidebar-nav-item" data-tab="gateways">
-                <span class="sidebar-nav-icon">🔌</span>
-                Integrations & Gateways
-            </a>
-            @endif
-            <a href="/admin#profile" class="sidebar-nav-item" data-tab="profile">
-                <span class="sidebar-nav-icon">👤</span>
-                Profile
-            </a>
-        </aside>
+        @include('admin.partials.sidebar', ['activeTab' => $activeTab ?? null])
 
         <!-- Main Content Area -->
         <main class="admin-main">
@@ -1890,5 +1803,6 @@
         };
     </script>
     @vite('resources/js/admin/layout.js')
+    @stack('scripts')
 </body>
 </html>

@@ -4,13 +4,15 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Booking;
 use App\Services\BookingService;
+use App\Services\ZinipayService;
 use Illuminate\Http\Request;
 
 class BookingController extends BaseController
 {
     public function __construct(
         protected BookingService $bookingService,
-        protected \App\Services\SeatMapService $seatMapService
+        protected \App\Services\SeatMapService $seatMapService,
+        protected ZinipayService $zinipayService
     ) {
     }
 
@@ -107,5 +109,37 @@ class BookingController extends BaseController
         );
 
         return response()->json($result, 200);
+    }
+
+    public function pay(Request $request, $id)
+    {
+        $booking = Booking::find($id);
+
+        if (! $booking) {
+            return response()->json(['message' => 'Booking not found.'], 404);
+        }
+
+        if ((int) $booking->user_id !== (int) $request->user()->id) {
+            return response()->json(['message' => 'You are not authorized to pay for this ticket.'], 403);
+        }
+
+        if ($booking->status !== 'PENDING' || strtolower($booking->payment_method) !== 'zinipay') {
+            return response()->json(['message' => 'Invalid booking status or payment method.'], 422);
+        }
+
+        $invoice = $this->zinipayService->createInvoice($booking, 'frontend');
+
+        if ($invoice && isset($invoice['payment_url'])) {
+            $booking->update(['payment_invoice_id' => $invoice['invoice_id']]);
+
+            return response()->json([
+                'message' => 'Payment initiated. Redirecting to payment...',
+                'payment_url' => $invoice['payment_url'],
+                'invoice_id' => $invoice['invoice_id'],
+                'booking' => $this->bookingService->formatForApi($booking),
+            ], 200);
+        }
+
+        return response()->json(['message' => 'Failed to initiate ZiniPay payment.'], 500);
     }
 }
