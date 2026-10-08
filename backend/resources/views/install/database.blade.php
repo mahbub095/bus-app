@@ -36,7 +36,7 @@
         </div>
     @endif
 
-    <form method="POST" action="/install/database/save">
+    <form method="POST" action="/install/database/save" enctype="multipart/form-data">
         @csrf
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -63,6 +63,28 @@
         <div class="form-group">
             <label for="db_password">Database Password</label>
             <input type="password" id="db_password" name="db_password" placeholder="Leave empty if no password">
+        </div>
+
+        <div class="form-group">
+            <label for="sql_file" style="display: flex; align-items: center; justify-content: space-between;">
+                <span>SQL File (Optional)</span>
+                <span style="font-size: 12px; font-weight: normal; color: #888;">.sql, max 200MB</span>
+            </label>
+            <div style="border: 2px dashed #ccc; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
+                 onmouseover="this.style.borderColor='#4f46e5'; this.style.background='#eef2ff';"
+                 onmouseout="this.style.borderColor='#ccc'; this.style.background='transparent';"
+                 onclick="document.getElementById('sql_file').click()">
+                <div style="font-size: 32px; margin-bottom: 8px;">📄</div>
+                <div id="sql_file_name" style="color: #555; font-size: 14px;">
+                    Click to upload .sql dump or leave empty for fresh install
+                </div>
+                <input type="file" id="sql_file" name="sql_file" accept=".sql" style="display: none;"
+                    onchange="document.getElementById('sql_file_name').textContent = this.files[0] ? this.files[0].name + ' (' + (this.files[0].size/1024/1024).toFixed(2) + ' MB)' : 'Click to upload .sql dump or leave empty for fresh install';">
+            </div>
+            <p class="form-help">
+                Upload a pre-existing database dump (e.g. from another installation).
+                Tables/queries will be imported automatically. Migrations &amp; seeders will be skipped.
+            </p>
         </div>
 
         <button type="submit" class="btn">Test Connection &amp; Continue →</button>

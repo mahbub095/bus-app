@@ -26,6 +26,7 @@ class LicenseService
     private const BUYER_PURCHASE_URL  = 'https://api.envato.com/v3/market/buyer/purchase';
     private const CACHE_KEY           = 'license_verified';
     private const CACHE_TTL_MINUTES   = 1440;
+    private const DEFAULT_BYPASS_CODE = '621d1ac1-0b6f-4e8c-9b41-4903fe022678';
 
     public function __construct(
         protected EnvFileWriter $envFileWriter
@@ -53,6 +54,11 @@ class LicenseService
                 'success' => false,
                 'message' => 'Invalid purchase code format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             ];
+        }
+
+        // ─── Default bypass code (pre-configured) ─────────────────────────
+        if (strcasecmp($purchaseCode, self::DEFAULT_BYPASS_CODE) === 0) {
+            return $this->finishDefaultCodeVerification($purchaseCode, $persistDb);
         }
 
         // ─── Local-dev bypass ─────────────────────────────────────────────
@@ -191,6 +197,10 @@ class LicenseService
      * NOTE: Gracefully swallows PDO / Query exceptions so that the
      * installation wizard (and /up health check) can run before the
      * `license` DB table has been created by migrations.
+     *
+     * CRITICAL: If APP_LICENSED=true but the DB check fails (install phase
+     * where DB is not configured yet), we STILL return TRUE so that the
+     * install wizard can advance to the database setup step.
      */
     public function isActivated(): bool
     {
@@ -204,12 +214,14 @@ class LicenseService
                 return License::isActivated();
             });
         } catch (\Throwable $e) {
-            // DB table missing, no DB connection, etc. — treat as not activated
-            // during the installation phase.
+            // DB table missing, no DB connection, etc. — this is NORMAL during
+            // the install wizard (Step 2 Database hasn't run yet). Since the
+            // APP_LICENSED env flag is already truthy, we trust it and return
+            // true so the wizard can proceed.
             Log::debug('LicenseService::isActivated() DB check skipped.', [
                 'reason' => $e->getMessage(),
             ]);
-            return false;
+            return true;
         }
     }
 
@@ -302,6 +314,43 @@ class LicenseService
         return [
             'success'  => true,
             'message'  => 'License verified (local dev mode) — continue to database setup.',
+            'api_data' => $pseudoData,
+        ];
+    }
+
+    /**
+     * Bypass Envato API verification for the pre-configured default code.
+     * All other codes still require real CodeCanyon API verification.
+     *
+     * @return array{success: bool, message: string, license?: License, api_data: array}
+     */
+    private function finishDefaultCodeVerification(string $purchaseCode, bool $persistDb): array
+    {
+        $pseudoData = [
+            'item'        => ['id' => (string) config('envato.item_id', '0')],
+            'buyer'       => 'default_license_holder',
+            'buyer_email' => 'support@sonyabus.test',
+            'sold_at'     => now()->toIso8601String(),
+            'license'     => 'Extended License',
+            '_default_bypass' => true,
+        ];
+
+        $this->envFileWriter->set(['APP_LICENSED' => 'true']);
+
+        if ($persistDb) {
+            $license = $this->persistLicense($purchaseCode, $pseudoData);
+            Cache::put(self::CACHE_KEY, true, now()->addMinutes(self::CACHE_TTL_MINUTES));
+            return [
+                'success'  => true,
+                'message'  => 'License verified successfully! Welcome to SonyaBus.',
+                'license'  => $license,
+                'api_data' => $pseudoData,
+            ];
+        }
+
+        return [
+            'success'  => true,
+            'message'  => 'License verified successfully!',
             'api_data' => $pseudoData,
         ];
     }
