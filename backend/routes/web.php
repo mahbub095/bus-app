@@ -46,9 +46,10 @@ Route::get('/install/admin/save', function () {
     return redirect('/install/admin');
 });
 
-// Step 4 — Finalize: GET (animated progress UI) + POST (AJAX runner)
-Route::get('/install/finalize',  [InstallController::class, 'finalize'])    ->name('install.finalize');
-Route::post('/install/finalize/run', [InstallController::class, 'runFinalize'])->name('install.finalize.run');
+// Step 4 — Finalize: GET (progress UI) + POST (fire background job) + GET status (polling)
+Route::get('/install/finalize',         [InstallController::class, 'finalize'])       ->name('install.finalize');
+Route::post('/install/finalize/run',    [InstallController::class, 'runFinalize'])    ->name('install.finalize.run');
+Route::get('/install/finalize/status',  [InstallController::class, 'finalizeStatus'])->name('install.finalize.status');
 Route::get('/install/finalize/run', function () {
     return redirect('/install/finalize');
 });

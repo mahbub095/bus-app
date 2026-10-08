@@ -5,83 +5,43 @@ namespace App\Http\Middleware;
 use App\Services\LicenseService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Two-stage gating for the application:
  *
- *  STAGE 1 — INSTALL LOCK (highest priority, checked FIRST)
- *    Until `APP_INSTALLED=true` OR storage/framework/installed marker file
- *    exists, ONLY the following routes are allowed:
- *      - /install and /install/*          (the install wizard itself)
- *      - /up                              (Laravel health check)
- *      - /payment/callback & /cancel      (payment gateway IPNs)
- *      - /api/payment/webhook             (ZiniPay server-to-server webhook)
- *    Everything else redirects to /install or returns 403 JSON.
- *    This enforces: "Must complete install process before anything works."
+ *  STAGE 1 — INSTALL LOCK
+ *    Until APP_INSTALLED=true, only install/* routes and a few system
+ *    routes are allowed. Everything else gets a 403 JSON or redirect to
+ *    /install — but NEVER from within an install/* route (no loop).
  *
- *  STAGE 2 — LICENSE ACTIVATION (runs only when install is complete)
- *    Activates the license gating. Admin-only write-style endpoints require
- *    APP_LICENSED=true + DB license record; public customer-facing API reads
- *    are permitted so that the customer React frontend can always render.
- *    (Admin routes and mutations are still gated.)
+ *  STAGE 2 — LICENSE GATE (runs only when install is complete)
+ *    Public customer API reads are always permitted.
+ *    Admin / write routes require a verified license.
  */
 class EnsureLicenseIsActivated
 {
-    /** Exact paths that always bypass EVERYTHING (both stages). */
-    private const EXACT_ALWAYS = [
-        'install',
-        'up',
-        'payment/callback',
-        'payment/cancel',
-        'api/payment/webhook',
-    ];
-
-    /** Path prefixes that always bypass. */
-    private const PREFIX_ALWAYS = [
-        'install/',
-        'api/install/',
-    ];
-
-    // ── Public customer API routes that are allowed in STAGE 2 (after
-    //    install is complete) even if license is not yet activated. ──
-    private const PUBLIC_API_EXACT = [
-        'api/site-settings',
-        'api/stations',
-        'api/search',
-        'api/promotions',
-        'api/promotions/check',
-    ];
-
-    private const PUBLIC_API_PREFIX = [
-        'api/auth/',
-        'api/bookings/public/',
-    ];
-
     public function __construct(protected LicenseService $licenseService) {}
 
     /**
-     * Whether the install wizard has completed (APP_INSTALLED=true or
-     * storage/framework/installed marker file exists).
+     * Paths that ALWAYS pass through — no install check, no license check.
+     * These must never redirect to each other.
      */
-    private function isInstallLocked(): bool
+    private function isAlwaysAllowed(string $path): bool
     {
-        $flag = env('APP_INSTALLED', false);
-
-        if ($flag === true || $flag === 1) {
+        // Exact matches
+        $exact = ['up', 'payment/callback', 'payment/cancel', 'api/payment/webhook'];
+        if (in_array($path, $exact, true)) {
             return true;
         }
 
-        if (is_string($flag)) {
-            $low = strtolower($flag);
-            if ($low === 'true' || $flag === '1') {
-                return true;
-            }
+        // Install wizard — always pass through (controller handles locked state)
+        if ($path === 'install' || str_starts_with($path, 'install/')) {
+            return true;
         }
 
-        $markerFile = storage_path('framework/installed');
-        if (file_exists($markerFile)) {
+        // Install API steps
+        if (str_starts_with($path, 'api/install/')) {
             return true;
         }
 
@@ -89,106 +49,91 @@ class EnsureLicenseIsActivated
     }
 
     /**
-     * Short-circuit a request to /install or throw the install-gate
-     * redirect / JSON response. Used when the install wizard has NOT been
-     * completed and the user tries to hit any non-install route.
+     * Check whether the install wizard has been completed.
      */
-    private function redirectToInstall(Request $request): Response
+    private function isInstalled(): bool
     {
-        if ($request->expectsJson() || str_starts_with($request->path(), 'api/')) {
-            return response()->json([
-                'message'  => 'Installation not complete. Please run the install wizard first.',
-                'redirect' => url('/install'),
-                'installed' => false,
-            ], 403);
+        $flag = env('APP_INSTALLED', false);
+
+        if ($flag === true || $flag === 1) {
+            return true;
         }
 
-        return redirect('/install');
+        if (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true)) {
+            return true;
+        }
+
+        return file_exists(storage_path('framework/installed'));
     }
 
     public function handle(Request $request, Closure $next): Response
     {
         $path = $request->path();
 
-        // ────────────────────────────────────────────────────────────────
-        // STAGE 0 — Routes that are always permitted regardless of state
-        // (install wizard itself, health checks, payment webhooks).
-        // ────────────────────────────────────────────────────────────────
-        if (in_array($path, self::EXACT_ALWAYS, true)) {
-            // Install-lock sub-branch: if already installed, redirect away
-            // from /install URLs (otherwise proceed with the install page).
-            if ($this->isInstallLocked()) {
-                $isInstallRoute = $path === 'install' || str_starts_with($path, 'install/');
-                if ($isInstallRoute) {
-                    return redirect('/admin');
-                }
-            }
+        // ── Always-allowed routes pass straight through ──────────────────
+        if ($this->isAlwaysAllowed($path)) {
             return $next($request);
         }
 
-        foreach (self::PREFIX_ALWAYS as $prefix) {
-            if (str_starts_with($path, $prefix)) {
-                if ($this->isInstallLocked()) {
-                    return redirect('/admin');
-                }
-                return $next($request);
+        // ── STAGE 1: Install gate ────────────────────────────────────────
+        // If install hasn't been completed, block everything except the
+        // install routes (already handled above).
+        if (! $this->isInstalled()) {
+            if ($request->expectsJson() || str_starts_with($path, 'api/')) {
+                return response()->json([
+                    'message'   => 'Installation not complete. Please run the install wizard first.',
+                    'redirect'  => url('/install'),
+                    'installed' => false,
+                ], 403);
             }
+
+            // Only redirect to /install if we're NOT already heading there
+            // (belt-and-suspenders guard; isAlwaysAllowed() above should
+            // have already returned for install routes).
+            return redirect('/install');
         }
 
-        // Str::is wildcard match (exact list)
-        foreach (self::EXACT_ALWAYS as $pattern) {
-            if (Str::is($pattern, $path)) {
-                return $next($request);
-            }
-        }
+        // ── STAGE 2: License gate (install is done) ──────────────────────
 
-        // ────────────────────────────────────────────────────────────────
-        // STAGE 1 — INSTALL GATE
-        // If the install wizard was never completed, block EVERYTHING and
-        // force the user to /install.
-        // This enforces "Must first install process" requirement.
-        // ────────────────────────────────────────────────────────────────
-        if (! $this->isInstallLocked()) {
-            return $this->redirectToInstall($request);
-        }
-
-        // ────────────────────────────────────────────────────────────────
-        // STAGE 2 — LICENSE GATE (runs only after install is complete)
-        // Public read-style customer API endpoints bypass; admin / write /
-        // web routes require APP_LICENSED=true + DB record.
-        // ────────────────────────────────────────────────────────────────
-
-        // Public customer API: exact paths
-        if (in_array($path, self::PUBLIC_API_EXACT, true)) {
+        // Public customer API — exact paths
+        $publicExact = [
+            'api/site-settings',
+            'api/stations',
+            'api/search',
+            'api/promotions',
+            'api/promotions/check',
+        ];
+        if (in_array($path, $publicExact, true)) {
             return $next($request);
         }
-        // Public customer API: prefixes
-        foreach (self::PUBLIC_API_PREFIX as $prefix) {
+
+        // Public customer API — prefixes
+        $publicPrefixes = ['api/auth/', 'api/bookings/public/'];
+        foreach ($publicPrefixes as $prefix) {
             if (str_starts_with($path, $prefix)) {
                 return $next($request);
             }
         }
 
-        // ── Public-API fallback catch-all ────────────────────────────
+        // All other API GET/HEAD/OPTIONS calls are public reads
         if (str_starts_with($path, 'api/')) {
-            $nonAdminApiMethods = ['GET', 'HEAD', 'OPTIONS'];
-            if (in_array($request->method(), $nonAdminApiMethods, true)) {
+            if (in_array($request->method(), ['GET', 'HEAD', 'OPTIONS'], true)) {
                 return $next($request);
             }
-            // Write-style API — allow only if it's a public write endpoint
-            $publicWritePrefixes = ['api/auth/', 'api/payment/webhook'];
-            foreach ($publicWritePrefixes as $wp) {
-                if (str_starts_with($path, $wp)) {
-                    return $next($request);
-                }
-            }
-            if ($path === 'api/bookings' || $path === 'api/seats/hold' || $path === 'api/seats/release'
-                || str_starts_with($path, 'api/bookings/')) {
+
+            // Public write endpoints
+            if (
+                str_starts_with($path, 'api/auth/') ||
+                $path === 'api/bookings' ||
+                str_starts_with($path, 'api/bookings/') ||
+                $path === 'api/seats/hold' ||
+                $path === 'api/seats/release'
+            ) {
                 return $next($request);
             }
         }
 
-        // ── Everything else needs a verified license ──────────────────
+        // ── License required for everything else ─────────────────────────
         if (! $this->licenseService->isActivated()) {
             if ($request->expectsJson() || str_starts_with($path, 'api/')) {
                 return response()->json([
