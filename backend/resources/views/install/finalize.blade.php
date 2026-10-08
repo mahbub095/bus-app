@@ -317,7 +317,7 @@
             });
         }
 
-        function runInstall() {
+        function runInstall(isRetry = false) {
             succBox.style.display = 'none';
             errBox.style.display  = 'none';
             // Reset tasks
@@ -351,6 +351,12 @@
                 }
             }, 650);
 
+            // Long-ish timeout — migrate + seed can easily take 1-2 minutes
+            // on slow servers / shared hosting. 5 minutes = 300s safety net.
+            const FETCH_TIMEOUT_MS = 300000;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
             fetch(runUrl, {
                 method: 'POST',
                 headers: {
@@ -360,8 +366,10 @@
                 },
                 credentials: 'same-origin',
                 body: new URLSearchParams({ _token: csrfToken }).toString(),
+                signal: controller.signal,
             })
             .then(function (resp) {
+                clearTimeout(timeoutId);
                 clearInterval(interval);
                 return resp.text().then(function (raw) {
                     let data = null;
@@ -425,10 +433,15 @@
                 });
             })
             .catch(function (err) {
+                clearTimeout(timeoutId);
                 clearInterval(interval);
-                appendLog(['❌ Network / fetch error: ' + (err && err.message ? err.message : String(err))]);
+                const isAbort = err && err.name === 'AbortError';
+                const errText = isAbort
+                    ? 'Request timed out after 5 minutes. This can happen on slow servers — click Retry to continue (most work is already done, duplicate-safe).'
+                    : 'Network error: Could not reach /install/finalize/run. Please check PHP error logs and retry.';
+                appendLog(['❌ ' + (isAbort ? 'Timeout' : 'Network / fetch error') + ': ' + (err && err.message ? err.message : String(err))]);
                 errBox.style.display = 'block';
-                errMsg.textContent = 'Network error: Could not reach /install/finalize/run. Please check PHP error logs and retry.';
+                errMsg.textContent = errText;
                 togBtn.click();
             });
         }
