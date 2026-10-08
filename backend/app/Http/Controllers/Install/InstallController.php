@@ -15,10 +15,14 @@ use App\Models\User;
  * Handles the step-by-step installation wizard.
  *
  * Steps:
- *   1. License verification (Envato purchase code)
- *   2. Database connection test
- *   3. Admin account creation
- *   4. Final setup (migrations + seeding)
+ *   1. License verification — calls Envato API, validates purchase code.
+ *      The license record is NOT persisted here yet because the DB may not
+ *      be configured. Instead purchase_code + api_data are saved to session
+ *      and flushed to DB in the finalize step after migrations have run.
+ *   2. Database connection — tests PDO, writes credentials to .env.
+ *   3. Admin account creation — saved to session for the finalize step.
+ *   4. Final setup — runs migrations, persists the pending license record,
+ *      creates the super-admin user, clears caches.
  */
 class InstallController extends Controller
 {
@@ -41,23 +45,31 @@ class InstallController extends Controller
     }
 
     /**
-     * Verify the submitted purchase code against the Envato API.
+     * Verify the submitted purchase code against the Envato API (or local
+     * dev bypass) and store the result in the session. We deliberately
+     * DO NOT save to the DB here because the DB is not guaranteed to exist.
      */
     public function verifyLicense(Request $request)
     {
         $request->validate([
-            'purchase_code'  => 'required|string|max:100',
-            'personal_token' => 'required|string|max:500',
+            'purchase_code' => 'required|string|max:100',
         ]);
 
+        // persistDb=false — don't write to license table yet; save to session
         $result = $this->licenseService->verify(
-            $request->input('purchase_code'),
-            $request->input('personal_token')
+            purchaseCode: $request->input('purchase_code'),
+            persistDb:    false
         );
 
         if (! $result['success']) {
             return back()->withErrors(['purchase_code' => $result['message']])->withInput();
         }
+
+        // Stash the purchase code + API response for the finalize step.
+        $request->session()->put('install.pending_license', [
+            'purchase_code' => trim($request->input('purchase_code')),
+            'api_data'      => $result['api_data'],
+        ]);
 
         return redirect('/install/database')->with('success', $result['message']);
     }
@@ -150,14 +162,32 @@ class InstallController extends Controller
         }
 
         if (! $request->session()->has('admin_email')) {
-            return redirect('/install/admin')->withErrors(['message' => 'Please complete the admin setup step first.']);
+            return redirect('/install/admin')->withErrors([
+                'message' => 'Please complete the admin setup step first.',
+            ]);
         }
 
         try {
-            // Run migrations
+            // ── Reload .env values now that DB credentials have been written ─
+            Artisan::call('config:clear');
+
+            // ── Run migrations ──────────────────────────────────────────────
             Artisan::call('migrate', ['--force' => true]);
 
-            // Create super admin
+            // ── Persist the verified license (DB table now exists) ──────────
+            $pending = $request->session()->get('install.pending_license');
+            if (is_array($pending) && ! empty($pending['purchase_code']) && is_array($pending['api_data'] ?? null)) {
+                $this->licenseService->persistVerifiedLicense(
+                    purchaseCode: $pending['purchase_code'],
+                    apiData:      $pending['api_data']
+                );
+                $request->session()->forget('install.pending_license');
+            }
+
+            // ── Run seeders (optional demo data) ─────────────────────────────
+            Artisan::call('db:seed', ['--force' => true]);
+
+            // ── Create super admin ──────────────────────────────────────────
             User::updateOrCreate(
                 ['email' => $request->session()->get('admin_email')],
                 [
@@ -167,9 +197,11 @@ class InstallController extends Controller
                 ]
             );
 
-            // Clear all caches
-            Artisan::call('config:clear');
+            // ── Clear all caches ─────────────────────────────────────────────
             Artisan::call('cache:clear');
+            Artisan::call('config:clear');
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
 
             $request->session()->forget(['admin_name', 'admin_email', 'admin_password']);
 

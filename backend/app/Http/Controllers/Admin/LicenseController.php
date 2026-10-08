@@ -24,17 +24,16 @@ class LicenseController extends BaseAdminController
 
     /**
      * Re-verify an existing purchase code (e.g. after domain migration).
+     * The author's Envato personal token is read from server config.
      */
     public function reVerify(Request $request)
     {
         $validated = $request->validate([
-            'purchase_code'  => 'required|string|max:100',
-            'personal_token' => 'required|string|max:500',
+            'purchase_code' => 'required|string|max:100',
         ]);
 
         $result = $this->licenseService->verify(
-            $validated['purchase_code'],
-            $validated['personal_token']
+            $validated['purchase_code']
         );
 
         if ($result['success']) {

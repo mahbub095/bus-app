@@ -85,7 +85,7 @@
             @csrf
             <input type="hidden" name="admin_tab" value="license">
 
-            <div class="input-group" style="margin-bottom: 16px;">
+            <div class="input-group" style="margin-bottom: 20px;">
                 <label for="purchase_code">Envato Purchase Code</label>
                 <input
                     type="text"
@@ -99,26 +99,6 @@
                 >
                 <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
                     Found in Envato Market → Downloads → Licenses &amp; Purchase Codes.
-                </small>
-            </div>
-
-            <div class="input-group" style="margin-bottom: 20px;">
-                <label for="personal_token">Envato Personal Token</label>
-                <input
-                    type="password"
-                    id="personal_token"
-                    name="personal_token"
-                    class="coupon-input"
-                    placeholder="Your Envato API personal token"
-                    autocomplete="off"
-                    required
-                    style="width: 100%;"
-                >
-                <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
-                    Generate at
-                    <a href="https://build.envato.com/create-token/?purchase:verify=t" target="_blank"
-                       style="color: var(--accent-color);">build.envato.com</a>.
-                    Enable <strong>Verify Purchases</strong>. The token is used once and not stored.
                 </small>
             </div>
 

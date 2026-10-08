@@ -58,25 +58,6 @@
             </p>
         </div>
 
-        <div class="form-group">
-            <label for="personal_token">Envato Personal Token</label>
-            <input
-                type="password"
-                id="personal_token"
-                name="personal_token"
-                placeholder="Your Envato API personal token"
-                required
-                autocomplete="off"
-            >
-            <p class="form-help">
-                Generate a token at
-                <a href="https://build.envato.com/create-token/?purchase:download=t&purchase:verify=t&purchase:list=t" target="_blank">
-                    build.envato.com → Create Token
-                </a>.
-                Enable <strong>Verify Purchases</strong> permission. The token is used once and not stored.
-            </p>
-        </div>
-
         <button type="submit" class="btn">Verify License &amp; Continue →</button>
     </form>
 @endsection
