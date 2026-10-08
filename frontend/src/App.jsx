@@ -14,6 +14,7 @@ import Footer from './components/Footer';
 import BookingPortal from './components/BookingPortal';
 import Maintenance from './components/Maintenance';
 import PaymentFailed from './components/PaymentFailed';
+import BackendOffline from './components/BackendOffline';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
@@ -49,6 +50,8 @@ function App() {
 
   // Site Settings (fetched from admin backend)
   const [siteSettings, setSiteSettings] = useState(null);
+  // true when /api/site-settings network request fails (backend is down)
+  const [backendOffline, setBackendOffline] = useState(false);
 
   // Show Toast Helper (durationMs defaults to 4.5s; booking success uses 1s)
   const showToast = (message, type = 'success', durationMs = 4500) => {
@@ -218,9 +221,14 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setSiteSettings(data);
+        setBackendOffline(false);
+      } else {
+        // Server is up but returned an error — treat as offline
+        setBackendOffline(true);
       }
     } catch (err) {
-      // Silently fail — use defaults
+      // Network error — backend is unreachable
+      setBackendOffline(true);
     }
   };
 
@@ -233,18 +241,37 @@ function App() {
       document.title = siteSettings.site_title;
     }
 
-    // Update favicon
+    // Update favicon — rebuild the absolute URL and force cache-bust when
+    // the URL changes so the browser tab icon refreshes immediately.
     if (siteSettings.favicon_url) {
-      let link = document.querySelector("link[rel~='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      // If it's a relative URL, prepend the backend origin
-      link.href = siteSettings.favicon_url.startsWith('http')
-        ? siteSettings.favicon_url
-        : `${import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '') || ''}${siteSettings.favicon_url}`;
+      const backendOrigin = (import.meta.env.VITE_API_BASE_URL || '')
+        .replace(/\/api\/?$/, '');
+
+      const rawUrl = siteSettings.favicon_url;
+      const absoluteUrl = rawUrl.startsWith('http')
+        ? rawUrl
+        : `${backendOrigin}${rawUrl}`;
+
+      // Append a cache-buster only for backend-uploaded files so the
+      // browser always fetches the latest version after an upload.
+      const isUploadedFile = rawUrl.startsWith('/uploads/');
+      const faviconHref = isUploadedFile
+        ? `${absoluteUrl}?v=${Date.now()}`
+        : absoluteUrl;
+
+      // Remove ALL existing icon link tags to avoid stale ones lingering
+      document.querySelectorAll("link[rel~='icon'], link[rel~='shortcut']").forEach(el => el.remove());
+
+      const link = document.createElement('link');
+      link.rel  = 'icon';
+      // Set the correct MIME type so all browsers accept it
+      const ext = rawUrl.split('.').pop().toLowerCase();
+      const mime = { svg: 'image/svg+xml', ico: 'image/x-icon', png: 'image/png',
+                     jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+                     webp: 'image/webp' };
+      if (mime[ext]) link.type = mime[ext];
+      link.href = faviconHref;
+      document.head.appendChild(link);
     }
 
     // Update SEO meta tags
@@ -311,6 +338,11 @@ function App() {
       setPaymentFailed,
       showToast
     });
+
+    // Poll site settings every 30 s so logo/branding changes made in the
+    // admin dashboard are reflected without a full page reload.
+    const settingsInterval = setInterval(fetchSiteSettings, 30_000);
+    return () => clearInterval(settingsInterval);
   }, []);
 
   useEffect(() => {
@@ -326,6 +358,11 @@ function App() {
       })
       .catch(() => clearAuth());
   }, [authToken]);
+
+  // Backend unreachable
+  if (backendOffline) {
+    return <BackendOffline onRetry={fetchSiteSettings} />;
+  }
 
   // Maintenance Mode Page
   if (siteSettings?.maintenance?.enabled) {
@@ -346,6 +383,7 @@ function App() {
         authUser={authUser}
         handleLogout={handleLogout}
         openAuthModal={openAuthModal}
+        siteSettings={siteSettings}
       />
 
       {/* Content */}

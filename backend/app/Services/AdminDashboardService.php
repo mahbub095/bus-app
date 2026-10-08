@@ -77,7 +77,10 @@ class AdminDashboardService
             'routes' => $routes,
             'schedules' => $schedules,
             'promotions' => $promotions,
-            'siteSettings' => SiteSetting::getAll(),
+            'siteSettings' => array_merge([
+                'logo_url'  => '',
+                'logo_text' => '',
+            ], SiteSetting::getAll()),
             'smsConfig' => SmsConfig::query()->latest('id')->first(),
             'users' => $users,
         ];

@@ -225,6 +225,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::middleware('super_admin')->group(function () {
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
+        Route::post('/admin/site-settings/logo', [SiteSettingsController::class, 'uploadLogo'])->name('admin.site-settings.logo');
+        Route::delete('/admin/site-settings/logo', [SiteSettingsController::class, 'deleteLogo'])->name('admin.site-settings.logo.delete');
         
         // Gateways & Integrations separate configuration update routes
         Route::post('/admin/gateway-settings/sms', [GatewaySettingsController::class, 'updateSms'])->name('admin.gateway-settings.update-sms');

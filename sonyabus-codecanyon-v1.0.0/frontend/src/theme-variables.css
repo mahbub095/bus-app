@@ -1,0 +1,152 @@
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+
+  --bg-main: #F4F6FB;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-header: rgba(255, 255, 255, 0.94);
+  --bg-panel-alt: #F8FAFC;
+  --bg-input: #FFFFFF;
+  --bg-input-elevated: #F1F5F9;
+  --bg-btn-secondary: #FFFFFF;
+  --bg-btn-secondary-hover: #F1F5F9;
+  --bg-footer: #FFFFFF;
+  --bg-overlay: rgba(15, 23, 42, 0.5);
+  --bg-seat-panel: #F1F5F9;
+  --bg-seat-map: #FFFFFF;
+  --bg-toast: #FFFFFF;
+  --bg-maintenance-card: rgba(255, 255, 255, 0.92);
+  --bg-cache-badge: rgba(255, 255, 255, 0.9);
+
+  --border-color: #E2E8F0;
+  --border-active: #6366F1;
+  --border-seat: #CBD5E1;
+  --border-hover: #CBD5E1;
+
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-glow: rgba(99, 102, 241, 0.18);
+  --primary-soft: rgba(99, 102, 241, 0.08);
+  --primary-soft-border: rgba(99, 102, 241, 0.15);
+  --primary-text-soft: #4F46E5;
+
+  --accent: #8B5CF6;
+  --accent-glow: rgba(139, 92, 246, 0.14);
+
+  --gold: #D97706;
+  --gold-glow: rgba(217, 119, 6, 0.14);
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  --title-gradient-start: #0F172A;
+  --title-gradient-end: #475569;
+
+  --success: #059669;
+  --danger: #DC2626;
+  --warning: #D97706;
+
+  --nav-link-hover-bg: rgba(99, 102, 241, 0.06);
+  --scrollbar-thumb: #CBD5E1;
+  --hero-glow-1: rgba(99, 102, 241, 0.08);
+  --hero-glow-2: rgba(139, 92, 246, 0.06);
+  --coach-tag-bg: #F1F5F9;
+  --coach-tag-ac-bg: rgba(99, 102, 241, 0.1);
+  --coach-tag-ac-color: #4F46E5;
+  --offer-card-bg: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+  --offer-header-bg: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(99, 102, 241, 0.08));
+  --offer-coupon-bg: #F1F5F9;
+  --ticket-field-bg: #FFFFFF;
+  --table-row-hover: rgba(99, 102, 241, 0.04);
+  --divider-dashed: rgba(15, 23, 42, 0.12);
+  --maintenance-title-gradient: linear-gradient(135deg, #0F172A 0%, #6366F1 50%, #8B5CF6 100%);
+  --spinner-track: rgba(15, 23, 42, 0.08);
+
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-lg: 20px;
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --shadow-neon: 0 0 0 1px rgba(99, 102, 241, 0.12), 0 8px 20px rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-main: #0B0B14;
+  --bg-card: #141424;
+  --bg-card-hover: #1C1C34;
+  --bg-header: rgba(11, 11, 20, 0.85);
+  --bg-panel-alt: #0E0E1B;
+  --bg-input: #1A1A2E;
+  --bg-input-elevated: #1F1F38;
+  --bg-btn-secondary: #202038;
+  --bg-btn-secondary-hover: #2B2B4C;
+  --bg-footer: #08080E;
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+  --bg-seat-panel: #121221;
+  --bg-seat-map: #0A0A12;
+  --bg-toast: #1E1E38;
+  --bg-maintenance-card: rgba(20, 20, 36, 0.6);
+  --bg-cache-badge: rgba(20, 20, 36, 0.6);
+
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-active: #6366F1;
+  --border-seat: #2A2A44;
+  --border-hover: rgba(255, 255, 255, 0.15);
+
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-glow: rgba(99, 102, 241, 0.25);
+  --primary-soft: rgba(99, 102, 241, 0.08);
+  --primary-soft-border: rgba(99, 102, 241, 0.15);
+  --primary-text-soft: #818CF8;
+
+  --accent: #A855F7;
+  --accent-glow: rgba(168, 85, 247, 0.2);
+
+  --gold: #F59E0B;
+  --gold-glow: rgba(245, 158, 11, 0.2);
+
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --text-inverse: #FFFFFF;
+
+  --title-gradient-start: #FFFFFF;
+  --title-gradient-end: #D1D5DB;
+
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+
+  --nav-link-hover-bg: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb: #252538;
+  --hero-glow-1: rgba(99, 102, 241, 0.15);
+  --hero-glow-2: rgba(168, 85, 247, 0.1);
+  --coach-tag-bg: rgba(255, 255, 255, 0.06);
+  --coach-tag-ac-bg: rgba(99, 102, 241, 0.15);
+  --coach-tag-ac-color: #818CF8;
+  --offer-card-bg: linear-gradient(135deg, #18182F 0%, #121223 100%);
+  --offer-header-bg: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(99, 102, 241, 0.15));
+  --offer-coupon-bg: #1E1E34;
+  --ticket-field-bg: rgba(255, 255, 255, 0.04);
+  --table-row-hover: rgba(255, 255, 255, 0.02);
+  --divider-dashed: rgba(255, 255, 255, 0.1);
+  --maintenance-title-gradient: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #c084fc 100%);
+  --spinner-track: rgba(255, 255, 255, 0.05);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+  --shadow-neon: 0 0 15px rgba(99, 102, 241, 0.4);
+}
