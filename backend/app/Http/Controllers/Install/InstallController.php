@@ -55,7 +55,7 @@ class InstallController extends Controller
     public function showLicense()
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         if ($this->licenseService->isActivated()) {
@@ -73,7 +73,7 @@ class InstallController extends Controller
     public function verifyLicense(Request $request)
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         $request->validate([
@@ -106,7 +106,7 @@ class InstallController extends Controller
     public function showDatabase()
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         if (! $this->licenseService->isActivated()) {
@@ -119,7 +119,7 @@ class InstallController extends Controller
     public function saveDatabase(Request $request)
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         $request->validate([
@@ -303,7 +303,7 @@ class InstallController extends Controller
     public function showAdmin()
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         if (! $this->licenseService->isActivated()) {
@@ -316,7 +316,7 @@ class InstallController extends Controller
     public function saveAdmin(Request $request)
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         $request->validate([
@@ -343,14 +343,13 @@ class InstallController extends Controller
 
     /**
      * GET /install/finalize
-     * Shows the installation progress screen. The actual work (migrate / seed /
-     * create super-admin / lock installer) is done by runFinalize() below via
-     * AJAX from this view so we can render a friendly animated progress UI.
+     * Shows a "click to install" confirmation page. The actual work is done
+     * by runFinalize() via a plain synchronous form POST — no AJAX/fetch.
      */
     public function finalize(Request $request)
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin');
+            return redirect('/admin/login');
         }
 
         if (! $this->licenseService->isActivated()) {
@@ -368,451 +367,90 @@ class InstallController extends Controller
 
     /**
      * POST /install/finalize/run
-     * Executes the actual install steps. Returns JSON so that the progress
-     * screen can advance each task visually. On success, the response also
-     * contains a redirect URL to the admin dashboard, and the super-admin
-     * user is automatically signed in via session auth.
+     * Stashes admin credentials into the cache, fires the install:run
+     * artisan command as a background process (so Apache never times out),
+     * then immediately redirects back to GET /install/finalize which polls
+     * the status file for progress.
      */
-    public function runFinalize(Request $request): \Illuminate\Http\JsonResponse
+    public function runFinalize(Request $request): \Illuminate\Http\RedirectResponse
     {
-        // ═════════════════════════════════════════════════════════════════════
-        // ⚠️  GLOBAL SAFETY NETS (run BEFORE any Laravel logic)
-        // ═════════════════════════════════════════════════════════════════════
-        // These prevent the classic "Network error / Failed to fetch" symptom
-        // in the browser that happens when PHP emits a warning, dies on a
-        // FATAL error, or exhausts memory — all of which produce either no
-        // HTTP response at all or a truncated / malformed one that fetch()
-        // interprets as a network-layer failure.
-
-        // 1) Allow up to 10 minutes for slow migrations / seeders.
-        @set_time_limit(600);
-        @ini_set('max_execution_time', '600');
-        @ini_set('memory_limit',        '512M');
-        @ini_set('implicit_flush',      '0');
-
-        // 2) Swallow any accidental pre-response echo / PHP notice output.
-        //    Without this, a single "PHP Warning:  ... in /vendor/..." line
-        //    prepended to the JSON payload breaks JSON.parse → frontend
-        //    shows "Unexpected server response", and on some Apache setups
-        //    an aborted mid-stream output even looks like a TCP RST to the
-        //    browser → fetch .catch() fires → "Network error".
-        $outBufLevelStart = ob_get_level();
-        while (ob_get_level() > 0) {
-            @ob_end_clean();
+        if ($this->isInstallLocked()) {
+            return redirect('/admin/login');
         }
-        ob_start();
 
-        // 3) Catch PHP FATAL errors (E_ERROR / E_CORE_ERROR / etc.) which
-        //    `catch (\Throwable)` CANNOT see. On crash we flush all buffers
-        //    and print a clean JSON response the browser's fetch() can read
-        //    normally (will hit .then(), not .catch()).
-        $fatalShutdownRef = function () use (&$outBufLevelStart): void {
-            $err = error_get_last();
-            if (! $err) return;
-            $fatals = [\E_ERROR, \E_CORE_ERROR, \E_COMPILE_ERROR, \E_USER_ERROR,
-                       \E_RECOVERABLE_ERROR, \E_PARSE];
-            if (! in_array($err['type'], $fatals, true)) return;
+        if (! $this->licenseService->isActivated()) {
+            return redirect('/install')->withErrors(['message' => 'License not activated.']);
+        }
 
-            // Nuke every buffer to make sure our JSON is pristine.
-            while (ob_get_level() > 0) @ob_end_clean();
-
-            header('Content-Type: application/json; charset=utf-8', true, 500);
-            echo json_encode([
-                'success'   => false,
-                'error'     => 'PHP Fatal Error: ' . $err['message'],
-                'exception' => 'FatalError@' . $err['file'] . ':' . $err['line'],
-                'log'       => [
-                    '❌ PHP FATAL ERROR (caught by shutdown handler):',
-                    '   ' . $err['message'],
-                    '   Location: ' . $err['file'] . ':' . $err['line'],
-                    '💡 Common causes on local: out of memory during seeder, or a',
-                    '   missing table that was expected but SQL import skipped it.',
-                ],
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            exit;
-        };
-        register_shutdown_function($fatalShutdownRef);
-
-        // Scoped helper: flushes ALL output buffers, then returns a clean
-        // JsonResponse with ONLY `application/json` content-type — no stray
-        // output bytes allowed.  This is the #1 fix for "Failed to fetch".
-        $cleanJson = static function (array $payload, int $status = 200): \Illuminate\Http\JsonResponse {
-            while (ob_get_level() > 0) @ob_end_clean();
-            return response()->json($payload, $status, [
-                'Content-Type'                => 'application/json; charset=utf-8',
-                'X-Content-Type-Options'      => 'nosniff',
-                'Cache-Control'               => 'no-store, no-cache, must-revalidate',
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        };
-
-        // ── Local mutable state (declared here so catch block can see) ──
-        $log             = [];
-        $createdUserId   = null;
-        $superAdminLocal = null;
-        $adminEmailLocal = null;
-        $adminNameLocal  = null;
-        $snap            = null;
-
-        try {
-            // ═════════════════════════════════════════════════════════════════
-            // PRE-CHECKS (also inside try — any error here is still JSON)
-            // ═════════════════════════════════════════════════════════════════
-            if ($this->isInstallLocked()) {
-                return $cleanJson([
-                    'success'      => true,
-                    'already_done' => true,
-                    'redirect_url' => url('/admin'),
-                    'log'          => ['Install already locked. Redirecting to dashboard...'],
-                ]);
-            }
-
-            if (! $this->licenseService->isActivated()) {
-                return $cleanJson([
-                    'success' => false,
-                    'error'   => 'License not activated. Please return to Step 1.',
-                    'log'     => ['License activation check FAILED.'],
-                ], 403);
-            }
-
-            if (! $request->session()->has('admin_email')) {
-                $fallback = null;
-                try {
-                    $fallback = User::whereIn('role', ['super_admin', 'admin'])
-                        ->orderByRaw("FIELD(role, 'super_admin', 'admin')")
-                        ->first();
-                } catch (\Throwable $e) { /* users table might not exist yet */ }
-
-                if (! $fallback) {
-                    return $cleanJson([
-                        'success' => false,
-                        'error'   => 'Admin credentials missing from session. Please complete Step 3 (Admin Setup) first.',
-                        'log'     => [
-                            '⚠️  Session admin_email key missing.',
-                            'ℹ️   No existing admin/super_admin user found in users table either.',
-                            '💡 Fix: Go back to /install/admin, fill the form, submit again.',
-                        ],
-                    ], 400);
-                }
-            }
-
-            // ═════════════════════════════════════════════════════════════════
-            // SESSION SNAPSHOT BEFORE ANY CONFIG CLEAR / ARTISAN CALLS
-            // ═════════════════════════════════════════════════════════════════
-            $snap = [
-                'admin_email'        => $request->session()->get('admin_email'),
-                'admin_name'         => $request->session()->get('admin_name'),
-                'admin_password'     => $request->session()->get('admin_password'),
-                'sql_imported'       => (bool) $request->session()->get('install.sql_imported', false),
-                'sql_imported_stats' => $request->session()->get('install.sql_imported_stats'),
-                'pending_license'    => $request->session()->get('install.pending_license'),
-            ];
-
-            // ── Reload .env + RECONNECT DB ───────────────────────────────
-            // NOTE: Artisan::call('config:clear') wipes the in-memory config
-            // cache, including the database PDO singleton.  On subsequent DB
-            // queries Laravel *should* lazily reconnect, but in practice on
-            // Windows + Laragon + mysqlnd the old PDO handle is kept around
-            // in a "gone away" state and Schema / DB queries throw warnings
-            // or even FATAL.  We force a clean reconnect.
-            Artisan::call('config:clear');
-            $log[] = '✅ Application config reloaded.';
-
-            try {
-                DB::purge();     // forget old PDO handle(s)
-                DB::reconnect(); // open a brand-new PDO connection from fresh config
-                DB::connection()->getPdo()->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-                DB::connection()->getPdo()->query('SELECT 1');  // warm-up ping
-                $log[] = '✅ Database connection re-established (fresh PDO after config:clear).';
-            } catch (\Throwable $e) {
-                $log[] = '⚠️  DB reconnect threw (continuing, Laravel will retry lazily): ' . $e->getMessage();
-            }
-
-            // ═════════════════════════════════════════════════════════════════
-            // Decide whether to run migrations / seeders.
-            // ═════════════════════════════════════════════════════════════════
-            $sqlAlreadyImported = $snap['sql_imported'];
-
-            $migrationsTableExists = false;
-            try {
-                $migrationsTableExists = Schema::hasTable('migrations');
-            } catch (\Throwable $e) {
-                $migrationsTableExists = false;
-            }
-
-            $shouldRunMigrations = true;
-            if ($sqlAlreadyImported && $migrationsTableExists) {
-                $shouldRunMigrations = false;
-            }
-
-            // ── Run migrations ──────────────────────────────────────────────
-            if ($shouldRunMigrations) {
-                $log[] = '⏳ Running database migrations...';
-                try {
-                    $migExit = Artisan::call('migrate', ['--force' => true]);
-                    $migOutput = Artisan::output();
-                    if ($migExit === 0) {
-                        $log[] = '✅ Database migrations completed.';
-                        if (trim($migOutput) !== '') {
-                            foreach (explode("\n", trim($migOutput)) as $mo) {
-                                $mo = trim($mo);
-                                if ($mo !== '') $log[] = '   ↳ ' . $mo;
-                            }
-                        }
-                    } else {
-                        $log[] = '⚠️  Migrations exited with code ' . $migExit . ' — continuing.';
-                        if (trim($migOutput) !== '') {
-                            foreach (explode("\n", trim($migOutput)) as $mo) {
-                                $mo = trim($mo);
-                                if ($mo !== '') $log[] = '   ↳ ' . $mo;
-                            }
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    $log[] = '⚠️  Migrations threw an error — attempting to continue:';
-                    $log[] = '   ↳ ' . get_class($e) . ': ' . $e->getMessage();
-                }
-            } else {
-                $log[] = '⏭️  Skipping migrations (pre-imported SQL dump detected — migrations table exists).';
-            }
-
-            // After migrations run: DB connection may have been internally
-            // closed by the artisan subprocess.  Re-verify / reconnect before
-            // we write to users / license tables below.
-            try {
-                DB::connection()->getPdo()->query('SELECT 1');
-            } catch (\Throwable $e) {
-                try {
-                    DB::purge();
-                    DB::reconnect();
-                } catch (\Throwable $e2) { /* swallow, will fail later with nicer message */ }
-            }
-
-            // ── Persist the verified license (DB table now exists) ──────────
-            $pending = $snap['pending_license'];
-            if (is_array($pending) && ! empty($pending['purchase_code']) && is_array($pending['api_data'] ?? null)) {
-                try {
-                    $this->licenseService->persistVerifiedLicense(
-                        purchaseCode: $pending['purchase_code'],
-                        apiData:      $pending['api_data']
-                    );
-                    try { $request->session()->forget('install.pending_license'); } catch (\Throwable $_) {}
-                    $log[] = '✅ Envato license record persisted to database.';
-                } catch (\Throwable $e) {
-                    $log[] = '⚠️  License persist skipped (non-fatal): ' . get_class($e) . ' — ' . $e->getMessage();
-                }
-            } else {
-                $log[] = '✅ (Default / bypass license — no CodeCanyon API record to persist.)';
-            }
-
-            // ── Run seeders ─────────────────────────────────────────────────
-            $log[] = '⏳ Running database seeders (demo data)...';
-            try {
-                $seedExit = Artisan::call('db:seed', ['--force' => true]);
-                $seedOutput = Artisan::output();
-                if ($seedExit === 0) {
-                    $log[] = '✅ Seeders completed.';
-                    if (trim($seedOutput) !== '') {
-                        foreach (explode("\n", trim($seedOutput)) as $so) {
-                            $so = trim($so);
-                            if ($so !== '') $log[] = '   ↳ ' . $so;
-                        }
-                    }
-                } else {
-                    $log[] = '⚠️  Seeders returned exit code ' . $seedExit . ' — continuing anyway.';
-                    if (trim($seedOutput) !== '') {
-                        foreach (explode("\n", trim($seedOutput)) as $so) {
-                            $so = trim($so);
-                            if ($so !== '') $log[] = '   ↳ ' . $so;
-                        }
-                    }
-                }
-            } catch (\Throwable $e) {
-                $log[] = '⚠️  Seeders threw an error — continuing (non-fatal):';
-                $log[] = '   ↳ ' . get_class($e) . ': ' . $e->getMessage();
-            }
-
-            // DB re-connect / ping after seeder Artisan subprocess
-            try {
-                DB::connection()->getPdo()->query('SELECT 1');
-            } catch (\Throwable $e) {
-                try {
-                    DB::purge();
-                    DB::reconnect();
-                } catch (\Throwable $e2) { /* swallow */ }
-            }
-
-            // ── Create / promote SUPER ADMIN user ──────────────────────────
-            $adminEmailLocal = $snap['admin_email'];
-            $adminNameLocal  = $snap['admin_name'];
-            $adminPass       = $snap['admin_password'];
-
-            $superAdminLocal = null;
-
-            if (empty($adminEmailLocal)) {
-                $log[] = '⚠️  Admin credentials empty in snapshot — searching DB for existing admin...';
-                try {
-                    $fb = User::whereIn('role', ['super_admin', 'admin'])
-                        ->orderByRaw("FIELD(role, 'super_admin', 'admin')")
-                        ->first();
-                    if ($fb instanceof User) {
-                        $superAdminLocal = $fb;
-                        $adminEmailLocal = $fb->email;
-                        $adminNameLocal  = $fb->name;
-                        $log[] = '✅ Fallback success: found existing ' . strtoupper($fb->role) . ' → ' . $fb->email . ' (will auto-sign-in).';
-                    }
-                } catch (\Throwable $e) {
-                    $log[] = 'ℹ️   Could not search users table: ' . $e->getMessage();
-                }
-            }
-
-            if (! empty($adminEmailLocal)) {
-                $existing = null;
-                try {
-                    $existing = User::where('email', $adminEmailLocal)->first();
-                } catch (\Throwable $e) {
-                    $log[] = 'ℹ️   Users table query failed — assuming new user: ' . $e->getMessage();
-                }
-
-                if (! $existing) {
-                    $log[] = '⏳ Creating SUPER ADMIN user: ' . $adminEmailLocal . ' ...';
-                    try {
-                        $superAdminLocal = User::create([
-                            'name'              => $adminNameLocal ?? 'Super Admin',
-                            'email'             => $adminEmailLocal,
-                            'password'          => Hash::make($adminPass ?? 'ChangeMe123!'),
-                            'role'              => 'super_admin',
-                            'menu_permissions'  => null,
-                            'email_verified_at' => now(),
-                        ]);
-                        $createdUserId = $superAdminLocal?->id;
-                        $log[] = '✅ SUPER ADMIN ' . $adminEmailLocal . ' created.';
-                    } catch (\Throwable $e) {
-                        $log[] = '⚠️  User::create failed — searching for existing record instead: ' . $e->getMessage();
-                        try {
-                            $superAdminLocal = User::where('email', $adminEmailLocal)->first();
-                            $createdUserId   = $superAdminLocal?->id;
-                            if ($superAdminLocal) $log[] = '✅ Found user record after all → ' . $superAdminLocal->email;
-                        } catch (\Throwable $e2) {
-                            $log[] = '❌ Could not recover user creation: ' . $e2->getMessage();
-                        }
-                    }
-                } else {
-                    $log[] = '⏳ Existing user found. Promoting to SUPER ADMIN: ' . $adminEmailLocal . ' ...';
-                    try {
-                        $existing->update([
-                            'name'              => $adminNameLocal ?? $existing->name,
-                            'role'              => 'super_admin',
-                            'menu_permissions'  => null,
-                            'email_verified_at' => $existing->email_verified_at ?? now(),
-                        ]);
-                        if (! empty($adminPass)) {
-                            $existing->update(['password' => Hash::make($adminPass)]);
-                        }
-                        $superAdminLocal = $existing->fresh();
-                        $createdUserId   = $superAdminLocal?->id;
-                        $log[] = '✅ ' . $adminEmailLocal . ' promoted to SUPER ADMIN.';
-                    } catch (\Throwable $e) {
-                        $superAdminLocal = $existing->fresh();
-                        $createdUserId   = $superAdminLocal?->id;
-                        $log[] = '⚠️  Promote update threw but user already exists — continuing anyway: ' . $e->getMessage();
-                    }
-                }
-            }
-
-            // ── Lock the installer ─────────────────────────────────────────
-            $log[] = '⏳ Locking install wizard...';
-            try {
-                app(\App\Services\EnvFileWriter::class)->set(['APP_INSTALLED' => 'true']);
-                $markerFile = storage_path('framework/installed');
-                @file_put_contents($markerFile, date('Y-m-d H:i:s'));
-                $log[] = '✅ Installer locked. APP_INSTALLED=true + storage/framework/installed marker created.';
-            } catch (\Throwable $e) {
-                $log[] = '⚠️  Lock step had an error — install still continues: ' . $e->getMessage();
-            }
-
-            // ── Clear all caches ─────────────────────────────────────────────
-            try {
-                Artisan::call('cache:clear');
-                Artisan::call('config:clear');
-                Artisan::call('route:clear');
-                Artisan::call('view:clear');
-                $log[] = '✅ All caches cleared (config, route, view, app cache).';
-            } catch (\Throwable $e) {
-                $log[] = '⚠️  Cache clear non-fatal error: ' . $e->getMessage();
-            }
-
-            // ── DB session / Auth reconnect after the 2nd config:clear above ─
-            try {
-                DB::connection()->getPdo()->query('SELECT 1');
-            } catch (\Throwable $e) {
-                try {
-                    DB::purge();
-                    DB::reconnect();
-                } catch (\Throwable $e2) { /* swallow */ }
-            }
-
-            // ── Auto-login the SUPER ADMIN into the web session ────────────
-            if ($superAdminLocal instanceof User) {
-                try {
-                    // Force a fresh session driver instance to work around the
-                    // in-memory config we just wiped.  Without this, on many
-                    // Laravel setups session()->save() silently fails → the
-                    // Auth::login below is never persisted → the final
-                    // redirect to /admin hits /admin/login → confused user.
-                    try {
-                        $request->session()->save();
-                    } catch (\Throwable $_) {}
-                    try {
-                        app('session')->driver()->start();
-                    } catch (\Throwable $_) {}
-
-                    Auth::login($superAdminLocal, true);
-                    $request->session()->regenerate();
-                    $log[] = '✅ Authenticated session started for ' . $superAdminLocal->email . ' (remember_me=ON).';
-                } catch (\Throwable $e) {
-                    $log[] = '⚠️  Auto-login failed (non-fatal, you can sign-in manually): ' . $e->getMessage();
-                }
-            }
-
-            // ── Flush install-specific session keys ─────────────────────────
-            try {
-                $request->session()->forget([
-                    'admin_name', 'admin_email', 'admin_password',
-                    'install.pending_license',
-                    'install.sql_imported',
-                    'install.sql_imported_stats',
-                ]);
-            } catch (\Throwable $_) {}
-
-            $log[] = '';
-            $log[] = '🎉 Installation complete! Redirecting to admin dashboard...';
-
-            return $cleanJson([
-                'success'      => true,
-                'log'          => $log,
-                'redirect_url' => url('/admin'),
-                'admin_email'  => $superAdminLocal?->email ?? $adminEmailLocal,
-                'admin_name'   => $superAdminLocal?->name  ?? $adminNameLocal,
+        if (! $request->session()->has('admin_email')) {
+            return redirect('/install/admin')->withErrors([
+                'message' => 'Admin credentials missing. Please re-submit the admin setup form.',
             ]);
-
-        } catch (\Throwable $e) {
-            $log[] = '❌ FATAL ERROR during installation:';
-            $log[] = '   ' . get_class($e) . ': ' . $e->getMessage();
-            $log[] = '   in ' . $e->getFile() . ':' . $e->getLine();
-
-            // Append stack trace lines (first 8) so user can paste to debug
-            $trace = explode("\n", $e->getTraceAsString());
-            foreach (array_slice($trace, 0, 8) as $tl) {
-                $log[] = '   ↳ ' . $tl;
-            }
-
-            return $cleanJson([
-                'success'         => false,
-                'error'           => $e->getMessage(),
-                'exception'       => get_class($e),
-                'log'             => $log,
-                'created_user_id' => $createdUserId,
-            ], 500);
         }
+
+        // ── Stash session data into file-based cache so the background ──
+        // process can read it (the background process has no HTTP session).
+        $ttl = now()->addMinutes(10);
+        cache(['install_admin_email'    => $request->session()->get('admin_email')]   , $ttl);
+        cache(['install_admin_name'     => $request->session()->get('admin_name')]    , $ttl);
+        cache(['install_admin_password' => $request->session()->get('admin_password')], $ttl);
+        cache(['install_sql_imported'   => $request->session()->get('install.sql_imported', false)], $ttl);
+        cache(['install_pending_license'=> $request->session()->get('install.pending_license')], $ttl);
+
+        // ── Generate a one-time token so the command can't be triggered ──
+        // by a random CLI call.
+        $token = bin2hex(random_bytes(16));
+        cache(['install_run_token' => $token], $ttl);
+
+        // ── Reset any previous status file ──────────────────────────────
+        $statusFile = \App\Console\Commands\InstallRun::statusFile();
+        @file_put_contents($statusFile, json_encode([
+            'status' => 'starting',
+            'log'    => ['⏳ Starting background install process...'],
+        ]));
+
+        // ── Find PHP executable (same one running Apache right now) ─────
+        $php = PHP_BINARY;   // e.g. C:\laragon\bin\php\php-8.x.x\php.exe
+        $artisan = base_path('artisan');
+
+        // ── Fire the artisan command as a detached background process ───
+        // On Windows we use `start /B` so it detaches from Apache's process.
+        // On Linux/Mac we append `> /dev/null 2>&1 &`.
+        if (PHP_OS_FAMILY === 'Windows') {
+            $cmd = 'start /B "" "' . $php . '" "' . $artisan . '" install:run --token=' . escapeshellarg($token) . ' > NUL 2>&1';
+            pclose(popen($cmd, 'r'));
+        } else {
+            $cmd = '"' . $php . '" "' . $artisan . '" install:run --token=' . escapeshellarg($token) . ' > /dev/null 2>&1 &';
+            exec($cmd);
+        }
+
+        // ── Redirect immediately — browser will now poll /finalize/status ─
+        return redirect('/install/finalize?running=1');
     }
+
+    /**
+     * GET /install/finalize/status
+     * Returns the current install status as JSON. Called every 2s by the
+     * polling page (finalize.blade.php). Never blocks — just reads a file.
+     */
+    public function finalizeStatus(): \Illuminate\Http\JsonResponse
+    {
+        $file = \App\Console\Commands\InstallRun::statusFile();
+
+        if (! file_exists($file)) {
+            return response()->json([
+                'status' => 'waiting',
+                'log'    => ['⏳ Waiting for background process to start...'],
+            ]);
+        }
+
+        $data = json_decode(file_get_contents($file), true);
+        if (! is_array($data)) {
+            return response()->json(['status' => 'waiting', 'log' => []]);
+        }
+
+        return response()->json($data);
+    }
+
 }
+
