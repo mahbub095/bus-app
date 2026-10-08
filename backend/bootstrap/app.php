@@ -12,9 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // License guard runs on every web & API request except /install/*
+        $middleware->append(\App\Http\Middleware\EnsureLicenseIsActivated::class);
+
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
-            'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
+            'admin'           => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'super_admin'     => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
             'menu_permission' => \App\Http\Middleware\EnsureUserHasMenuPermission::class,
         ]);
     })

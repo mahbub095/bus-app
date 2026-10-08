@@ -99,6 +99,10 @@
 
     <div class="sidebar-section-label">System</div>
     @if(Auth::user()->isSuperAdmin())
+    <a href="/admin#license" class="sidebar-nav-item {{ ($activeTab ?? '') === 'license' ? 'active' : '' }}" data-tab="license">
+        <span class="sidebar-nav-icon">🔑</span>
+        License
+    </a>
     <a href="/admin#site-settings" class="sidebar-nav-item {{ ($activeTab ?? '') === 'site-settings' ? 'active' : '' }}" data-tab="site-settings">
         <span class="sidebar-nav-icon">⚙️</span>
         Site Settings

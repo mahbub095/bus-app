@@ -6,8 +6,6 @@ use App\Models\Bus;
 use App\Models\Promotion;
 use App\Models\Route;
 use App\Models\Schedule;
-use App\Models\SiteSetting;
-use App\Models\SmsConfig;
 use App\Models\Station;
 use App\Models\User;
 
@@ -69,20 +67,15 @@ class AdminDashboardService
         $users = User::orderBy('created_at', 'desc')->paginate(15, ['*'], 'users_page');
 
         return [
-            'metrics' => $metrics,
-            'analytics' => $analytics,
-            'stations' => $stations,
+            'metrics'     => $metrics,
+            'analytics'   => $analytics,
+            'stations'    => $stations,
             'allStations' => $allStations,
-            'buses' => $buses,
-            'routes' => $routes,
-            'schedules' => $schedules,
-            'promotions' => $promotions,
-            'siteSettings' => array_merge([
-                'logo_url'  => '',
-                'logo_text' => '',
-            ], SiteSetting::getAll()),
-            'smsConfig' => SmsConfig::query()->latest('id')->first(),
-            'users' => $users,
+            'buses'       => $buses,
+            'routes'      => $routes,
+            'schedules'   => $schedules,
+            'promotions'  => $promotions,
+            'users'       => $users,
         ];
     }
 }

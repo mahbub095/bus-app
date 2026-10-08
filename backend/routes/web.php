@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AjaxController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BusController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RouteController;
@@ -13,8 +14,23 @@ use App\Http\Controllers\Admin\SiteSettingsController;
 use App\Http\Controllers\Admin\GatewaySettingsController;
 use App\Http\Controllers\Admin\StationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Install\InstallController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Installation Wizard (license-gated; bypasses EnsureLicenseIsActivated)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/install', [InstallController::class, 'showLicense'])->name('install.license');
+Route::post('/install/license/verify', [InstallController::class, 'verifyLicense'])->name('install.license.verify');
+Route::get('/install/database', [InstallController::class, 'showDatabase'])->name('install.database');
+Route::post('/install/database/save', [InstallController::class, 'saveDatabase'])->name('install.database.save');
+Route::get('/install/admin', [InstallController::class, 'showAdmin'])->name('install.admin');
+Route::post('/install/admin/save', [InstallController::class, 'saveAdmin'])->name('install.admin.save');
+Route::get('/install/finalize', [InstallController::class, 'finalize'])->name('install.finalize');
 
 /*
 |--------------------------------------------------------------------------
@@ -30,11 +46,12 @@ Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payme
 /*
 |--------------------------------------------------------------------------
 | Admin authentication (session)
+| Rate-limited: 10 attempts per minute per IP to prevent brute-force.
 |--------------------------------------------------------------------------
 */
 
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/admin/login', [AuthController::class, 'login']);
+Route::post('/admin/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
@@ -215,6 +232,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/admin/promotions', [PromotionController::class, 'store'])->name('admin.promotions.store');
         Route::put('/admin/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
         Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | License Management (Super Admin)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('super_admin')->group(function () {
+        Route::get('/admin/license', [LicenseController::class, 'info'])->name('admin.license.info');
+        Route::post('/admin/license/re-verify', [LicenseController::class, 'reVerify'])->name('admin.license.re-verify');
     });
 
     /*

@@ -34,13 +34,16 @@ Route::middleware(\App\Http\Middleware\CheckMaintenanceMode::class)->group(funct
 /*
 |--------------------------------------------------------------------------
 | Customer Authentication (Guest routes)
+| Rate-limited: 10 attempts per minute per IP to prevent brute-force.
 |--------------------------------------------------------------------------
 */
 
-Route::post('/auth/register', [UserAuthController::class, 'register']);
-Route::post('/auth/login', [UserAuthController::class, 'login']);
-Route::post('/auth/forgot-password', [UserAuthController::class, 'forgotPassword']);
-Route::post('/auth/reset-password', [UserAuthController::class, 'resetPassword']);
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/auth/register', [UserAuthController::class, 'register']);
+    Route::post('/auth/login', [UserAuthController::class, 'login']);
+    Route::post('/auth/forgot-password', [UserAuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password', [UserAuthController::class, 'resetPassword']);
+});
 
 /*
 |--------------------------------------------------------------------------

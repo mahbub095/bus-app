@@ -89,11 +89,16 @@ class SiteSettingsService
             'favicon' => 'required|file|mimes:ico,png,svg,jpg,jpeg,gif,webp|max:512',
         ]);
 
-        $file = $request->file('favicon');
-        $filename = 'favicon.'.$file->getClientOriginalExtension();
+        $file    = $request->file('favicon');
+        // Derive extension from the validated MIME type, not the client filename,
+        // to prevent extension spoofing (e.g. evil.php renamed to image.png).
+        $ext      = $this->safeExtensionFromMime($file->getMimeType(), ['ico', 'png', 'svg', 'jpg', 'jpeg', 'gif', 'webp']);
+        $filename = 'favicon.' . $ext;
+
+        $this->ensureUploadDirectory();
         $file->move(public_path('uploads'), $filename);
 
-        $faviconUrl = '/uploads/'.$filename;
+        $faviconUrl = '/uploads/' . $filename;
         SiteSetting::setValue('favicon_url', $faviconUrl);
         SiteSetting::clearCache();
 
@@ -106,11 +111,14 @@ class SiteSettingsService
             'logo' => 'required|file|mimes:png,svg,jpg,jpeg,gif,webp|max:1024',
         ]);
 
-        $file = $request->file('logo');
-        $filename = 'logo.'.$file->getClientOriginalExtension();
+        $file     = $request->file('logo');
+        $ext      = $this->safeExtensionFromMime($file->getMimeType(), ['png', 'svg', 'jpg', 'jpeg', 'gif', 'webp']);
+        $filename = 'logo.' . $ext;
+
+        $this->ensureUploadDirectory();
         $file->move(public_path('uploads'), $filename);
 
-        $logoUrl = '/uploads/'.$filename;
+        $logoUrl = '/uploads/' . $filename;
         SiteSetting::setValue('logo_url', $logoUrl);
         SiteSetting::clearCache();
 
@@ -128,5 +136,46 @@ class SiteSettingsService
         }
         SiteSetting::setValue('logo_url', '');
         SiteSetting::clearCache();
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Map a MIME type to a safe, whitelisted file extension.
+     * Falls back to the first allowed extension if the MIME is not recognised.
+     */
+    private function safeExtensionFromMime(string $mimeType, array $allowed): string
+    {
+        $map = [
+            'image/png'               => 'png',
+            'image/jpeg'              => 'jpg',
+            'image/gif'               => 'gif',
+            'image/webp'              => 'webp',
+            'image/svg+xml'           => 'svg',
+            'image/x-icon'            => 'ico',
+            'image/vnd.microsoft.icon' => 'ico',
+        ];
+
+        $ext = $map[$mimeType] ?? null;
+
+        // Ensure the resolved extension is in the allowed list
+        if ($ext && in_array($ext, $allowed, true)) {
+            return $ext;
+        }
+
+        return $allowed[0];
+    }
+
+    /**
+     * Create the uploads directory if it does not already exist.
+     */
+    private function ensureUploadDirectory(): void
+    {
+        $dir = public_path('uploads');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
     }
 }

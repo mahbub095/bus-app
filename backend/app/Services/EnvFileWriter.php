@@ -14,9 +14,22 @@ class EnvFileWriter
             return;
         }
 
+        // Security: Prevent path traversal
+        $realEnvPath = realpath($envPath);
+        $realBasePath = realpath(base_path());
+
+        if ($realEnvPath === false || ! str_starts_with($realEnvPath, $realBasePath)) {
+            throw new \RuntimeException('Invalid .env file path');
+        }
+
         $content = file_get_contents($envPath);
 
         foreach ($variables as $key => $value) {
+            // Security: Only allow valid env key names (alphanumeric and underscore)
+            if (! preg_match('/^[A-Z_][A-Z0-9_]*$/i', $key)) {
+                continue;
+            }
+
             $formattedValue = $this->formatValue((string) $value);
             $keyPattern = '/^'.preg_quote($key, '/').'=(.*)$/m';
 

@@ -94,7 +94,10 @@
     <div class="section">Getting started</div>
     <a href="#introduction">Introduction</a>
     <a href="#requirements">Requirements</a>
-    <a href="#installation">Installation</a>
+    <a href="#license">License Activation</a>
+    <a href="#installation">Installation (Overview)</a>
+    <a href="#cpanel-install">↳ cPanel Hosting</a>
+    <a href="#local-install">↳ Local (Laragon/XAMPP)</a>
     <div class="section">Configuration</div>
     <a href="#backend-env">Backend .env</a>
     <a href="#frontend-env">Frontend .env</a>
@@ -110,6 +113,9 @@
     <div class="section">Maintenance</div>
     <a href="#updating">Updating</a>
     <a href="#troubleshooting">Troubleshooting</a>
+    <a href="#troubleshooting">↳ General Errors</a>
+    <a href="#troubleshooting">↳ cPanel Errors</a>
+    <a href="#troubleshooting">↳ Local Errors</a>
     <a href="#support">Support</a>
   </nav>
 </aside>
@@ -139,6 +145,68 @@
       <tr><td>Auth</td><td>Laravel Sanctum (customer API) + session (admin)</td></tr>
       <tr><td>Reports</td><td>11 report types — PDF (DomPDF) &amp; Excel export</td></tr>
     </table>
+  </section>
+
+  <!-- LICENSE ACTIVATION -->
+  <section id="license">
+    <h2>License Activation</h2>
+    <p>
+      SonyaBus requires a valid <a href="https://codecanyon.net" target="_blank">CodeCanyon</a> purchase code to operate.
+      Activation happens through the built-in installation wizard the first time you open the app.
+      The application will automatically redirect every request to <code>/install</code> until a license is verified.
+    </p>
+
+    <h3>What you need</h3>
+    <table>
+      <tr><th>Item</th><th>Where to find it</th></tr>
+      <tr>
+        <td>Purchase Code</td>
+        <td>Envato Market → Your Account → <strong>Downloads</strong> → click <em>Licenses &amp; Purchase Codes</em> next to SonyaBus</td>
+      </tr>
+      <tr>
+        <td>Personal Token</td>
+        <td>
+          Generate at <a href="https://build.envato.com/create-token/?purchase:verify=t" target="_blank">build.envato.com/create-token</a>.
+          Enable the <strong>Verify Purchases</strong> permission. The token is used once during verification and is never stored.
+        </td>
+      </tr>
+    </table>
+
+    <h3>Activation wizard — steps</h3>
+    <ol class="steps">
+      <li>
+        <strong>License</strong> — Enter your purchase code and Envato personal token.
+        The system calls the Envato Market API to confirm the code belongs to this product.
+      </li>
+      <li>
+        <strong>Database</strong> — Enter your MySQL host, port, database name and credentials.
+        A live connection test is performed before saving.
+      </li>
+      <li>
+        <strong>Admin Account</strong> — Create the initial super-admin login (name, email, password).
+      </li>
+      <li>
+        <strong>Finalize</strong> — Runs <code>php artisan migrate</code>, creates the admin account, and clears all caches.
+        You are redirected to the admin dashboard.
+      </li>
+    </ol>
+
+    <div class="callout callout-success">
+      <strong>✅ After activation</strong> the wizard is no longer accessible to unauthenticated visitors.
+      Your <code>.env</code> file is updated with <code>APP_LICENSED=true</code> automatically.
+    </div>
+
+    <h3>Re-verifying after a domain change</h3>
+    <p>
+      If you migrate to a new domain, go to <strong>Admin → License</strong> (super admin only) and enter
+      your purchase code and a new Envato personal token. The license record will be updated with the new domain.
+    </p>
+
+    <div class="callout callout-warning">
+      <strong>⚠ One purchase = one live installation.</strong> A Regular License covers a single end product
+      for a single client. Purchase an Extended License or additional Regular Licenses for multiple deployments.
+      See the <a href="https://codecanyon.net/licenses/standard" target="_blank">Envato license terms</a> for details.
+    </div>
   </section>
 
   <!-- REQUIREMENTS -->
@@ -171,21 +239,36 @@ composer install --no-dev --optimize-autoloader</code></pre>
     <h3>Step 3 — Configure backend environment</h3>
     <pre><code>cp .env.example .env
 php artisan key:generate</code></pre>
-    <p>Now edit <code>backend/.env</code> — see the <a href="#backend-env">Backend .env</a> section for all required values.</p>
+    <p>
+      Edit <code>backend/.env</code> and set at minimum: <code>APP_URL</code>, <code>APP_FRONTEND_URL</code>,
+      <code>DB_*</code> credentials, and <code>ENVATO_ITEM_ID</code> (your CodeCanyon item ID).
+      See the <a href="#backend-env">Backend .env</a> section for all values.
+    </p>
 
-    <h3>Step 4 — Run migrations &amp; seed demo data</h3>
-    <pre><code>php artisan migrate --seed</code></pre>
-    <div class="callout callout-warning">
-      <strong>⚠ Production note:</strong> The seeder creates demo routes, schedules, and three users with password <code>password123</code>. Change all passwords immediately after setup.
+    <div class="callout callout-info">
+      <strong>ℹ ENVATO_ITEM_ID</strong> is the numeric ID in your CodeCanyon item URL:<br>
+      <code>https://codecanyon.net/item/sonyabus/<strong>12345678</strong></code> → set <code>ENVATO_ITEM_ID=12345678</code>
     </div>
 
-    <h3>Step 5 — Set storage permissions</h3>
+    <h3>Step 4 — Set storage permissions</h3>
     <pre><code>chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache</code></pre>
 
-    <h3>Step 6 — Optional: link storage</h3>
-    <p>Run this if the system uses public file uploads (e.g. favicon upload in Site Settings):</p>
-    <pre><code>php artisan storage:link</code></pre>
+    <h3>Step 5 — Configure your web server</h3>
+    <p>Point your web server to <code>backend/public/</code>. See the <a href="#webserver">Web Server</a> section for Nginx and Apache examples.</p>
+
+    <h3>Step 6 — Run the Installation Wizard</h3>
+    <p>
+      Open your backend URL in a browser. You will be automatically redirected to the installation wizard at
+      <code>https://your-backend-domain.com/install</code>.
+      Complete all 4 steps: <strong>License → Database → Admin Account → Finalize</strong>.
+    </p>
+    <p>The wizard will run database migrations and create your super-admin account.</p>
+
+    <div class="callout callout-warning">
+      <strong>⚠ After installation</strong>, the wizard creates demo data only if you ran <code>php artisan db:seed</code> manually.
+      The wizard itself does not seed demo data — your database starts clean.
+    </div>
 
     <h3>Step 7 — Install &amp; build the frontend</h3>
     <pre><code>cd ../frontend
@@ -195,8 +278,401 @@ npm install
 npm run build</code></pre>
     <p>The compiled app will be in <code>frontend/dist/</code>. Point your web server document root here for the customer-facing site.</p>
 
-    <h3>Step 8 — Configure your web server</h3>
-    <p>See the <a href="#webserver">Web Server</a> section for Nginx and Apache examples.</p>
+    <h3>(Optional) Seed demo data</h3>
+    <p>To populate the system with sample stations, routes, schedules, and user accounts for testing:</p>
+    <pre><code>php artisan db:seed</code></pre>
+    <div class="callout callout-danger">
+      <strong>🔴 Never seed on a live production database.</strong>
+      The seeder creates demo accounts with password <code>password123</code>.
+    </div>
+  </section>
+
+  <!-- CPANEL INSTALLATION -->
+  <section id="cpanel-install">
+    <h2>cPanel-এ Install করার পদ্ধতি</h2>
+    <p>
+      Shared hosting (Hostinger, Namecheap, Bluehost ইত্যাদি) যেখানে cPanel আছে সেখানে
+      SonyaBus install করতে নিচের steps অনুসরণ করুন।
+    </p>
+
+    <div class="callout callout-warning">
+      <strong>⚠ শর্ত:</strong> cPanel-এ <strong>PHP 8.2+</strong> এবং <strong>SSH / Terminal</strong> অথবা
+      <strong>Composer Manager</strong> plugin থাকতে হবে। বেশিরভাগ modern shared hosting-এ cPanel Terminal পাওয়া যায়।
+    </div>
+
+    <h3>পদক্ষেপ ১ — দুটো Subdomain তৈরি করুন</h3>
+    <p>
+      SonyaBus-এর backend এবং frontend আলাদা domain/subdomain-এ থাকে।
+      cPanel → <strong>Domains / Subdomains</strong> থেকে তৈরি করুন:
+    </p>
+    <table>
+      <tr><th>উদ্দেশ্য</th><th>Subdomain উদাহরণ</th><th>Document Root</th></tr>
+      <tr>
+        <td>Backend (Laravel API + Admin)</td>
+        <td><code>api.yourdomain.com</code></td>
+        <td><code>public_html/api/public</code></td>
+      </tr>
+      <tr>
+        <td>Frontend (React App)</td>
+        <td><code>app.yourdomain.com</code></td>
+        <td><code>public_html/app</code></td>
+      </tr>
+    </table>
+    <div class="callout callout-info">
+      <strong>ℹ বিকল্প:</strong> আলাদা subdomain না করে main domain-এও রাখা যায়। সেক্ষেত্রে
+      <code>yourdomain.com</code> → frontend, <code>yourdomain.com/api</code> নয় বরং
+      <code>api.yourdomain.com</code> → backend রাখাই ভালো।
+    </div>
+
+    <h3>পদক্ষেপ ২ — ফাইল আপলোড করুন</h3>
+    <ol class="steps">
+      <li>
+        <strong>ZIP প্রস্তুত করুন:</strong> আপনার কম্পিউটারে project-এর দুটো folder আলাদা করুন —
+        <code>backend.zip</code> এবং <code>frontend.zip</code>।
+      </li>
+      <li>
+        <strong>cPanel → File Manager</strong> খুলুন।
+        <code>public_html/</code> ফোল্ডারে যান।
+      </li>
+      <li>
+        <code>backend.zip</code> আপলোড করুন এবং <code>public_html/api/</code> ফোল্ডারে extract করুন।
+        <br>ফলে তৈরি হবে: <code>public_html/api/app/</code>, <code>public_html/api/public/</code> ইত্যাদি।
+      </li>
+      <li>
+        <code>frontend/dist/</code> এর সব contents আপলোড করুন <code>public_html/app/</code> ফোল্ডারে।
+        <br>(dist folder-এর ভেতরের files, folder নিজে নয়)
+      </li>
+    </ol>
+
+    <div class="callout callout-info">
+      <strong>ℹ dist folder তৈরি:</strong> Frontend build করতে আপনার local machine-এ:
+      <pre style="margin:8px 0 0;"><code>cd frontend
+npm install
+npm run build</code></pre>
+      তৈরি হওয়া <code>frontend/dist/</code> ফোল্ডারের সব files cPanel-এ আপলোড করুন।
+    </div>
+
+    <h3>পদক্ষেপ ৩ — Subdomain Document Root ঠিক করুন</h3>
+    <p>
+      cPanel → <strong>Domains</strong> → <code>api.yourdomain.com</code> এর Document Root
+      <strong>অবশ্যই</strong> <code>public_html/api/public</code> হতে হবে — <code>public_html/api</code> নয়।
+      এটা না হলে Laravel 500 error দেবে।
+    </p>
+
+    <h3>পদক্ষেপ ৪ — .env ফাইল তৈরি করুন</h3>
+    <p>
+      cPanel File Manager → <code>public_html/api/</code> ফোল্ডারে যান।
+      <code>.env.example</code> ফাইলটি copy করে নাম দিন <code>.env</code>।
+      তারপর Edit করুন:
+    </p>
+    <pre><code>APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://api.yourdomain.com
+APP_FRONTEND_URL=https://app.yourdomain.com
+ENVATO_ITEM_ID=12345678   &lt;-- আপনার CodeCanyon item ID
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=yourusername_sonyabus   &lt;-- cPanel database নাম
+DB_USERNAME=yourusername_dbuser     &lt;-- cPanel database user
+DB_PASSWORD=your_db_password</code></pre>
+
+    <h3>পদক্ষেপ ৫ — MySQL Database তৈরি করুন</h3>
+    <p>cPanel → <strong>MySQL Databases</strong>:</p>
+    <ol class="steps">
+      <li>নতুন database তৈরি করুন: যেমন <code>yourusername_sonyabus</code></li>
+      <li>নতুন user তৈরি করুন: যেমন <code>yourusername_dbuser</code> — শক্তিশালী password দিন</li>
+      <li>User-কে database-এ <strong>ALL PRIVILEGES</strong> দিন</li>
+    </ol>
+
+    <h3>পদক্ষেপ ৬ — Terminal থেকে Composer চালান</h3>
+    <p>cPanel → <strong>Terminal</strong> (অথবা SSH client যেমন PuTTY):</p>
+    <pre><code># backend folder-এ যান
+cd public_html/api
+
+# APP_KEY generate করুন
+php artisan key:generate
+
+# Dependencies install করুন
+composer install --no-dev --optimize-autoloader
+
+# Storage link তৈরি করুন
+php artisan storage:link</code></pre>
+
+    <div class="callout callout-warning">
+      <strong>⚠ Composer না থাকলে:</strong> cPanel-এ Softaculous বা hosting provider-এর
+      "Composer Manager" ব্যবহার করুন। অথবা local machine-এ
+      <code>composer install --no-dev</code> চালিয়ে <code>vendor/</code> folder-সহ আপলোড করুন।
+    </div>
+
+    <h3>পদক্ষেপ ৭ — .htaccess চেক করুন</h3>
+    <p>
+      <code>public_html/api/public/.htaccess</code> ফাইলটি আছে কিনা দেখুন।
+      না থাকলে নিচেরটা তৈরি করুন:
+    </p>
+    <pre><code>&lt;IfModule mod_rewrite.c&gt;
+    &lt;IfModule mod_negotiation.c&gt;
+        Options -MultiViews -Indexes
+    &lt;/IfModule&gt;
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+&lt;/IfModule&gt;</code></pre>
+
+    <h3>পদক্ষেপ ৮ — Frontend-এর .htaccess তৈরি করুন</h3>
+    <p>
+      React app-এর জন্য <code>public_html/app/.htaccess</code> তৈরি করুন
+      (React Router-এর জন্য সব request index.html-এ redirect করতে হবে):
+    </p>
+    <pre><code>&lt;IfModule mod_rewrite.c&gt;
+    RewriteEngine On
+    RewriteBase /
+
+    # Don't rewrite files or directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Rewrite everything else to index.html
+    RewriteRule ^ index.html [L]
+&lt;/IfModule&gt;</code></pre>
+
+    <h3>পদক্ষেপ ৯ — Installation Wizard চালান</h3>
+    <p>
+      Browser-এ <code>https://api.yourdomain.com</code> খুলুন।
+      Automatically <code>/install</code> এ redirect হবে।
+      4টি step সম্পন্ন করুন: <strong>License → Database → Admin → Finalize</strong>.
+    </p>
+
+    <h3>পদক্ষেপ ১০ — Cron Job সেটআপ করুন</h3>
+    <p>cPanel → <strong>Cron Jobs</strong> → "Add New Cron Job":</p>
+    <pre><code>* * * * * /usr/bin/php /home/yourusername/public_html/api/artisan schedule:run >> /dev/null 2>&1</code></pre>
+    <div class="callout callout-info">
+      <strong>ℹ php path:</strong> আপনার hosting-এ php binary path আলাদা হতে পারে।
+      Terminal-এ <code>which php</code> চালিয়ে দেখুন।
+    </div>
+
+    <h3>পদক্ষেপ ১১ — Queue Worker সেটআপ করুন</h3>
+    <p>SMS notification queue-এর জন্য। cPanel → <strong>Cron Jobs</strong>:</p>
+    <pre><code>* * * * * /usr/bin/php /home/yourusername/public_html/api/artisan queue:work --stop-when-empty >> /dev/null 2>&1</code></pre>
+    <div class="callout callout-warning">
+      <strong>⚠ Shared hosting limitation:</strong> বেশিরভাগ shared hosting-এ persistent background process চালানো যায় না।
+      তাই <code>queue:work</code> এর বদলে <code>queue:work --stop-when-empty</code> ব্যবহার করুন
+      এবং cron দিয়ে প্রতি মিনিটে চালান।
+    </div>
+
+    <div class="callout callout-success">
+      <strong>✅ সব শেষ!</strong> এখন <code>https://api.yourdomain.com/admin</code> → admin dashboard,
+      <code>https://app.yourdomain.com</code> → customer app।
+    </div>
+  </section>
+
+  <!-- LOCAL INSTALLATION -->
+  <section id="local-install">
+    <h2>Local Machine-এ Install করার পদ্ধতি (Laragon / XAMPP)</h2>
+    <p>
+      Windows-এ <strong>Laragon</strong> বা <strong>XAMPP</strong> দিয়ে local development environment সেটআপ করুন।
+      Laragon সবচেয়ে সহজ এবং recommended।
+    </p>
+
+    <h3>Option A — Laragon (Recommended)</h3>
+
+    <h4>পদক্ষেপ ১ — Laragon ইনস্টল করুন</h4>
+    <ol class="steps">
+      <li>
+        <a href="https://laragon.org/download/" target="_blank">laragon.org/download</a> থেকে
+        <strong>Laragon Full</strong> (6.0+) ডাউনলোড করে ইনস্টল করুন।
+        এতে PHP 8.2, MySQL, Apache, Composer, Node.js সব আসে।
+      </li>
+      <li>Laragon চালু করুন → <strong>Start All</strong> ক্লিক করুন।</li>
+    </ol>
+
+    <h4>পদক্ষেপ ২ — Project রাখুন</h4>
+    <p>
+      Laragon-এর default root folder: <code>C:\laragon\www\</code><br>
+      Project ফোল্ডার রাখুন: <code>C:\laragon\www\bus-app\</code>
+    </p>
+    <pre><code>C:\laragon\www\bus-app\
+├── backend\      &lt;-- Laravel
+└── frontend\     &lt;-- React</code></pre>
+
+    <h4>পদক্ষেপ ৩ — Database তৈরি করুন</h4>
+    <p>
+      Laragon → <strong>Database</strong> icon ক্লিক করুন (HeidiSQL খুলবে)।
+      Left panel → right click → <strong>Create new → Database</strong> → নাম দিন <code>sonyabus</code>।
+    </p>
+
+    <h4>পদক্ষেপ ৪ — Backend সেটআপ করুন</h4>
+    <p>Laragon Terminal বা Windows Terminal খুলুন:</p>
+    <pre><code>cd C:\laragon\www\bus-app\backend
+
+# .env তৈরি করুন
+copy .env.example .env
+
+# APP_KEY generate
+php artisan key:generate</code></pre>
+
+    <p><code>.env</code> ফাইলটি Notepad++ বা VS Code দিয়ে edit করুন:</p>
+    <pre><code>APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://bus-app.test/api   # অথবা http://localhost:8000
+APP_FRONTEND_URL=http://localhost:5173
+ENVATO_ITEM_ID=12345678
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sonyabus
+DB_USERNAME=root
+DB_PASSWORD=        # Laragon-এ default password নেই</code></pre>
+
+    <pre><code># Composer dependencies
+composer install
+
+# Storage link
+php artisan storage:link</code></pre>
+
+    <h4>পদক্ষেপ ৫ — Virtual Host সেটআপ (Laragon Auto Virtual Host)</h4>
+    <p>
+      Laragon automatically virtual host তৈরি করে। Laragon → <strong>Menu → Apache → sites-enabled</strong>
+      এ যান, অথবা Laragon-এ <strong>Menu → Laragon → Preferences → Services &amp; Ports</strong>
+      নিশ্চিত করুন "Auto Virtual Hosts" চালু আছে।
+    </p>
+    <p>
+      <code>C:\laragon\www\bus-app\backend\public</code> কে serve করতে
+      Laragon-এর Virtual Host নিজেই কনফিগার করে। Browser-এ যান:
+      <code>http://bus-app.test</code> — কিন্তু এটি root serve করবে।
+    </p>
+    <div class="callout callout-info">
+      <strong>ℹ সহজ উপায়:</strong> Laragon Virtual Host ঝামেলা এড়িয়ে
+      <code>php artisan serve</code> ব্যবহার করুন (নিচে দেখুন)।
+    </div>
+
+    <h4>পদক্ষেপ ৬ — Backend Server চালু করুন</h4>
+    <pre><code>cd C:\laragon\www\bus-app\backend
+php artisan serve</code></pre>
+    <p>Backend চলবে: <code>http://localhost:8000</code></p>
+
+    <h4>পদক্ষেপ ৭ — Frontend সেটআপ করুন</h4>
+    <p>নতুন Terminal খুলুন:</p>
+    <pre><code>cd C:\laragon\www\bus-app\frontend
+
+# .env তৈরি করুন
+copy .env.example .env</code></pre>
+
+    <p><code>frontend\.env</code> edit করুন:</p>
+    <pre><code>VITE_API_BASE_URL=http://localhost:8000/api
+VITE_ZINIPAY_API_KEY=your_zinipay_test_key</code></pre>
+
+    <pre><code>npm install
+npm run dev</code></pre>
+    <p>Frontend চলবে: <code>http://localhost:5173</code></p>
+
+    <h4>পদক্ষেপ ৮ — Installation Wizard</h4>
+    <p>
+      Browser-এ <code>http://localhost:8000</code> খুলুন → automatically <code>/install</code> এ যাবে।
+      4 step সম্পন্ন করুন।
+    </p>
+    <div class="callout callout-info">
+      <strong>ℹ Local license verification:</strong> Local machine-এ Envato API call করতে
+      internet connection লাগবে। Purchase code test করতে real purchase code ব্যবহার করুন।
+      <br><br>
+      <strong>Development-এ license bypass করতে</strong> (testing এর জন্য):
+      <code>.env</code>-এ <code>APP_LICENSED=true</code> দিয়ে manually migration run করুন:
+      <pre style="margin:8px 0 0;"><code>php artisan migrate
+php artisan db:seed  # optional demo data</code></pre>
+    </div>
+
+    <h4>পদক্ষেপ ৯ — Queue Worker চালু করুন (SMS-এর জন্য)</h4>
+    <pre><code>cd C:\laragon\www\bus-app\backend
+php artisan queue:work</code></pre>
+
+    <div class="callout callout-success">
+      <strong>✅ Local setup সম্পন্ন!</strong><br>
+      Admin: <code>http://localhost:8000/admin</code><br>
+      Customer App: <code>http://localhost:5173</code>
+    </div>
+
+    <hr style="margin: 32px 0; border-color: var(--border);">
+
+    <h3>Option B — XAMPP</h3>
+
+    <h4>পদক্ষেপ ১ — XAMPP সেটআপ</h4>
+    <ol class="steps">
+      <li>
+        <a href="https://www.apachefriends.org/" target="_blank">apachefriends.org</a> থেকে
+        XAMPP (PHP 8.2+) ইনস্টল করুন।
+      </li>
+      <li>XAMPP Control Panel → <strong>Apache</strong> এবং <strong>MySQL</strong> Start করুন।</li>
+      <li>
+        Project রাখুন: <code>C:\xampp\htdocs\bus-app\</code>
+      </li>
+    </ol>
+
+    <h4>পদক্ষেপ ২ — Virtual Host কনফিগার করুন</h4>
+    <p><code>C:\xampp\apache\conf\extra\httpd-vhosts.conf</code> ফাইলে add করুন:</p>
+    <pre><code>&lt;VirtualHost *:80&gt;
+    DocumentRoot "C:/xampp/htdocs/bus-app/backend/public"
+    ServerName bus-api.local
+
+    &lt;Directory "C:/xampp/htdocs/bus-app/backend/public"&gt;
+        AllowOverride All
+        Require all granted
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+
+    <p><code>C:\Windows\System32\drivers\etc\hosts</code> ফাইলে (Admin হিসেবে) add করুন:</p>
+    <pre><code>127.0.0.1   bus-api.local</code></pre>
+
+    <p>XAMPP → Apache → <strong>Restart</strong> করুন।</p>
+
+    <h4>পদক্ষেপ ৩ — Database তৈরি করুন</h4>
+    <p>Browser-এ <code>http://localhost/phpmyadmin</code> → নতুন database তৈরি করুন: <code>sonyabus</code></p>
+
+    <h4>পদক্ষেপ ৪ — Backend সেটআপ করুন</h4>
+    <p>XAMPP Shell বা Windows Terminal (cmd) খুলুন:</p>
+    <pre><code>cd C:\xampp\htdocs\bus-app\backend
+copy .env.example .env
+php artisan key:generate
+composer install
+php artisan storage:link</code></pre>
+
+    <p><code>.env</code> edit করুন:</p>
+    <pre><code>APP_URL=http://bus-api.local
+APP_FRONTEND_URL=http://localhost:5173
+DB_HOST=127.0.0.1
+DB_DATABASE=sonyabus
+DB_USERNAME=root
+DB_PASSWORD=     # XAMPP-এ default password নেই</code></pre>
+
+    <h4>পদক্ষেপ ৫ — Frontend চালু করুন</h4>
+    <pre><code>cd C:\xampp\htdocs\bus-app\frontend
+copy .env.example .env
+# VITE_API_BASE_URL=http://bus-api.local/api দিন
+npm install
+npm run dev</code></pre>
+
+    <h4>পদক্ষেপ ৬ — Installation Wizard</h4>
+    <p>Browser-এ <code>http://bus-api.local</code> খুলুন → <code>/install</code> wizard সম্পন্ন করুন।</p>
+
+    <div class="callout callout-success">
+      <strong>✅ XAMPP setup সম্পন্ন!</strong><br>
+      Admin: <code>http://bus-api.local/admin</code><br>
+      Customer App: <code>http://localhost:5173</code>
+    </div>
   </section>
 
   <!-- BACKEND ENV -->
@@ -208,6 +684,10 @@ APP_KEY=           # generated by php artisan key:generate
 APP_DEBUG=false    # MUST be false in production
 APP_URL=https://your-backend-domain.com
 APP_FRONTEND_URL=https://your-frontend-domain.com
+APP_LICENSED=false # set automatically to true after license activation
+
+# Envato license — numeric ID from your CodeCanyon item URL
+ENVATO_ITEM_ID=12345678
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -359,6 +839,7 @@ server {
       <tr><td>Coupons</td><td><code>promotions</code></td><td>Create promo codes with flat discount amounts</td></tr>
       <tr><td>Users &amp; Roles</td><td><code>users</code></td><td>Manage customer and admin accounts, assign menu permissions</td></tr>
       <tr><td>Ticket Reports</td><td><code>reports</code></td><td>11 report types with PDF &amp; Excel export</td></tr>
+      <tr><td>License</td><td>Super Admin only</td><td>View license status, re-verify after domain migration</td></tr>
       <tr><td>Site Settings</td><td>Super Admin only</td><td>Site name, favicon, maintenance mode, SEO, footer text</td></tr>
       <tr><td>Integrations</td><td>Super Admin only</td><td>Configure SMS, mail, and ZiniPay gateways</td></tr>
     </table>
@@ -493,6 +974,8 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
   <!-- TROUBLESHOOTING -->
   <section id="troubleshooting">
     <h2>Troubleshooting</h2>
+
+    <h3>সাধারণ সমস্যা</h3>
     <table>
       <tr><th>Symptom</th><th>Likely cause &amp; fix</th></tr>
       <tr>
@@ -527,7 +1010,168 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
         <td>Seat map shows all seats unavailable</td>
         <td>Check that the schedule date is today or in the future. Past schedules show all seats as expired.</td>
       </tr>
+      <tr>
+        <td>License wizard: "ENVATO_ITEM_ID is not configured"</td>
+        <td><code>.env</code> ফাইলে <code>ENVATO_ITEM_ID=</code> এর পরে আপনার CodeCanyon item ID দিন এবং <code>php artisan config:clear</code> চালান।</td>
+      </tr>
+      <tr>
+        <td>License wizard: "Invalid or expired personal token"</td>
+        <td>Envato personal token expire হয়ে থাকতে পারে। <a href="https://build.envato.com/create-token/?purchase:verify=t" target="_blank">build.envato.com</a> থেকে নতুন token তৈরি করুন।</td>
+      </tr>
+      <tr>
+        <td>License wizard: "purchase code is for a different product"</td>
+        <td>আপনি অন্য কোনো CodeCanyon item-এর purchase code দিচ্ছেন। SonyaBus-এর purchase code ব্যবহার করুন।</td>
+      </tr>
     </table>
+
+    <h3>cPanel-এ সাধারণ সমস্যা</h3>
+    <table>
+      <tr><th>সমস্যা</th><th>সমাধান</th></tr>
+      <tr>
+        <td>cPanel-এ site খুললে <code>Object not found</code> বা index দেখায়</td>
+        <td>
+          Subdomain-এর Document Root ভুল সেট আছে।
+          cPanel → <strong>Domains</strong> → <code>api.yourdomain.com</code> এর Document Root
+          <code>public_html/api/public</code> করুন — <code>public_html/api</code> নয়।
+        </td>
+      </tr>
+      <tr>
+        <td><code>composer: command not found</code></td>
+        <td>
+          Terminal-এ <code>composer</code> নেই। Local machine-এ
+          <code>composer install --no-dev</code> চালিয়ে <code>vendor/</code> folder সহ upload করুন।
+          অথবা hosting provider-এর Composer Manager ব্যবহার করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>PHP version error: <code>requires PHP 8.2</code></td>
+        <td>
+          cPanel → <strong>MultiPHP Manager</strong> → আপনার domain select করুন →
+          PHP version <strong>8.2</strong> বা higher select করুন।
+        </td>
+      </tr>
+      <tr>
+        <td><code>.env</code> ফাইল দেখা যাচ্ছে না File Manager-এ</td>
+        <td>
+          cPanel File Manager → Settings → <strong>"Show Hidden Files (dotfiles)"</strong> চেক করুন।
+          <code>.env</code> একটি hidden file।
+        </td>
+      </tr>
+      <tr>
+        <td>Database connection error wizard-এ</td>
+        <td>
+          cPanel MySQL-এ database user-কে database-এ assign করতে হয়।
+          cPanel → <strong>MySQL Databases</strong> → "Add User to Database" → ALL PRIVILEGES দিন।
+          DB_HOST সাধারণত <code>localhost</code> (127.0.0.1 নয়)।
+        </td>
+      </tr>
+      <tr>
+        <td><code>storage/logs</code> write permission error</td>
+        <td>
+          cPanel File Manager → <code>public_html/api/storage</code> → right click →
+          <strong>Change Permissions</strong> → <code>755</code> থেকে <code>775</code> করুন।
+          Recursively apply করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>React app route refresh করলে 404 হয়</td>
+        <td>
+          <code>public_html/app/.htaccess</code> ফাইল নেই বা ভুল।
+          Installation guide-এর <strong>পদক্ষেপ ৮</strong> এর .htaccess content ব্যবহার করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>SSL/HTTPS mixed content warning</td>
+        <td>
+          <code>APP_URL</code> এবং <code>APP_FRONTEND_URL</code> উভয়ই <code>https://</code> দিয়ে শুরু হওয়া উচিত।
+          cPanel → <strong>SSL/TLS</strong> → Let's Encrypt certificate install করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>Cron job কাজ করছে না</td>
+        <td>
+          Terminal-এ <code>which php</code> চালিয়ে সঠিক PHP path বের করুন।
+          Cron command-এ সেই path ব্যবহার করুন, যেমন: <code>/opt/cpanel/ea-php82/root/usr/bin/php</code>
+        </td>
+      </tr>
+    </table>
+
+    <h3>Local (Laragon/XAMPP)-এ সাধারণ সমস্যা</h3>
+    <table>
+      <tr><th>সমস্যা</th><th>সমাধান</th></tr>
+      <tr>
+        <td>Laragon-এ <code>php artisan serve</code> চালালে port conflict</td>
+        <td>
+          <code>php artisan serve --port=8001</code> দিয়ে অন্য port ব্যবহার করুন।
+          তারপর frontend <code>.env</code>-এ <code>VITE_API_BASE_URL=http://localhost:8001/api</code> আপডেট করুন।
+        </td>
+      </tr>
+      <tr>
+        <td><code>SQLSTATE: Connection refused</code> error</td>
+        <td>
+          Laragon বা XAMPP-এ MySQL চালু নেই। Laragon → <strong>Start All</strong>
+          অথবা XAMPP Control Panel → MySQL → <strong>Start</strong> করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>Frontend-এ API call করলে CORS error</td>
+        <td>
+          <code>backend/config/cors.php</code> এ <code>allowed_origins</code>-এ
+          <code>http://localhost:5173</code> আছে কিনা দেখুন।
+          থাকলে <code>php artisan config:clear</code> চালান।
+        </td>
+      </tr>
+      <tr>
+        <td>Windows-এ <code>php artisan key:generate</code> কাজ করছে না</td>
+        <td>
+          <code>.env</code> ফাইল নেই। আগে <code>copy .env.example .env</code> চালান,
+          তারপর <code>php artisan key:generate</code>।
+        </td>
+      </tr>
+      <tr>
+        <td>npm install-এ <code>node-gyp</code> error</td>
+        <td>
+          Windows Build Tools install করুন:
+          <code>npm install --global windows-build-tools</code>
+          অথবা Node.js LTS version ব্যবহার করুন (20 LTS recommended)।
+        </td>
+      </tr>
+      <tr>
+        <td>Laragon-এ Virtual Host-এ 403 Forbidden</td>
+        <td>
+          Laragon → Menu → Apache → <code>httpd-vhosts.conf</code> edit করুন।
+          Document root <code>backend/public</code> হওয়া নিশ্চিত করুন,
+          <code>backend</code> নয়। Apache restart করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>Local-এ License verify হচ্ছে না</td>
+        <td>
+          Internet connection চেক করুন (Envato API call লাগে)।
+          Testing-এর জন্য <code>.env</code>-এ <code>APP_LICENSED=true</code> দিয়ে
+          <code>php artisan migrate</code> manually run করুন।
+        </td>
+      </tr>
+      <tr>
+        <td>Queue worker ছাড়া SMS যাচ্ছে না</td>
+        <td>
+          Local-এ আলাদা terminal-এ <code>php artisan queue:work</code> চালান।
+          অথবা testing-এর জন্য <code>.env</code>-এ <code>QUEUE_CONNECTION=sync</code> দিন
+          (synchronous — no worker needed, but blocks the request)।
+        </td>
+      </tr>
+    </table>
+
+    <h3>Log ফাইল দেখার পদ্ধতি</h3>
+    <p>যেকোনো error debug করতে প্রথমে log দেখুন:</p>
+    <pre><code># Terminal থেকে
+tail -f storage/logs/laravel.log
+
+# Windows-এ (PowerShell)
+Get-Content storage\logs\laravel.log -Wait -Tail 50
+
+# cPanel-এ
+# File Manager → public_html/api/storage/logs/laravel.log → View</code></pre>
   </section>
 
   <!-- SUPPORT -->
