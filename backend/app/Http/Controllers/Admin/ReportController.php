@@ -43,7 +43,12 @@ class ReportController extends BaseAdminController
 
         $buses = \App\Models\Bus::orderBy('operator_name')->get();
 
-        return view("admin.reports.pages.{$type}", compact('routes', 'buses', 'type'));
+        return view("admin.reports.pages.{$type}", compact('routes', 'buses', 'type') + [
+            'siteSettings' => array_merge([
+                'logo_url'  => '',
+                'logo_text' => '',
+            ], \App\Models\SiteSetting::getAll()),
+        ]);
     }
 
     public function sellingPreview(Request $request)

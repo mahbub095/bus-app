@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AjaxController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BusController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RouteController;
@@ -13,8 +14,44 @@ use App\Http\Controllers\Admin\SiteSettingsController;
 use App\Http\Controllers\Admin\GatewaySettingsController;
 use App\Http\Controllers\Admin\StationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Install\InstallController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Installation Wizard (license-gated; bypasses EnsureLicenseIsActivated)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/install', [InstallController::class, 'showLicense'])->name('install.license');
+
+// Step 1 — License: POST form submit + GET fallback redirect (refresh / direct visit)
+Route::post('/install/license/verify', [InstallController::class, 'verifyLicense'])->name('install.license.verify');
+Route::get('/install/license/verify', function () {
+    return redirect('/install');
+});
+
+// Step 2 — Database: GET form page, POST save, GET fallback redirect
+Route::get('/install/database', [InstallController::class, 'showDatabase'])->name('install.database');
+Route::post('/install/database/save', [InstallController::class, 'saveDatabase'])->name('install.database.save');
+Route::get('/install/database/save', function () {
+    return redirect('/install/database');
+});
+
+// Step 3 — Admin: GET form page, POST save, GET fallback redirect
+Route::get('/install/admin', [InstallController::class, 'showAdmin'])->name('install.admin');
+Route::post('/install/admin/save', [InstallController::class, 'saveAdmin'])->name('install.admin.save');
+Route::get('/install/admin/save', function () {
+    return redirect('/install/admin');
+});
+
+// Step 4 — Finalize: GET (animated progress UI) + POST (AJAX runner)
+Route::get('/install/finalize',  [InstallController::class, 'finalize'])    ->name('install.finalize');
+Route::post('/install/finalize/run', [InstallController::class, 'runFinalize'])->name('install.finalize.run');
+Route::get('/install/finalize/run', function () {
+    return redirect('/install/finalize');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -30,11 +67,12 @@ Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payme
 /*
 |--------------------------------------------------------------------------
 | Admin authentication (session)
+| Rate-limited: 10 attempts per minute per IP to prevent brute-force.
 |--------------------------------------------------------------------------
 */
 
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/admin/login', [AuthController::class, 'login']);
+Route::post('/admin/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
@@ -219,12 +257,24 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | License Management (Super Admin)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('super_admin')->group(function () {
+        Route::get('/admin/license', [LicenseController::class, 'info'])->name('admin.license.info');
+        Route::post('/admin/license/re-verify', [LicenseController::class, 'reVerify'])->name('admin.license.re-verify');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | System Settings & Configuration (Super Admin)
     |--------------------------------------------------------------------------
     */
     Route::middleware('super_admin')->group(function () {
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
+        Route::post('/admin/site-settings/logo', [SiteSettingsController::class, 'uploadLogo'])->name('admin.site-settings.logo');
+        Route::delete('/admin/site-settings/logo', [SiteSettingsController::class, 'deleteLogo'])->name('admin.site-settings.logo.delete');
         
         // Gateways & Integrations separate configuration update routes
         Route::post('/admin/gateway-settings/sms', [GatewaySettingsController::class, 'updateSms'])->name('admin.gateway-settings.update-sms');

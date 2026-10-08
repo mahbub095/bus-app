@@ -74,6 +74,11 @@
     @endif
 
     @if(Auth::user()->isSuperAdmin())
+    <!-- License Management -->
+    <section class="admin-tab-content" id="tab-content-license">
+        @include('admin.partials.license')
+    </section>
+
     <!-- Sub-tab 12: Site Settings (Footer, Title, Favicon, Maintenance, SEO) -->
     <section class="admin-tab-content" id="tab-content-site-settings">
         @include('admin.partials.site-settings')

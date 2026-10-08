@@ -24,6 +24,9 @@ trait RedirectsToAdminTab
             'reports',
             'profile',
             'users',
+            'license',
+            'site-settings',
+            'gateways',
         ];
 
         $tab = $request->input('admin_tab', 'coach-services');

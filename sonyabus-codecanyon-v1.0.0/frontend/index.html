@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function () {
+        const storageKey = 'sonyabus_theme';
+        const saved = localStorage.getItem(storageKey);
+        const theme = saved === 'dark' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SonyaBus | Premium Bus Ticket Reservation</title>
+    <meta name="description" content="Book premium bus tickets across Bangladesh with SonyaBus. Secure online booking, custom seat selection, instant PNR invoice, and promo codes." />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
