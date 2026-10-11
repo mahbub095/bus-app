@@ -49,11 +49,13 @@ class InstallController extends Controller
             return redirect('/admin/login');
         }
 
-        $request->validate(['purchase_code' => 'required|string|max:100']);
+        $request->validate([
+            'purchase_code' => 'required|string|max:100',
+        ]);
 
         $result = $this->licenseService->verify(
-            purchaseCode: $request->input('purchase_code'),
-            persistDb:    false
+            purchaseCode: trim($request->input('purchase_code')),
+            persistDb:    false,
         );
 
         if (! $result['success']) {

@@ -21,13 +21,8 @@
         </div>
     </div>
 
-    {{-- Alerts --}}
     @if ($errors->any())
         <div class="alert alert-error">{{ $errors->first() }}</div>
-    @endif
-
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
     {{-- ── FORM STATE ─────────────────────────────────────────────────── --}}
@@ -45,9 +40,10 @@
                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                     required
                     autocomplete="off"
+                    spellcheck="false"
                 >
                 <p class="form-help">
-                    Find it in
+                    Find your purchase code in
                     <a href="https://help.market.envato.com/hc/en-us/articles/202822600" target="_blank">
                         Envato Market → Downloads → Licenses &amp; Purchase Codes
                     </a>.
@@ -63,7 +59,7 @@
     </div>
 
     {{-- ── LOADING STATE ───────────────────────────────────────────────── --}}
-    <div id="stateLoading" style="display:none; text-align:center; padding: 20px 0 28px;">
+    <div id="stateLoading" style="display:none; text-align:center; padding: 24px 0 32px;">
         <div style="
             width: 52px; height: 52px;
             border: 5px solid #e2e8f0;
@@ -83,53 +79,40 @@
     <style>
         @keyframes spin { to { transform: rotate(360deg); } }
         .alert-error {
-            background: #fef2f2;
-            border-left: 4px solid #ef4444;
-            color: #991b1b;
-            border-radius: 6px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            background: #fef2f2; border-left: 4px solid #ef4444;
+            color: #991b1b; border-radius: 6px;
+            padding: 12px 16px; margin-bottom: 20px; font-size: 14px;
         }
-        .alert-success {
-            background: #f0fdf4;
-            border-left: 4px solid #10b981;
-            color: #065f46;
-            border-radius: 6px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
+        .form-help { font-size: 12px; color: #64748b; margin-top: 6px; line-height: 1.5; }
+        .form-help a { color: #667eea; text-decoration: none; }
+        .form-help a:hover { text-decoration: underline; }
     </style>
 
     <script>
-        const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const CSRF    = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
         function submitLicense() {
-            const code   = document.getElementById('purchase_code').value.trim();
-            const errEl  = document.getElementById('formError');
+            const code  = document.getElementById('purchase_code').value.trim();
+            const errEl = document.getElementById('formError');
 
-            if (!code) {
+            errEl.style.display = 'none';
+
+            if (! code) {
                 errEl.textContent = 'Please enter your purchase code.';
                 errEl.style.display = 'block';
                 return;
             }
-
-            // Basic UUID format check
-            const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRe.test(code)) {
-                errEl.textContent = 'Invalid purchase code format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+            if (! UUID_RE.test(code)) {
+                errEl.textContent = 'Invalid format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
                 errEl.style.display = 'block';
                 return;
             }
 
-            errEl.style.display = 'none';
-
-            // Show loader
+            // Show loader, hide form
             document.getElementById('stateForm').style.display    = 'none';
             document.getElementById('stateLoading').style.display = 'block';
 
-            // Submit via fetch so we control the transition
             const formData = new FormData();
             formData.append('_token', CSRF);
             formData.append('purchase_code', code);
@@ -140,36 +123,30 @@
                 redirect: 'follow',
             })
             .then(response => {
-                // If server redirected us to /install/database → go there
                 if (response.ok || response.redirected) {
                     window.location.href = response.url || '/install/database';
                 } else {
                     return response.text().then(html => {
-                        // Parse error message from redirected page
-                        document.open();
-                        document.write(html);
-                        document.close();
+                        document.open(); document.write(html); document.close();
                     });
                 }
             })
             .catch(() => {
-                // Fallback: just do a normal form POST
+                // Fallback: plain form POST
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/install/license/verify';
-                const t = document.createElement('input');
-                t.type = 'hidden'; t.name = '_token'; t.value = CSRF;
-                form.appendChild(t);
-                const p = document.createElement('input');
-                p.type = 'hidden'; p.name = 'purchase_code'; p.value = code;
-                form.appendChild(p);
+                [['_token', CSRF], ['purchase_code', code]].forEach(([n, v]) => {
+                    const i = document.createElement('input');
+                    i.type = 'hidden'; i.name = n; i.value = v;
+                    form.appendChild(i);
+                });
                 document.body.appendChild(form);
                 form.submit();
             });
         }
 
-        // Allow Enter key to submit
-        document.getElementById('purchase_code').addEventListener('keydown', function(e) {
+        document.getElementById('purchase_code').addEventListener('keydown', function (e) {
             if (e.key === 'Enter') { e.preventDefault(); submitLicense(); }
         });
     </script>
