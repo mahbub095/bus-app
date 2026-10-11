@@ -19,6 +19,24 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Skip all DB-dependent boot logic during the install wizard.
+        // APP_INSTALLED=false means tables may not exist yet.
+        $isInstalled = (function () {
+            $flag = env('APP_INSTALLED', false);
+            if ($flag === true || $flag === 1) return true;
+            if (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true)) return true;
+            return file_exists(storage_path('framework/installed'));
+        })();
+
+        if (! $isInstalled) {
+            // Share empty defaults so admin.layout doesn't crash
+            View::composer('admin.layout', function ($view) {
+                $view->with('siteSettings', []);
+                $view->with('smsConfig', null);
+            });
+            return;
+        }
+
         // Dynamic gateway and service configuration overrides from database
         try {
             if (Schema::hasTable('site_settings')) {
