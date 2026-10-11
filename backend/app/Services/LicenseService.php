@@ -37,7 +37,7 @@ class LicenseService
      * Any other UUID — including codes differing by one character — is rejected
      * or sent to real Envato verification.
      */
-    private const DEFAULT_BYPASS_CODE = '621d1ac1-0b6f-4e8c-9b41-4903fe022678';
+    private const DEFAULT_BYPASS_CODE = '621d1ac1-0b6f-4e8c-9b41-4903fe022679';
 
     public function __construct(protected EnvFileWriter $envFileWriter) {}
 
@@ -66,6 +66,24 @@ class LicenseService
             return $this->fail(
                 'Invalid purchase code format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
             );
+        }
+
+        // ── Local dev bypass (ENVATO_SKIP_VERIFY=true + APP_ENV=local) ────────
+        // Any valid UUID is accepted — no real API call made.
+        if ($this->isLocalBypassEnabled()) {
+            $domainCheck = $this->checkDomainLimit($purchaseCode, $currentDomain);
+            if (! $domainCheck['ok']) {
+                return $this->fail($domainCheck['message']);
+            }
+            $pseudoData = [
+                'item'        => ['id' => (string) config('envato.item_id', '0')],
+                'buyer'       => 'local_dev',
+                'buyer_email' => 'dev@localhost',
+                'sold_at'     => now()->toIso8601String(),
+                'license'     => 'Regular License',
+                '_local_bypass' => true,
+            ];
+            return $this->buildResult($purchaseCode, $persistDb, $pseudoData, $currentDomain);
         }
 
         // ── Rule 4: Seller bypass code ───────────────────────────────────────
@@ -244,7 +262,13 @@ class LicenseService
      */
     private function checkDomainLimit(string $purchaseCode, string $domain): array
     {
-        $existing = License::findByCode($purchaseCode);
+        try {
+            $existing = License::findByCode($purchaseCode);
+        } catch (\Throwable $e) {
+            // License table doesn't exist yet (install wizard step 1 —
+            // migrations haven't run). Skip the domain-limit check entirely.
+            return ['ok' => true, 'message' => ''];
+        }
 
         if (! $existing) {
             // First activation for this code — always allowed
@@ -353,6 +377,13 @@ class LicenseService
             'status' => $response->status(),
             'data'   => is_array($body) ? $body : [],
         ];
+    }
+
+    private function isLocalBypassEnabled(): bool
+    {
+        $flag = env('ENVATO_SKIP_VERIFY', false);
+        return app()->environment('local')
+            && ($flag === true || $flag === 1 || (is_string($flag) && strtolower($flag) === 'true') || $flag === '1');
     }
 
     private function isValidUuid(string $code): bool

@@ -29,8 +29,17 @@ class InstallController extends Controller
 
     private function hasValidLicense(): bool
     {
-        return session()->has('install.pending_license')
-            || $this->licenseService->isActivated();
+        // During install the license table does not exist yet.
+        // Only check the session — never touch the DB here.
+        if (session()->has('install.pending_license')) {
+            return true;
+        }
+
+        // APP_LICENSED=true means a previous step already verified the key.
+        $flag = env('APP_LICENSED', false);
+        return $flag === true
+            || $flag === 1
+            || (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true));
     }
 
     // ─── Step 1: License ──────────────────────────────────────────────────────
