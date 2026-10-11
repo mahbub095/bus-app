@@ -6,8 +6,8 @@
         <form class="search-form" id="coach-search-form" onsubmit="return false;">
             <div class="input-group">
                 <label>From Station</label>
-                <select id="cs-from" class="coupon-input" required>
-                    <option value="">Select departure...</option>
+                <select id="cs-from" class="coupon-input">
+                    <option value="">All Departure Stations</option>
                     @foreach($allStations as $st)
                         <option value="{{ $st->id }}">{{ $st->name }}</option>
                     @endforeach
@@ -15,8 +15,8 @@
             </div>
             <div class="input-group">
                 <label>To Station</label>
-                <select id="cs-to" class="coupon-input" required>
-                    <option value="">Select destination...</option>
+                <select id="cs-to" class="coupon-input">
+                    <option value="">All Destination Stations</option>
                     @foreach($allStations as $st)
                         <option value="{{ $st->id }}">{{ $st->name }}</option>
                     @endforeach
@@ -24,7 +24,7 @@
             </div>
             <div class="input-group">
                 <label>Journey Date</label>
-                <input type="date" id="cs-date" class="coupon-input" required>
+                <input type="date" id="cs-date" class="coupon-input" value="{{ now()->toDateString() }}">
             </div>
             <div class="input-group">
                 <label>Coach Type</label>
@@ -47,15 +47,19 @@
     </div>
 
     <!-- Results -->
-    <div id="cs-results" style="display: none;">
+    <div id="cs-results" style="display: block;">
         <div class="results-header">
             <h2 class="section-title">Available Coach Services</h2>
-            <span class="results-count" id="cs-results-count"></span>
+            <span class="results-count" id="cs-results-count">Loading coach services...</span>
         </div>
-        <div class="bus-list" id="cs-bus-list"></div>
+        <div class="bus-list" id="cs-bus-list">
+            <div class="search-card" style="padding: 40px; text-align: center; color: var(--text-muted);">
+                Loading available coach services...
+            </div>
+        </div>
     </div>
 
-    <div id="cs-empty-hint" class="notice-info-box">
+    <div id="cs-empty-hint" class="notice-info-box" style="display: none;">
         Search by route and date to view available coach services with a live seat map. Booked seats can be cancelled directly from the layout.
     </div>
 

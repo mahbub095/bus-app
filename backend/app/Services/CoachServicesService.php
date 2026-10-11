@@ -16,28 +16,60 @@ class CoachServicesService
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function search(int $fromId, int $toId, string $date, ?string $coachType = null, bool $includeSeatBookings = false): Collection
+    public function search(?int $fromId = null, ?int $toId = null, ?string $date = null, ?string $coachType = null, bool $includeSeatBookings = false): Collection
     {
-        $route = Route::where('departure_station_id', $fromId)
-            ->where('arrival_station_id', $toId)
-            ->first();
+        $query = Schedule::with([
+            'bus',
+            'route.departureStation',
+            'route.arrivalStation',
+            'bookings' => fn ($q) => SeatMapService::scopePaidBookingsForSeatMap($q),
+        ]);
 
-        if (! $route) {
-            return collect();
+        if ($fromId && $toId) {
+            $routeIds = Route::where('departure_station_id', $fromId)
+                ->where('arrival_station_id', $toId)
+                ->pluck('id');
+            if ($routeIds->isEmpty()) {
+                return collect();
+            }
+            $query->whereIn('route_id', $routeIds);
+        } elseif ($fromId) {
+            $routeIds = Route::where('departure_station_id', $fromId)->pluck('id');
+            if ($routeIds->isEmpty()) {
+                return collect();
+            }
+            $query->whereIn('route_id', $routeIds);
+        } elseif ($toId) {
+            $routeIds = Route::where('arrival_station_id', $toId)->pluck('id');
+            if ($routeIds->isEmpty()) {
+                return collect();
+            }
+            $query->whereIn('route_id', $routeIds);
         }
 
-        $startDate = Carbon::parse($date)->startOfDay();
-        $endDate = Carbon::parse($date)->endOfDay();
+        if ($date) {
+            $startDate = Carbon::parse($date)->startOfDay();
+            $endDate = Carbon::parse($date)->endOfDay();
+            $query->whereBetween('departure_time', [$startDate, $endDate]);
+        } else {
+            $startDate = Carbon::today()->startOfDay();
+            $query->where('departure_time', '>=', $startDate);
+        }
 
-        $schedules = Schedule::where('route_id', $route->id)
-            ->whereBetween('departure_time', [$startDate, $endDate])
-            ->with([
+        $schedules = $query->orderBy('departure_time', 'asc')->get();
+
+        // If no future schedules exist and no specific date requested, fetch latest schedules
+        if ($schedules->isEmpty() && ! $date) {
+            $schedules = Schedule::with([
                 'bus',
                 'route.departureStation',
                 'route.arrivalStation',
                 'bookings' => fn ($q) => SeatMapService::scopePaidBookingsForSeatMap($q),
             ])
-            ->get();
+                ->orderBy('departure_time', 'desc')
+                ->limit(50)
+                ->get();
+        }
 
         if ($coachType && $coachType !== 'All') {
             $schedules = $schedules->filter(

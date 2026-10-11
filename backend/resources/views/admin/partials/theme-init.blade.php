@@ -6,7 +6,7 @@
         document.documentElement.setAttribute('data-theme', theme);
 
         try {
-            const knownTabs = ['stations', 'buses', 'routes', 'schedules', 'promotions', 'users', 'coach-services', 'bookings', 'cancel-requests', 'reports', 'site-settings', 'gateways', 'profile'];
+            const knownTabs = ['stations', 'buses', 'routes', 'schedules', 'promotions', 'users', 'coach-services', 'bookings', 'cancel-requests', 'reports', 'license', 'site-settings', 'gateways', 'profile'];
             const hash = window.location.hash.replace(/^#/, '').trim();
             const search = window.location.search;
             let activeTab = null;

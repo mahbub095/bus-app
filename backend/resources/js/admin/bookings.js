@@ -249,4 +249,10 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
     }
 
     window.bookingsLogsModule = { startPolling, stopPolling };
+
+    // Auto-fetch if bookings tab is currently displayed
+    const tabEl = document.getElementById('tab-content-bookings');
+    if (window.location.hash === '#bookings' || (tabEl && tabEl.style.display !== 'none')) {
+        startPolling();
+    }
 })();

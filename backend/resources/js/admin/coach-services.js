@@ -288,12 +288,12 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                     <div class="time-block">
                         <span class="time-label">Departure</span>
                         <span class="time-value">${formatTime(sched.departure_time)}</span>
-                        <span class="station-value">${escapeHtml(stationName(searchParams.from))}</span>
+                        <span class="station-value">${escapeHtml(sched.route?.from || stationName(searchParams.from))}</span>
                     </div>
                     <div class="time-block">
                         <span class="time-label">Arrival</span>
                         <span class="time-value">${formatTime(sched.arrival_time)}</span>
-                        <span class="station-value">${escapeHtml(stationName(searchParams.to))}</span>
+                        <span class="station-value">${escapeHtml(sched.route?.to || stationName(searchParams.to))}</span>
                     </div>
                     <div class="time-block">
                         <span class="time-label">Duration</span>
@@ -528,15 +528,18 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     async function handleSearch() {
-        const from = document.getElementById('cs-from').value, to = document.getElementById('cs-to').value,
-              date = document.getElementById('cs-date').value, coachType = document.getElementById('cs-coach-type').value;
-        if (!from || !to || !date) { alert('Please select from, to, and date.'); return; }
-        if (from === to) { alert('Departure and destination must be different.'); return; }
+        const from = document.getElementById('cs-from')?.value || '',
+              to   = document.getElementById('cs-to')?.value || '',
+              date = document.getElementById('cs-date')?.value || '',
+              coachType = document.getElementById('cs-coach-type')?.value || 'All';
+        if (from && to && from === to) { alert('Departure and destination must be different.'); return; }
         searchParams = { from, to, date, coachType };
         searchDone = true; expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = [];
         adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = ''; adminDroppingPoint = '';
-        document.getElementById('cs-empty-hint').style.display = 'none';
-        document.getElementById('cs-results').style.display    = 'block';
+        const emptyHint = document.getElementById('cs-empty-hint');
+        if (emptyHint) emptyHint.style.display = 'none';
+        const resultsEl = document.getElementById('cs-results');
+        if (resultsEl) resultsEl.style.display = 'block';
         await fetchCoachServices(); startPolling();
     }
 
@@ -577,7 +580,14 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     function startPolling() {
         stopPolling();
         const tab = document.getElementById('tab-content-coach-services');
-        if (tab && tab.style.display !== 'none' && searchDone) fetchCoachServices(true);
+        if (tab && tab.style.display !== 'none') {
+            searchDone = true;
+            const emptyHint = document.getElementById('cs-empty-hint');
+            if (emptyHint) emptyHint.style.display = 'none';
+            const resultsEl = document.getElementById('cs-results');
+            if (resultsEl) resultsEl.style.display = 'block';
+            fetchCoachServices(searchResults.length > 0);
+        }
         pollTimer = setInterval(() => {
             const t = document.getElementById('tab-content-coach-services');
             if (t && t.style.display !== 'none' && searchDone) fetchCoachServices(true);
@@ -589,4 +599,18 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     document.getElementById('cs-search-btn')?.addEventListener('click', handleSearch);
     bindCoachListEvents();
     window.coachServicesModule = { startPolling, stopPolling };
+
+    // Auto-initialize search parameters
+    const initialFrom = document.getElementById('cs-from')?.value || '';
+    const initialTo   = document.getElementById('cs-to')?.value || '';
+    const initialDate = document.getElementById('cs-date')?.value || '';
+    const initialCoachType = document.getElementById('cs-coach-type')?.value || 'All';
+    searchParams = { from: initialFrom, to: initialTo, date: initialDate, coachType: initialCoachType };
+    searchDone = true;
+
+    // Auto-fetch if coach services tab is currently displayed
+    const initialTab = document.getElementById('tab-content-coach-services');
+    if (window.location.hash === '#coach-services' || (initialTab && initialTab.style.display !== 'none')) {
+        startPolling();
+    }
 })();
