@@ -5,15 +5,13 @@ namespace App\Http\Controllers\Install;
 use App\Http\Controllers\Controller;
 use App\Services\LicenseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 /**
  * Installation wizard — 3 steps:
  *   1. /install              License verification
  *   2. /install/database     DB credentials test + write to .env
- *   3. /install/finalize     Admin account + run install in background
- *   4. /install/complete     Success page with optional demo data import
+ *   3. /install/finalize     Admin account creation + background install
+ *      /install/complete     Success page with optional demo data import
  */
 class InstallController extends Controller
 {
@@ -120,7 +118,7 @@ class InstallController extends Controller
             'DB_PASSWORD' => $pass,
         ]);
 
-        // 3. Optional SQL import — use the raw PDO connection we already opened
+        // Store sql_imported flag in session for the finalize step
         if ($request->hasFile('sql_file') && $request->file('sql_file')->isValid()) {
             try {
                 $this->importSqlFile($pdo, file_get_contents($request->file('sql_file')->getRealPath()));
@@ -131,9 +129,6 @@ class InstallController extends Controller
                     ->withInput();
             }
         }
-
-        // 4. Store validated credentials in session for the finalize step
-        session()->put('install.db', compact('host', 'port', 'db', 'user', 'pass'));
 
         return redirect('/install/finalize')->with('success', 'Database connection verified.');
     }

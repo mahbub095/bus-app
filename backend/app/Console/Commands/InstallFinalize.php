@@ -246,7 +246,7 @@ class InstallFinalize extends Command
             } catch (\Throwable $_) {}
 
             // Clean up cache keys
-            foreach (['install_admin_email','install_admin_name','install_admin_password','install_sql_imported'] as $key) {
+            foreach (['install_admin_email', 'install_admin_name', 'install_admin_password', 'install_sql_imported', 'install_pending_license'] as $key) {
                 cache()->forget($key);
             }
 
