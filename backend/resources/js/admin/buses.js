@@ -50,7 +50,12 @@ function adjustDefaultSeats(layout) {
  * the registration form into edit mode.
  */
 function handleEditBusClick(btn) {
-    setCrudFormMode('bus-form', {
+    const fn = window.setCrudFormMode || (typeof setCrudFormMode === 'function' ? setCrudFormMode : null);
+    if (!fn) {
+        console.error('setCrudFormMode is not available');
+        return;
+    }
+    fn('bus-form', {
         mode:        'edit',
         id:          btn.dataset.id,
         action:      btn.dataset.action,
@@ -66,6 +71,11 @@ function handleEditBusClick(btn) {
             seat_layout_grid: (btn.dataset.grid === 'null' || !btn.dataset.grid) ? '' : btn.dataset.grid,
         },
     });
+
+    const form = document.getElementById('bus-form');
+    if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 // ─── Seat Layout Designer — state ─────────────────────────────────────────────
@@ -507,3 +517,11 @@ window.addDesignerRow          = addDesignerRow;
 window.removeDesignerRow       = removeDesignerRow;
 window.addDesignerColumn       = addDesignerColumn;
 window.removeDesignerColumn    = removeDesignerColumn;
+
+// Event delegation for edit buttons
+document.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-bus-btn');
+    if (editBtn) {
+        handleEditBusClick(editBtn);
+    }
+});

@@ -44,17 +44,22 @@ class AjaxController extends Controller
     public function searchCoachServices(Request $request)
     {
         $request->validate([
-            'from' => 'required|exists:stations,id',
-            'to' => 'required|exists:stations,id',
-            'date' => 'required|date_format:Y-m-d',
+            'from' => 'nullable',
+            'to' => 'nullable',
+            'date' => 'nullable|date_format:Y-m-d',
             'coach_type' => 'nullable|string',
         ]);
 
+        $from = $request->filled('from') ? (int) $request->query('from') : null;
+        $to = $request->filled('to') ? (int) $request->query('to') : null;
+        $date = $request->query('date') ?: null;
+        $coachType = $request->query('coach_type');
+
         $results = $this->coachServicesService->search(
-            (int) $request->query('from'),
-            (int) $request->query('to'),
-            $request->query('date'),
-            $request->query('coach_type'),
+            $from,
+            $to,
+            $date,
+            $coachType,
             includeSeatBookings: true
         );
 

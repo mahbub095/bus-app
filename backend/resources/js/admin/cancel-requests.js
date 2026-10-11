@@ -124,4 +124,10 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
     }
 
     window.cancelRequestsLogsModule = { startPolling, stopPolling };
+
+    // Auto-fetch if cancel-requests tab is currently displayed
+    const tabEl = document.getElementById('tab-content-cancel-requests');
+    if (window.location.hash === '#cancel-requests' || (tabEl && tabEl.style.display !== 'none')) {
+        startPolling();
+    }
 })();
