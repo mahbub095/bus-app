@@ -5,26 +5,22 @@ namespace App\Http\Controllers\Install;
 use App\Http\Controllers\Controller;
 use App\Services\LicenseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 
 /**
- * Handles the step-by-step installation wizard.
- *
- * Steps:
- *   1. License — verifies Envato purchase code (stored in session)
- *   2. Database — tests connection, writes to .env
- *   3. Finalize — creates admin, runs migrations, locks installer
+ * Installation wizard — 3 steps:
+ *   1. /install              License verification
+ *   2. /install/database     DB credentials test + write to .env
+ *   3. /install/finalize     Admin account + run install in background
+ *   4. /install/complete     Success page with optional demo data import
  */
 class InstallController extends Controller
 {
     public function __construct(protected LicenseService $licenseService) {}
 
-    /**
-     * Returns true when APP_INSTALLED=true — prevents re-running the wizard.
-     */
+    // ─── Guards ──────────────────────────────────────────────────────────────
+
     private function isInstallLocked(): bool
     {
         $flag = env('APP_INSTALLED', false);
@@ -33,9 +29,6 @@ class InstallController extends Controller
             || (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true));
     }
 
-    /**
-     * Returns true when a pending license is in session OR already activated in DB.
-     */
     private function hasValidLicense(): bool
     {
         return session()->has('install.pending_license')
@@ -58,9 +51,7 @@ class InstallController extends Controller
             return redirect('/admin/login');
         }
 
-        $request->validate([
-            'purchase_code' => 'required|string|max:100',
-        ]);
+        $request->validate(['purchase_code' => 'required|string|max:100']);
 
         $result = $this->licenseService->verify(
             purchaseCode: $request->input('purchase_code'),
@@ -79,24 +70,18 @@ class InstallController extends Controller
         return redirect('/install/database')->with('success', $result['message']);
     }
 
-    // ─── Step 2: Database ─────────────────────────────────────────────────────
+    // ─── Step 2: Database ────────────────────────────────────────────────────
 
     public function showDatabase()
     {
-        if ($this->isInstallLocked()) {
-            return redirect('/admin/login');
-        }
-        if (! $this->hasValidLicense()) {
-            return redirect('/install');
-        }
+        if ($this->isInstallLocked()) return redirect('/admin/login');
+        if (! $this->hasValidLicense()) return redirect('/install');
         return view('install.database');
     }
 
     public function saveDatabase(Request $request)
     {
-        if ($this->isInstallLocked()) {
-            return redirect('/admin/login');
-        }
+        if ($this->isInstallLocked()) return redirect('/admin/login');
 
         $request->validate([
             'db_host'     => 'required|string|max:255',
@@ -107,46 +92,38 @@ class InstallController extends Controller
             'sql_file'    => 'nullable|file|mimes:sql|max:200000',
         ]);
 
-        // Test connection
+        $host  = $request->db_host;
+        $port  = $request->db_port;
+        $db    = $request->db_database;
+        $user  = $request->db_username;
+        $pass  = $request->db_password ?? '';
+
+        // 1. Test connection via raw PDO — no Laravel DB facade involved
         try {
-            $testPdo = new \PDO(
-                "mysql:host={$request->db_host};port={$request->db_port};dbname={$request->db_database}",
-                $request->db_username,
-                $request->db_password ?? ''
+            $pdo = new \PDO(
+                "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4",
+                $user, $pass,
+                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 5]
             );
-            $testPdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         } catch (\PDOException $e) {
             return back()
-                ->withErrors(['db_host' => 'Database connection failed: ' . $e->getMessage()])
+                ->withErrors(['db_host' => 'Connection failed: ' . $e->getMessage()])
                 ->withInput();
         }
 
-        // Write to .env
+        // 2. Write credentials to .env (no config reload, no DB::purge)
         app(\App\Services\EnvFileWriter::class)->set([
-            'DB_HOST'     => $request->db_host,
-            'DB_PORT'     => (string) $request->db_port,
-            'DB_DATABASE' => $request->db_database,
-            'DB_USERNAME' => $request->db_username,
-            'DB_PASSWORD' => $request->db_password ?? '',
+            'DB_HOST'     => $host,
+            'DB_PORT'     => (string) $port,
+            'DB_DATABASE' => $db,
+            'DB_USERNAME' => $user,
+            'DB_PASSWORD' => $pass,
         ]);
 
-        // Reload DB config in-memory without calling config:clear
-        // (config:clear kills php artisan serve on Windows/local dev)
-        config([
-            'database.connections.mysql.host'     => $request->db_host,
-            'database.connections.mysql.port'     => $request->db_port,
-            'database.connections.mysql.database' => $request->db_database,
-            'database.connections.mysql.username' => $request->db_username,
-            'database.connections.mysql.password' => $request->db_password ?? '',
-        ]);
-        DB::purge('mysql');
-        DB::reconnect('mysql');
-
-        // Optional SQL import
+        // 3. Optional SQL import — use the raw PDO connection we already opened
         if ($request->hasFile('sql_file') && $request->file('sql_file')->isValid()) {
             try {
-                $sql = file_get_contents($request->file('sql_file')->getRealPath());
-                $this->importSqlFile($testPdo, $sql);
+                $this->importSqlFile($pdo, file_get_contents($request->file('sql_file')->getRealPath()));
                 session()->put('install.sql_imported', true);
             } catch (\Throwable $e) {
                 return back()
@@ -155,6 +132,9 @@ class InstallController extends Controller
             }
         }
 
+        // 4. Store validated credentials in session for the finalize step
+        session()->put('install.db', compact('host', 'port', 'db', 'user', 'pass'));
+
         return redirect('/install/finalize')->with('success', 'Database connection verified.');
     }
 
@@ -162,112 +142,78 @@ class InstallController extends Controller
 
     public function showFinalize(Request $request)
     {
-        if ($this->isInstallLocked()) {
-            return redirect('/admin/login');
-        }
-        if (! $this->hasValidLicense()) {
-            return redirect('/install');
-        }
+        if ($this->isInstallLocked()) return redirect('/admin/login');
+        if (! $this->hasValidLicense()) return redirect('/install');
         return view('install.finalize');
     }
 
-    public function runFinalize(Request $request)
+    /**
+     * POST /install/finalize/run
+     *
+     * Fires the background install:finalize command which handles:
+     *   - migrate (with migrate:install first)
+     *   - persist license
+     *   - create super admin
+     *   - lock installer
+     *
+     * Returns JSON so the finalize page can poll for status.
+     */
+    public function runFinalize(Request $request): \Illuminate\Http\JsonResponse
     {
         if ($this->isInstallLocked()) {
-            return redirect('/admin/login');
+            return response()->json(['error' => 'Already installed.'], 400);
         }
 
-        // Validate admin form fields submitted directly from the finalize page
         $request->validate([
             'admin_name'     => 'required|string|max:100',
             'admin_email'    => 'required|email|max:100',
             'admin_password' => 'required|string|min:8',
         ]);
 
-        $adminName  = $request->input('admin_name');
-        $adminEmail = $request->input('admin_email');
-        $adminPass  = $request->input('admin_password');
-        $sqlImported    = session()->get('install.sql_imported', false);
-        $pendingLicense = session()->get('install.pending_license');
+        // Store admin credentials in cache for the background command
+        $ttl = now()->addMinutes(10);
+        cache(['install_admin_name'     => $request->input('admin_name')],     $ttl);
+        cache(['install_admin_email'    => $request->input('admin_email')],    $ttl);
+        cache(['install_admin_password' => $request->input('admin_password')], $ttl);
+        cache(['install_sql_imported'   => session()->get('install.sql_imported', false)], $ttl);
+        cache(['install_pending_license'=> session()->get('install.pending_license')], $ttl);
 
-        try {
-            // 1. Migrations — skip if tables already exist
-            if (! $sqlImported) {
-                try {
-                    DB::connection()->getPdo()->query('SELECT 1 FROM users LIMIT 1');
-                } catch (\Throwable $_) {
-                    Artisan::call('migrate', ['--force' => true]);
-                    DB::purge();
-                    DB::reconnect();
-                }
-            }
+        // One-time token
+        $token = bin2hex(random_bytes(16));
+        cache(['install_finalize_token' => $token], $ttl);
 
-            // 2. Persist license record
-            if (is_array($pendingLicense) && ! empty($pendingLicense['purchase_code'])) {
-                try {
-                    $this->licenseService->persistVerifiedLicense(
-                        purchaseCode: $pendingLicense['purchase_code'],
-                        apiData:      $pendingLicense['api_data'] ?? [],
-                    );
-                } catch (\Throwable $e) {
-                    // Non-fatal
-                }
-            }
+        // Reset status file
+        $statusFile = \App\Console\Commands\InstallFinalize::statusFile();
+        @file_put_contents($statusFile, json_encode([
+            'status' => 'starting',
+            'log'    => ['Starting installation...'],
+        ]));
 
-            // 3. Create / update super admin
-            $existing = User::where('email', $adminEmail)->first();
-            if ($existing) {
-                $existing->update([
-                    'name'              => $adminName,
-                    'role'              => 'super_admin',
-                    'menu_permissions'  => null,
-                    'password'          => Hash::make($adminPass),
-                    'email_verified_at' => $existing->email_verified_at ?? now(),
-                ]);
-            } else {
-                User::create([
-                    'name'              => $adminName,
-                    'email'             => $adminEmail,
-                    'password'          => Hash::make($adminPass),
-                    'role'              => 'super_admin',
-                    'menu_permissions'  => null,
-                    'email_verified_at' => now(),
-                ]);
-            }
+        // Launch background process
+        $php     = PHP_BINARY;
+        $artisan = base_path('artisan');
 
-            // 5. Lock installer
-            app(\App\Services\EnvFileWriter::class)->set(['APP_INSTALLED' => 'true']);
-            @file_put_contents(storage_path('framework/installed'), now()->toDateTimeString());
-
-            // 6. Clear caches safely (no artisan calls that kill php artisan serve)
-            // Flush file-based cache manually
-            try {
-                \Illuminate\Support\Facades\Cache::flush();
-            } catch (\Throwable $_) {}
-
-            // Clear compiled views
-            try {
-                $viewCachePath = storage_path('framework/views');
-                if (is_dir($viewCachePath)) {
-                    foreach (glob($viewCachePath . '/*.php') as $file) {
-                        @unlink($file);
-                    }
-                }
-            } catch (\Throwable $_) {}
-
-            // 7. Clean session
-            session()->forget(['install.pending_license', 'install.sql_imported']);
-
-            return redirect('/install/complete');
-
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Install failed: ' . $e->getMessage(), [
-                'file' => $e->getFile() . ':' . $e->getLine(),
-            ]);
-            return back()
-                ->withErrors(['message' => 'Installation failed: ' . $e->getMessage()])
-                ->withInput();
+        if (PHP_OS_FAMILY === 'Windows') {
+            $cmd = 'start /B "" "' . $php . '" "' . $artisan . '" install:finalize --token=' . $token . ' > NUL 2>&1';
+            pclose(popen($cmd, 'r'));
+        } else {
+            exec('"' . $php . '" "' . $artisan . '" install:finalize --token=' . $token . ' > /dev/null 2>&1 &');
         }
+
+        return response()->json(['started' => true]);
+    }
+
+    /**
+     * GET /install/finalize/status
+     */
+    public function finalizeStatus(): \Illuminate\Http\JsonResponse
+    {
+        $file = \App\Console\Commands\InstallFinalize::statusFile();
+        if (! file_exists($file)) {
+            return response()->json(['status' => 'waiting', 'log' => []]);
+        }
+        $data = json_decode(file_get_contents($file), true);
+        return response()->json(is_array($data) ? $data : ['status' => 'waiting', 'log' => []]);
     }
 
     public function complete()
@@ -275,7 +221,42 @@ class InstallController extends Controller
         return view('install.complete');
     }
 
-    // ─── SQL import helper ───────────────────────────────────────────────────
+    // ─── Demo seed endpoints ──────────────────────────────────────────────────
+
+    public function startDemoSeed(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $token = bin2hex(random_bytes(16));
+        cache(['install_demo_seed_token' => $token], now()->addMinutes(5));
+
+        @file_put_contents(
+            \App\Console\Commands\InstallDemoSeed::statusFile(),
+            json_encode(['status' => 'starting', 'log' => ['Starting...']])
+        );
+
+        $php     = PHP_BINARY;
+        $artisan = base_path('artisan');
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $cmd = 'start /B "" "' . $php . '" "' . $artisan . '" install:demo-seed --token=' . $token . ' > NUL 2>&1';
+            pclose(popen($cmd, 'r'));
+        } else {
+            exec('"' . $php . '" "' . $artisan . '" install:demo-seed --token=' . $token . ' > /dev/null 2>&1 &');
+        }
+
+        return response()->json(['started' => true]);
+    }
+
+    public function demoSeedStatus(): \Illuminate\Http\JsonResponse
+    {
+        $file = \App\Console\Commands\InstallDemoSeed::statusFile();
+        if (! file_exists($file)) {
+            return response()->json(['status' => 'waiting', 'log' => []]);
+        }
+        $data = json_decode(file_get_contents($file), true);
+        return response()->json(is_array($data) ? $data : ['status' => 'waiting', 'log' => []]);
+    }
+
+    // ─── SQL import helper ────────────────────────────────────────────────────
 
     private function importSqlFile(\PDO $pdo, string $sql): void
     {
@@ -284,12 +265,9 @@ class InstallController extends Controller
         $sql = preg_replace('/^#.*$/m',  '', $sql);
         $sql = preg_replace('!/\*.*?\*/!s', '', $sql);
 
-        $statements = explode(';', $sql);
-        foreach ($statements as $stmt) {
+        foreach (explode(';', $sql) as $stmt) {
             $stmt = trim($stmt);
-            if ($stmt === '' || preg_match('/^(use\s|delimiter\s)/i', $stmt)) {
-                continue;
-            }
+            if ($stmt === '' || preg_match('/^(use\s|delimiter\s)/i', $stmt)) continue;
             try {
                 $pdo->exec($stmt);
             } catch (\PDOException $e) {

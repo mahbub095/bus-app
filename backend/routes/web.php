@@ -35,8 +35,11 @@ Route::get('/install/database/save', fn() => redirect('/install/database'));
 Route::get('/install/finalize', [InstallController::class, 'showFinalize'])->name('install.finalize');
 Route::post('/install/finalize/run', [InstallController::class, 'runFinalize'])->name('install.finalize.run');
 Route::get('/install/finalize/run', fn() => redirect('/install/finalize'));
+Route::get('/install/finalize/status', [InstallController::class, 'finalizeStatus'])->name('install.finalize.status');
 
 Route::get('/install/complete', [InstallController::class, 'complete'])->name('install.complete');
+Route::post('/install/demo-seed/start', [InstallController::class, 'startDemoSeed'])->name('install.demo-seed.start');
+Route::get('/install/demo-seed/status', [InstallController::class, 'demoSeedStatus'])->name('install.demo-seed.status');
 
 /*
 |--------------------------------------------------------------------------
