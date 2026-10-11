@@ -25,34 +25,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/install', [InstallController::class, 'showLicense'])->name('install.license');
-
-// Step 1 — License: POST form submit + GET fallback redirect (refresh / direct visit)
 Route::post('/install/license/verify', [InstallController::class, 'verifyLicense'])->name('install.license.verify');
-Route::get('/install/license/verify', function () {
-    return redirect('/install');
-});
+Route::get('/install/license/verify', fn() => redirect('/install'));
 
-// Step 2 — Database: GET form page, POST save, GET fallback redirect
 Route::get('/install/database', [InstallController::class, 'showDatabase'])->name('install.database');
 Route::post('/install/database/save', [InstallController::class, 'saveDatabase'])->name('install.database.save');
-Route::get('/install/database/save', function () {
-    return redirect('/install/database');
-});
+Route::get('/install/database/save', fn() => redirect('/install/database'));
 
-// Step 3 — Admin: GET form page, POST save, GET fallback redirect
-Route::get('/install/admin', [InstallController::class, 'showAdmin'])->name('install.admin');
-Route::post('/install/admin/save', [InstallController::class, 'saveAdmin'])->name('install.admin.save');
-Route::get('/install/admin/save', function () {
-    return redirect('/install/admin');
-});
+Route::get('/install/finalize', [InstallController::class, 'showFinalize'])->name('install.finalize');
+Route::post('/install/finalize/run', [InstallController::class, 'runFinalize'])->name('install.finalize.run');
+Route::get('/install/finalize/run', fn() => redirect('/install/finalize'));
 
-// Step 4 — Finalize: GET (progress UI) + POST (fire background job) + GET status (polling)
-Route::get('/install/finalize',         [InstallController::class, 'finalize'])       ->name('install.finalize');
-Route::post('/install/finalize/run',    [InstallController::class, 'runFinalize'])    ->name('install.finalize.run');
-Route::get('/install/finalize/status',  [InstallController::class, 'finalizeStatus'])->name('install.finalize.status');
-Route::get('/install/finalize/run', function () {
-    return redirect('/install/finalize');
-});
+Route::get('/install/complete', [InstallController::class, 'complete'])->name('install.complete');
 
 /*
 |--------------------------------------------------------------------------
