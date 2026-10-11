@@ -7,34 +7,35 @@ return [
     | Envato Item ID
     |--------------------------------------------------------------------------
     |
-    | The numeric ID of your CodeCanyon product. Used during license
-    | verification to ensure the purchase code belongs to this item.
+    | The numeric ID of your CodeCanyon product.
+    | Used to confirm the purchase code belongs to THIS product.
     |
-    | Find it in your CodeCanyon item URL:
+    | Where to find it:
     |   https://codecanyon.net/item/sonyabus/XXXXXXXX
-    |                                              ^^^^^^^^ this is the ID
+    |                                         ^^^^^^^^ this number
     |
     */
-
     'item_id' => env('ENVATO_ITEM_ID', ''),
 
     /*
     |--------------------------------------------------------------------------
-    | Envato Personal Token (Author)
+    | Envato Author Personal Token
     |--------------------------------------------------------------------------
     |
-    | The Envato author's personal token used to verify purchase codes
-    | via the Envato Market API. It is NEVER sent to the browser or
-    | exposed to end users — it lives exclusively on the server.
+    | YOUR personal token as the seller/author. Used by the server to call
+    | the Envato Market API and verify buyers' purchase codes.
     |
-    | Generate at: https://build.envato.com/create-token/
-    | Required permission: "View the user's sales history and search sales"
-    |                      (for the /author/sale endpoint)
+    | Buyers only enter their purchase code — they NEVER see this token.
     |
-    | Alternative permission (fallback endpoint):
-    |   "View your purchases of items" (Verify purchases)
+    | How to generate:
+    |   1. Go to https://build.envato.com/create-token/
+    |   2. Log in with your Envato AUTHOR account
+    |   3. Enable permission: "View the user's sales history and search sales"
+    |   4. Click "Create Token" and copy it here
+    |
+    | Security: Keep this token secret. Never commit it to version control.
+    |
     */
-
     'personal_token' => env('ENVATO_PERSONAL_TOKEN', ''),
 
 ];

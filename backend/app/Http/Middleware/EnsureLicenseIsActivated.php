@@ -30,7 +30,13 @@ class EnsureLicenseIsActivated
     private function isAlwaysAllowed(string $path): bool
     {
         // Exact matches
-        $exact = ['up', 'payment/callback', 'payment/cancel', 'api/payment/webhook'];
+        $exact = [
+            'up',
+            'admin/login',
+            'payment/callback',
+            'payment/cancel',
+            'api/payment/webhook',
+        ];
         if (in_array($path, $exact, true)) {
             return true;
         }

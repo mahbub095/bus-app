@@ -330,10 +330,23 @@ function App() {
     let cancelled = false;
 
     const runProbe = async () => {
-      // 1) cached hit (fast path)
+      // ── Fast path: VITE_API_BASE_URL explicitly configured ────────────
+      // Skip all probing — trust the env value directly.
+      const explicit = import.meta.env.VITE_API_BASE_URL;
+      if (explicit && String(explicit).trim() !== '') {
+        if (!cancelled) {
+          const base = String(explicit).replace(/\/$/, '');
+          localStorage.setItem(API_BASE_CACHE_KEY, base);
+          setApiBase(base);
+          setProbingBackend(false);
+        }
+        return;
+      }
+
+      // ── Fallback: probe candidate URLs (no VITE_API_BASE_URL set) ─────
+      // 1) cached hit
       const cached = localStorage.getItem(API_BASE_CACHE_KEY);
       if (cached) {
-        // Verify cached URL is still reachable before trusting
         const ok = await probeApiBase([cached]);
         if (ok && !cancelled) {
           setApiBase(ok);
@@ -341,11 +354,10 @@ function App() {
           setProbingBackend(false);
           return;
         }
-        // cache stale → clean up and fall through to full probe
         localStorage.removeItem(API_BASE_CACHE_KEY);
       }
 
-      // 2) full probe through candidate list
+      // 2) full probe
       const candidates = buildApiBaseCandidates();
       setTriedCandidates(candidates);
       const resolved = await probeApiBase(candidates);
@@ -488,6 +500,14 @@ function App() {
   }, [siteSettings, apiBase]);
 
   const retryBackendConnection = async () => {
+    const explicit = import.meta.env.VITE_API_BASE_URL;
+    if (explicit && String(explicit).trim() !== '') {
+      const base = String(explicit).replace(/\/$/, '');
+      localStorage.setItem(API_BASE_CACHE_KEY, base);
+      setApiBase(base);
+      setBackendOffline(false);
+      return;
+    }
     setProbingBackend(true);
     localStorage.removeItem(API_BASE_CACHE_KEY);
     const candidates = buildApiBaseCandidates();

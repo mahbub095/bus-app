@@ -8,227 +8,173 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Handles Envato purchase code verification for CodeCanyon products.
+ * Envato purchase code verification for CodeCanyon products.
  *
- * Verification flow:
- *   1. Read the author's personal token from config (envato.personal_token).
- *   2. Call Envato Market /author/sale API with the buyer's purchase code.
- *   3. Confirm the item ID returned matches ENVATO_ITEM_ID.
- *   4. Store the result locally and cache the verified status.
+ * ┌─────────────────────────────────────────────────────────────────┐
+ * │  VERIFICATION RULES                                             │
+ * │                                                                 │
+ * │  1. Wrong code      → rejected immediately                      │
+ * │  2. Other product   → rejected (item ID mismatch)               │
+ * │  3. Max 5 domains   → 6th unique domain is rejected             │
+ * │  4. Bypass code     → only the exact DEFAULT_BYPASS_CODE passes  │
+ * └─────────────────────────────────────────────────────────────────┘
  *
- * Local development bypass (no real Envato token needed):
- *   Set in .env:  APP_ENV=local  ENVATO_SKIP_VERIFY=true
- *   Any valid-format purchase code will be accepted.
+ * .env write policy:
+ *   $persistDb = false  (wizard step 1) → NO writes (keeps artisan serve alive)
+ *   $persistDb = true   (re-verify)     → writes APP_LICENSED=true to .env
+ *   persistVerifiedLicense()            → called from background command, safe
  */
 class LicenseService
 {
-    private const AUTHOR_SALE_URL     = 'https://api.envato.com/v3/market/author/sale';
-    private const BUYER_PURCHASE_URL  = 'https://api.envato.com/v3/market/buyer/purchase';
-    private const CACHE_KEY           = 'license_verified';
-    private const CACHE_TTL_MINUTES   = 1440;
-    private const DEFAULT_BYPASS_CODE = '621d1ac1-0b6f-4e8c-9b41-4903fe022678';
-
-    public function __construct(
-        protected EnvFileWriter $envFileWriter
-    ) {}
-
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
+    private const AUTHOR_SALE_URL    = 'https://api.envato.com/v3/market/author/sale';
+    private const BUYER_PURCHASE_URL = 'https://api.envato.com/v3/market/buyer/purchase';
+    private const CACHE_KEY          = 'license_verified';
+    private const CACHE_TTL_MINUTES  = 1440; // 24 h
 
     /**
-     * Verify a purchase code against the Envato API and (optionally) persist.
+     * Seller-only bypass code.
+     * ONLY this exact UUID passes without a real Envato API call.
+     * Any other UUID — including codes differing by one character — is rejected
+     * or sent to real Envato verification.
+     */
+    private const DEFAULT_BYPASS_CODE = '621d1ac1-0b6f-4e8c-9b41-4903fe022678';
+
+    public function __construct(protected EnvFileWriter $envFileWriter) {}
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
+
+    /**
+     * Verify a purchase code against all rules.
      *
      * @param  string  $purchaseCode
-     * @param  bool    $persistDb  If false, only validate via API/env; caller
-     *                             must later call persistVerifiedLicense()
-     *                             (used during install flow before DB exists).
-     * @return array{success: bool, message: string, license?: License, api_data?: array}
+     * @param  bool    $persistDb    false during wizard step 1 to avoid writing
+     *                               .env (which restarts php artisan serve).
+     * @param  string  $currentDomain  The domain being activated (APP_URL).
      */
-    public function verify(string $purchaseCode, bool $persistDb = true): array
-    {
-        $purchaseCode = trim($purchaseCode);
+    public function verify(
+        string $purchaseCode,
+        bool   $persistDb     = true,
+        string $currentDomain = ''
+    ): array {
+        $purchaseCode  = trim($purchaseCode);
+        $currentDomain = $currentDomain ?: config('app.url', '');
 
-        if (! $this->isValidPurchaseCodeFormat($purchaseCode)) {
-            return [
-                'success' => false,
-                'message' => 'Invalid purchase code format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-            ];
+        // ── Rule 0: Format check ─────────────────────────────────────────────
+        if (! $this->isValidUuid($purchaseCode)) {
+            return $this->fail(
+                'Invalid purchase code format. It should look like: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+            );
         }
 
-        // ─── Default bypass code (pre-configured) ─────────────────────────
+        // ── Rule 4: Seller bypass code ───────────────────────────────────────
+        // ONLY the exact DEFAULT_BYPASS_CODE passes without an API call.
         if (strcasecmp($purchaseCode, self::DEFAULT_BYPASS_CODE) === 0) {
-            return $this->finishDefaultCodeVerification($purchaseCode, $persistDb);
+            return $this->handleBypass($purchaseCode, $persistDb, $currentDomain);
         }
 
-        // ─── Local-dev bypass ─────────────────────────────────────────────
-        if ($this->isLocalBypassEnabled()) {
-            return $this->finishLocalDevVerification($purchaseCode, $persistDb);
-        }
+        // ── Rules 1–3: Real Envato API verification ──────────────────────────
+        $authorToken  = config('envato.personal_token', '');
+        $envatoItemId = config('envato.item_id', '');
 
-        $personalToken = config('envato.personal_token');
-        if (empty($personalToken)) {
-            Log::error('Envato personal token is missing from config (.env).');
-            return [
-                'success' => false,
-                'message' => 'Server configuration error: Envato personal token is not set. Please contact support.',
-            ];
+        if (empty($authorToken)) {
+            return $this->fail('License verification is not configured on this server. Please contact the seller.');
         }
-
-        $envatoItemId = config('envato.item_id');
         if (empty($envatoItemId)) {
-            return [
-                'success' => false,
-                'message' => 'Server configuration error: ENVATO_ITEM_ID is not set. Please contact support.',
-            ];
+            return $this->fail('Server configuration error (ENVATO_ITEM_ID missing). Please contact the seller.');
         }
 
         try {
-            // Primary: author/sale endpoint (requires author token with sales permission)
-            $response = $this->callEnvatoApi(self::AUTHOR_SALE_URL, $purchaseCode, $personalToken);
-            $data     = $response['data'];
+            $response = $this->callApi(self::AUTHOR_SALE_URL, $purchaseCode, $authorToken);
 
-            // Fallback: if author/sale fails with 403/401, try buyer/purchase endpoint
+            // Fallback endpoint on 401/403
             if (! $response['ok'] && in_array($response['status'], [401, 403], true)) {
-                $fallback = $this->callEnvatoApi(self::BUYER_PURCHASE_URL, $purchaseCode, $personalToken);
+                $fallback = $this->callApi(self::BUYER_PURCHASE_URL, $purchaseCode, $authorToken);
                 if ($fallback['ok']) {
                     $response = $fallback;
-                    $data     = $fallback['data'];
                 }
             }
 
+            $data = $response['data'];
+
+            // ── Rule 1: Wrong / non-existent code ────────────────────────────
             if ($response['status'] === 404) {
-                return [
-                    'success' => false,
-                    'message' => 'Purchase code not found. Please check the code and try again.',
-                ];
+                return $this->fail(
+                    'Invalid purchase code. This code was not found on Envato Market. ' .
+                    'Please check the code from your CodeCanyon download page.'
+                );
             }
 
-            if ($response['status'] === 403 || $response['status'] === 401) {
-                Log::warning('Envato API rejected token (401/403). Token may be expired or missing required scopes.', [
-                    'status' => $response['status'],
-                    'body'   => is_array($response['body']) ? json_encode($response['body']) : $response['body'],
-                ]);
-                return [
-                    'success' => false,
-                    'message' => 'Server configuration error: Envato personal token is invalid or missing required permissions. Please contact support.',
-                ];
+            if (in_array($response['status'], [401, 403], true)) {
+                return $this->fail('License verification failed. Please contact the seller.');
             }
 
             if (! $response['ok']) {
-                Log::warning('Envato API returned unexpected status.', [
-                    'status' => $response['status'],
-                    'body'   => is_array($response['body']) ? json_encode($response['body']) : $response['body'],
-                ]);
-                return [
-                    'success' => false,
-                    'message' => 'Could not reach Envato verification server. Please try again in a few minutes.',
-                ];
+                return $this->fail(
+                    'Could not reach Envato verification server. Please try again in a moment.'
+                );
             }
 
-            // Validate that the purchase code belongs to this product
-            $itemId = (string) ($data['item']['id'] ?? '');
-            if ($itemId !== (string) $envatoItemId) {
-                return [
-                    'success' => false,
-                    'message' => 'This purchase code is for a different product. Please use the purchase code from your SonyaBus download.',
-                ];
+            // ── Rule 2: Must belong to THIS product ──────────────────────────
+            $returnedItemId = (string) ($data['item']['id'] ?? '');
+            if ($returnedItemId !== (string) $envatoItemId) {
+                return $this->fail(
+                    'This purchase code is for a different product. ' .
+                    'Please use the purchase code from your SonyaBus download.'
+                );
             }
 
-            $this->envFileWriter->set(['APP_LICENSED' => 'true']);
-
-            if ($persistDb) {
-                $license = $this->persistLicense($purchaseCode, $data);
-                Cache::put(self::CACHE_KEY, true, now()->addMinutes(self::CACHE_TTL_MINUTES));
-                return [
-                    'success'   => true,
-                    'message'   => 'License verified successfully! Welcome to SonyaBus.',
-                    'license'   => $license,
-                    'api_data'  => $data,
-                ];
+            // ── Rule 3: Domain limit (max 5) ─────────────────────────────────
+            $domainCheck = $this->checkDomainLimit($purchaseCode, $currentDomain);
+            if (! $domainCheck['ok']) {
+                return $this->fail($domainCheck['message']);
             }
 
-            return [
-                'success'  => true,
-                'message'  => 'License verified successfully!',
-                'api_data' => $data,
-            ];
+            return $this->buildResult($purchaseCode, $persistDb, $data, $currentDomain);
 
         } catch (\Throwable $e) {
-            Log::error('License verification exception.', [
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
-            ]);
-            return [
-                'success' => false,
-                'message' => 'An unexpected error occurred during verification. Please try again.',
-            ];
+            Log::error('LicenseService::verify exception.', ['error' => $e->getMessage()]);
+            return $this->fail('An unexpected error occurred during verification. Please try again.');
         }
     }
 
     /**
-     * Persist a previously-verified license to the database.
-     *
-     * Used by the install wizard in the "finalize" step AFTER the
-     * migrations have run (so the `license` table is guaranteed to exist).
-     *
-     * @param  string                   $purchaseCode
-     * @param  array<array-key, mixed>  $apiData  Response body from Envato API
-     *                                            (or the pseudo-response from
-     *                                            the local-dev bypass).
+     * Persist a verified license after migrations have run.
+     * Called from InstallFinalize background command — safe to write .env here.
      */
     public function persistVerifiedLicense(string $purchaseCode, array $apiData): License
     {
         $this->envFileWriter->set(['APP_LICENSED' => 'true']);
 
-        $license = $this->persistLicense($purchaseCode, $apiData);
+        $domain  = config('app.url', '');
+        $license = $this->saveLicense($purchaseCode, $apiData, $domain);
 
         Cache::put(self::CACHE_KEY, true, now()->addMinutes(self::CACHE_TTL_MINUTES));
-
         return $license;
     }
 
-    /**
-     * Check whether the application has a verified license.
-     *
-     * Fast path: if APP_LICENSED is not truthy, return false immediately.
-     * Otherwise, the DB-backed result is cached for 24 hours.
-     *
-     * NOTE: Gracefully swallows PDO / Query exceptions so that the
-     * installation wizard (and /up health check) can run before the
-     * `license` DB table has been created by migrations.
-     *
-     * CRITICAL: If APP_LICENSED=true but the DB check fails (install phase
-     * where DB is not configured yet), we STILL return TRUE so that the
-     * install wizard can advance to the database setup step.
-     */
+    /** Returns true when a valid license is active for this installation. */
     public function isActivated(): bool
     {
         $flag = env('APP_LICENSED', false);
-        if ($flag === false || $flag === 'false' || $flag === '' || $flag === null) {
+        if (! $flag || $flag === 'false') {
             return false;
         }
 
         try {
-            return Cache::remember(self::CACHE_KEY, now()->addMinutes(self::CACHE_TTL_MINUTES), function () {
-                return License::isActivated();
-            });
+            return Cache::remember(
+                self::CACHE_KEY,
+                now()->addMinutes(self::CACHE_TTL_MINUTES),
+                fn () => License::isActivated()
+            );
         } catch (\Throwable $e) {
-            // DB table missing, no DB connection, etc. — this is NORMAL during
-            // the install wizard (Step 2 Database hasn't run yet). Since the
-            // APP_LICENSED env flag is already truthy, we trust it and return
-            // true so the wizard can proceed.
-            Log::debug('LicenseService::isActivated() DB check skipped.', [
-                'reason' => $e->getMessage(),
-            ]);
+            // DB table not yet created during install — trust the env flag
+            Log::debug('LicenseService::isActivated() DB check skipped.', ['reason' => $e->getMessage()]);
             return true;
         }
     }
 
-    /**
-     * Clear the local license record and the cached state.
-     * Use only in controlled reset / re-install scenarios.
-     */
     public function deactivate(): void
     {
         License::truncate();
@@ -236,162 +182,180 @@ class LicenseService
         $this->envFileWriter->set(['APP_LICENSED' => 'false']);
     }
 
-    /**
-     * Return the current license data formatted for display.
-     *
-     * @return array<string, mixed>
-     */
     public function info(): array
     {
         $license = License::current();
-
         if (! $license) {
             return ['activated' => false];
         }
 
+        $domains = $license->getDomains();
+
         return [
-            'activated'       => $license->is_verified,
-            'purchase_code'   => $this->maskPurchaseCode($license->purchase_code),
-            'envato_username' => $license->envato_username,
-            'buyer_email'     => $license->buyer_email,
-            'license_type'    => $license->license_type,
-            'purchase_date'   => $license->purchase_date?->toDateString(),
-            'verified_at'     => $license->verified_at?->toDateTimeString(),
-            'app_url'         => $license->app_url,
+            'activated'          => $license->is_verified,
+            'purchase_code'      => $this->maskCode($license->purchase_code),
+            'envato_username'    => $license->envato_username,
+            'buyer_email'        => $license->buyer_email,
+            'license_type'       => $license->license_type,
+            'purchase_date'      => $license->purchase_date?->toDateString(),
+            'verified_at'        => $license->verified_at?->toDateTimeString(),
+            'app_url'            => $license->app_url,
+            'activated_domains'  => $domains,
+            'domain_slots_used'  => count($domains),
+            'domain_slots_max'   => License::MAX_DOMAINS,
+            'domain_slots_left'  => $license->remainingSlots(),
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Local development bypass
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
 
     /**
-     * Skip real Envato API calls when running locally with the flag enabled.
-     * Allows any valid-format purchase code to be accepted.
+     * Handle the seller's bypass code path.
+     * Only DEFAULT_BYPASS_CODE arrives here — any other UUID was already
+     * rejected by the format check or sent to real API verification above.
      */
-    private function isLocalBypassEnabled(): bool
+    private function handleBypass(string $purchaseCode, bool $persistDb, string $domain): array
     {
-        if (! app()->environment('local')) {
-            return false;
+        // Still enforce domain limit for the bypass code
+        $domainCheck = $this->checkDomainLimit($purchaseCode, $domain);
+        if (! $domainCheck['ok']) {
+            return $this->fail($domainCheck['message']);
         }
 
-        $flag = env('ENVATO_SKIP_VERIFY', false);
+        $pseudoData = [
+            'item'        => ['id' => (string) config('envato.item_id', '0')],
+            'buyer'       => 'seller_test_account',
+            'buyer_email' => 'seller@sonyabus.test',
+            'sold_at'     => now()->toIso8601String(),
+            'license'     => 'Extended License',
+        ];
 
-        // Accept boolean true, string "true" (case-insensitive), or int 1
-        return $flag === true
-            || $flag === 1
-            || (is_string($flag) && strtolower($flag) === 'true')
-            || (is_string($flag) && $flag === '1');
+        return $this->buildResult($purchaseCode, $persistDb, $pseudoData, $domain);
     }
 
     /**
-     * @return array{success: bool, message: string, license?: License, api_data: array}
+     * Check domain limit for a given purchase code.
+     * If the purchase code has no existing DB record yet (step 1 of wizard),
+     * we skip the limit check because the record will be created on finalise.
+     *
+     * @return array{ok: bool, message: string}
      */
-    private function finishLocalDevVerification(string $purchaseCode, bool $persistDb): array
+    private function checkDomainLimit(string $purchaseCode, string $domain): array
     {
-        $pseudoData = [
-            'item'        => ['id' => (string) config('envato.item_id', '0')],
-            'buyer'       => 'local_developer',
-            'buyer_email' => 'dev@localhost.test',
-            'sold_at'     => now()->toIso8601String(),
-            'license'     => 'Regular License',
-            '_local_bypass' => true,
-        ];
+        $existing = License::findByCode($purchaseCode);
 
-        $this->envFileWriter->set(['APP_LICENSED' => 'true']);
+        if (! $existing) {
+            // First activation for this code — always allowed
+            return ['ok' => true, 'message' => ''];
+        }
 
-        if ($persistDb) {
-            $license = $this->persistLicense($purchaseCode, $pseudoData);
-            Cache::put(self::CACHE_KEY, true, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        $normalized = $existing->normalizeDomain($domain);
+
+        // Same domain re-verifying → always allowed (counts as renewal)
+        if ($existing->hasDomain($domain)) {
+            return ['ok' => true, 'message' => ''];
+        }
+
+        // New domain — check slot limit
+        if ($existing->remainingSlots() <= 0) {
+            $used = count($existing->getDomains());
             return [
-                'success'  => true,
-                'message'  => 'License verified (local dev mode) — Welcome to SonyaBus!',
-                'license'  => $license,
-                'api_data' => $pseudoData,
+                'ok'      => false,
+                'message' => "This purchase code has reached the maximum of " . License::MAX_DOMAINS . " domain activations "
+                    . "({$used}/" . License::MAX_DOMAINS . " used). "
+                    . "Please purchase an additional license for new domains.",
             ];
         }
 
-        return [
-            'success'  => true,
-            'message'  => 'License verified (local dev mode) — continue to database setup.',
-            'api_data' => $pseudoData,
-        ];
+        return ['ok' => true, 'message' => ''];
     }
 
     /**
-     * Bypass Envato API verification for the pre-configured default code.
-     * All other codes still require real CodeCanyon API verification.
-     *
-     * @return array{success: bool, message: string, license?: License, api_data: array}
+     * Build a verified result, writing to DB/.env only when $persistDb = true.
+     * When $persistDb = false (wizard step 1), no side-effects occur.
      */
-    private function finishDefaultCodeVerification(string $purchaseCode, bool $persistDb): array
-    {
-        $pseudoData = [
-            'item'        => ['id' => (string) config('envato.item_id', '0')],
-            'buyer'       => 'default_license_holder',
-            'buyer_email' => 'support@sonyabus.test',
-            'sold_at'     => now()->toIso8601String(),
-            'license'     => 'Extended License',
-            '_default_bypass' => true,
-        ];
-
-        $this->envFileWriter->set(['APP_LICENSED' => 'true']);
-
+    private function buildResult(
+        string $purchaseCode,
+        bool   $persistDb,
+        array  $apiData,
+        string $domain
+    ): array {
         if ($persistDb) {
-            $license = $this->persistLicense($purchaseCode, $pseudoData);
+            $this->envFileWriter->set(['APP_LICENSED' => 'true']);
+            $license = $this->saveLicense($purchaseCode, $apiData, $domain);
             Cache::put(self::CACHE_KEY, true, now()->addMinutes(self::CACHE_TTL_MINUTES));
+
             return [
                 'success'  => true,
                 'message'  => 'License verified successfully! Welcome to SonyaBus.',
                 'license'  => $license,
-                'api_data' => $pseudoData,
+                'api_data' => $apiData,
             ];
         }
 
+        // Step 1 of wizard — validate only, no DB or .env writes
         return [
             'success'  => true,
             'message'  => 'License verified successfully!',
-            'api_data' => $pseudoData,
+            'api_data' => $apiData,
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
+    /** Save / update the license record and register the domain. */
+    private function saveLicense(string $purchaseCode, array $data, string $domain): License
+    {
+        $license = License::firstOrNew(['purchase_code' => $purchaseCode]);
 
-    /**
-     * Call an Envato Market API endpoint and return a structured result.
-     *
-     * @return array{ok: bool, status: int, body: mixed, data: array<array-key, mixed>}
-     */
-    private function callEnvatoApi(string $url, string $purchaseCode, string $personalToken): array
+        $soldAt = $data['sold_at'] ?? $data['purchase']['sold_at'] ?? null;
+        if (is_string($soldAt) && ($ts = strtotime($soldAt)) !== false) {
+            $soldAt = date('Y-m-d H:i:s', $ts);
+        } else {
+            $soldAt = null;
+        }
+
+        $license->fill([
+            'purchase_code'   => $purchaseCode,
+            'envato_username' => $data['buyer'] ?? $data['purchase']['buyer'] ?? null,
+            'buyer_email'     => $data['buyer_email'] ?? $data['purchase']['buyer_email'] ?? null,
+            'purchase_date'   => $soldAt,
+            'license_type'    => $data['license'] ?? $data['purchase']['license'] ?? 'Regular License',
+            'is_verified'     => true,
+            'verified_at'     => now(),
+            'app_url'         => $domain,
+        ]);
+
+        $license->save();
+
+        // Register this domain (addDomain handles duplicates and limit)
+        if (! empty($domain)) {
+            $license->addDomain($domain);
+        }
+
+        return $license;
+    }
+
+    private function callApi(string $url, string $purchaseCode, string $token): array
     {
         $response = Http::timeout(20)
             ->retry(2, 500)
             ->withHeaders([
-                'Authorization' => 'Bearer ' . $personalToken,
+                'Authorization' => 'Bearer ' . $token,
                 'User-Agent'    => 'SonyaBus License Verification/1.0',
                 'Accept'        => 'application/json',
             ])
             ->get($url, ['code' => $purchaseCode]);
 
         $body = $response->json();
-        if (! is_array($body)) {
-            $body = [];
-        }
-
         return [
             'ok'     => $response->successful(),
             'status' => $response->status(),
-            'body'   => $body,
-            'data'   => $body,
+            'data'   => is_array($body) ? $body : [],
         ];
     }
 
-    /**
-     * Validate the UUID-based Envato purchase code format.
-     */
-    private function isValidPurchaseCodeFormat(string $code): bool
+    private function isValidUuid(string $code): bool
     {
         return (bool) preg_match(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
@@ -399,67 +363,14 @@ class LicenseService
         );
     }
 
-    /**
-     * Store or update the license record from Envato API response data.
-     *
-     * Handles both /author/sale and /buyer/purchase response shapes since
-     * the exact fields vary by endpoint and API version.
-     */
-    private function persistLicense(string $purchaseCode, array $data): License
+    private function fail(string $message): array
     {
-        $license = License::firstOrNew(['purchase_code' => $purchaseCode]);
-
-        $soldAt = $data['sold_at'] ?? $data['purchase']['sold_at'] ?? null;
-        if (is_string($soldAt)) {
-            $timestamp = strtotime($soldAt);
-            if ($timestamp !== false) {
-                $soldAt = date('Y-m-d H:i:s', $timestamp);
-            } else {
-                $soldAt = null;
-            }
-        } else {
-            $soldAt = null;
-        }
-
-        $buyer = $data['buyer']
-            ?? $data['purchase']['buyer']
-            ?? $data['buyer_info']['first_name']
-            ?? null;
-
-        $email = $data['buyer_email']
-            ?? $data['purchase']['buyer_email']
-            ?? null;
-
-        $licenseType = $data['license']
-            ?? $data['purchase']['license']
-            ?? 'Regular License';
-
-        $license->fill([
-            'purchase_code'   => $purchaseCode,
-            'envato_username' => is_string($buyer) ? $buyer : null,
-            'buyer_email'     => is_string($email) ? $email : null,
-            'purchase_date'   => $soldAt,
-            'license_type'    => $licenseType,
-            'is_verified'     => true,
-            'verified_at'     => now(),
-            'app_url'         => config('app.url'),
-        ]);
-
-        $license->save();
-
-        return $license;
+        return ['success' => false, 'message' => $message];
     }
 
-    /**
-     * Mask purchase code for safe display: show first 8 chars only.
-     * Example: "a1b2c3d4-****-****-****-************"
-     */
-    private function maskPurchaseCode(string $code): string
+    private function maskCode(string $code): string
     {
-        if (strlen($code) < 36) {
-            return '****-****-****-****';
-        }
-
+        if (strlen($code) < 36) return '****-****-****-****';
         return substr($code, 0, 8) . '-****-****-****-************';
     }
 }
