@@ -106,6 +106,7 @@
     <a href="#credentials">Default Credentials</a>
     <a href="#admin-panel">Admin Panel</a>
     <a href="#customer-app">Customer App</a>
+    <a href="#user-manual">User Manual</a>
     <a href="#payments">ZiniPay Setup</a>
     <a href="#sms">SMS Setup</a>
     <a href="#mail">Mail / Password Reset</a>
@@ -289,24 +290,23 @@ npm run build</code></pre>
 
   <!-- CPANEL INSTALLATION -->
   <section id="cpanel-install">
-    <h2>cPanel-এ Install করার পদ্ধতি</h2>
+    <h2>cPanel Installation</h2>
     <p>
-      Shared hosting (Hostinger, Namecheap, Bluehost ইত্যাদি) যেখানে cPanel আছে সেখানে
-      SonyaBus install করতে নিচের steps অনুসরণ করুন।
+      Follow these steps to install SonyaBus on shared hosting (Hostinger, Namecheap, Bluehost, etc.) that comes with cPanel.
     </p>
 
     <div class="callout callout-warning">
-      <strong>⚠ শর্ত:</strong> cPanel-এ <strong>PHP 8.2+</strong> এবং <strong>SSH / Terminal</strong> অথবা
-      <strong>Composer Manager</strong> plugin থাকতে হবে। বেশিরভাগ modern shared hosting-এ cPanel Terminal পাওয়া যায়।
+      <strong>⚠ Requirement:</strong> Your cPanel must have <strong>PHP 8.2+</strong> and either <strong>SSH / Terminal</strong> access or the
+      <strong>Composer Manager</strong> plugin. Most modern shared hosting plans include cPanel Terminal.
     </div>
 
-    <h3>পদক্ষেপ ১ — দুটো Subdomain তৈরি করুন</h3>
+    <h3>Step 1 — Create Two Subdomains</h3>
     <p>
-      SonyaBus-এর backend এবং frontend আলাদা domain/subdomain-এ থাকে।
-      cPanel → <strong>Domains / Subdomains</strong> থেকে তৈরি করুন:
+      SonyaBus keeps its backend and frontend on separate domains/subdomains.
+      Create them from cPanel → <strong>Domains / Subdomains</strong>:
     </p>
     <table>
-      <tr><th>উদ্দেশ্য</th><th>Subdomain উদাহরণ</th><th>Document Root</th></tr>
+      <tr><th>Purpose</th><th>Subdomain Example</th><th>Document Root</th></tr>
       <tr>
         <td>Backend (Laravel API + Admin)</td>
         <td><code>api.yourdomain.com</code></td>
@@ -319,96 +319,96 @@ npm run build</code></pre>
       </tr>
     </table>
     <div class="callout callout-info">
-      <strong>ℹ বিকল্প:</strong> আলাদা subdomain না করে main domain-এও রাখা যায়। সেক্ষেত্রে
-      <code>yourdomain.com</code> → frontend, <code>yourdomain.com/api</code> নয় বরং
-      <code>api.yourdomain.com</code> → backend রাখাই ভালো।
+      <strong>ℹ Alternative:</strong> You can use the main domain instead of separate subdomains. In that case
+      <code>yourdomain.com</code> → frontend, but it is still recommended to keep
+      <code>api.yourdomain.com</code> → backend rather than <code>yourdomain.com/api</code>.
     </div>
 
-    <h3>পদক্ষেপ ২ — ফাইল আপলোড করুন</h3>
+    <h3>Step 2 — Upload Files</h3>
     <ol class="steps">
       <li>
-        <strong>ZIP প্রস্তুত করুন:</strong> আপনার কম্পিউটারে project-এর দুটো folder আলাদা করুন —
-        <code>backend.zip</code> এবং <code>frontend.zip</code>।
+        <strong>Prepare ZIPs:</strong> On your computer, separate the project into two folders —
+        <code>backend.zip</code> and <code>frontend.zip</code>.
       </li>
       <li>
-        <strong>cPanel → File Manager</strong> খুলুন।
-        <code>public_html/</code> ফোল্ডারে যান।
+        Open <strong>cPanel → File Manager</strong>.
+        Go to the <code>public_html/</code> folder.
       </li>
       <li>
-        <code>backend.zip</code> আপলোড করুন এবং <code>public_html/api/</code> ফোল্ডারে extract করুন।
-        <br>ফলে তৈরি হবে: <code>public_html/api/app/</code>, <code>public_html/api/public/</code> ইত্যাদি।
+        Upload <code>backend.zip</code> and extract it into the <code>public_html/api/</code> folder.
+        <br>This will create: <code>public_html/api/app/</code>, <code>public_html/api/public/</code>, etc.
       </li>
       <li>
-        <code>frontend/dist/</code> এর সব contents আপলোড করুন <code>public_html/app/</code> ফোল্ডারে।
-        <br>(dist folder-এর ভেতরের files, folder নিজে নয়)
+        Upload all contents of <code>frontend/dist/</code> into the <code>public_html/app/</code> folder.
+        <br>(Upload the files inside the dist folder, not the dist folder itself)
       </li>
     </ol>
 
     <div class="callout callout-info">
-      <strong>ℹ dist folder তৈরি:</strong> Frontend build করতে আপনার local machine-এ:
+      <strong>ℹ Build the dist folder:</strong> To build the frontend on your local machine:
       <pre style="margin:8px 0 0;"><code>cd frontend
 npm install
 npm run build</code></pre>
-      তৈরি হওয়া <code>frontend/dist/</code> ফোল্ডারের সব files cPanel-এ আপলোড করুন।
+      Upload all files from the generated <code>frontend/dist/</code> folder to cPanel.
     </div>
 
-    <h3>পদক্ষেপ ৩ — Subdomain Document Root ঠিক করুন</h3>
+    <h3>Step 3 — Fix the Subdomain Document Root</h3>
     <p>
-      cPanel → <strong>Domains</strong> → <code>api.yourdomain.com</code> এর Document Root
-      <strong>অবশ্যই</strong> <code>public_html/api/public</code> হতে হবে — <code>public_html/api</code> নয়।
-      এটা না হলে Laravel 500 error দেবে।
+      cPanel → <strong>Domains</strong> → the Document Root for <code>api.yourdomain.com</code>
+      <strong>must</strong> be <code>public_html/api/public</code> — not <code>public_html/api</code>.
+      Otherwise Laravel will throw a 500 error.
     </p>
 
-    <h3>পদক্ষেপ ৪ — .env ফাইল তৈরি করুন</h3>
+    <h3>Step 4 — Create the .env File</h3>
     <p>
-      cPanel File Manager → <code>public_html/api/</code> ফোল্ডারে যান।
-      <code>.env.example</code> ফাইলটি copy করে নাম দিন <code>.env</code>।
-      তারপর Edit করুন:
+      cPanel File Manager → go to the <code>public_html/api/</code> folder.
+      Copy the <code>.env.example</code> file and name it <code>.env</code>.
+      Then edit it:
     </p>
     <pre><code>APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://api.yourdomain.com
 APP_FRONTEND_URL=https://app.yourdomain.com
-ENVATO_ITEM_ID=12345678   &lt;-- আপনার CodeCanyon item ID
+ENVATO_ITEM_ID=12345678   &lt;-- your CodeCanyon item ID
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=yourusername_sonyabus   &lt;-- cPanel database নাম
+DB_DATABASE=yourusername_sonyabus   &lt;-- cPanel database name
 DB_USERNAME=yourusername_dbuser     &lt;-- cPanel database user
 DB_PASSWORD=your_db_password</code></pre>
 
-    <h3>পদক্ষেপ ৫ — MySQL Database তৈরি করুন</h3>
+    <h3>Step 5 — Create a MySQL Database</h3>
     <p>cPanel → <strong>MySQL Databases</strong>:</p>
     <ol class="steps">
-      <li>নতুন database তৈরি করুন: যেমন <code>yourusername_sonyabus</code></li>
-      <li>নতুন user তৈরি করুন: যেমন <code>yourusername_dbuser</code> — শক্তিশালী password দিন</li>
-      <li>User-কে database-এ <strong>ALL PRIVILEGES</strong> দিন</li>
+      <li>Create a new database, e.g. <code>yourusername_sonyabus</code></li>
+      <li>Create a new user, e.g. <code>yourusername_dbuser</code> — use a strong password</li>
+      <li>Give the user <strong>ALL PRIVILEGES</strong> on the database</li>
     </ol>
 
-    <h3>পদক্ষেপ ৬ — Terminal থেকে Composer চালান</h3>
-    <p>cPanel → <strong>Terminal</strong> (অথবা SSH client যেমন PuTTY):</p>
-    <pre><code># backend folder-এ যান
+    <h3>Step 6 — Run Composer from Terminal</h3>
+    <p>cPanel → <strong>Terminal</strong> (or an SSH client like PuTTY):</p>
+    <pre><code># go to the backend folder
 cd public_html/api
 
-# APP_KEY generate করুন
+# generate APP_KEY
 php artisan key:generate
 
-# Dependencies install করুন
+# install dependencies
 composer install --no-dev --optimize-autoloader
 
-# Storage link তৈরি করুন
+# create storage link
 php artisan storage:link</code></pre>
 
     <div class="callout callout-warning">
-      <strong>⚠ Composer না থাকলে:</strong> cPanel-এ Softaculous বা hosting provider-এর
-      "Composer Manager" ব্যবহার করুন। অথবা local machine-এ
-      <code>composer install --no-dev</code> চালিয়ে <code>vendor/</code> folder-সহ আপলোড করুন।
+      <strong>⚠ If Composer is not available:</strong> Use Softaculous in cPanel or your hosting provider's
+      "Composer Manager". Alternatively, run <code>composer install --no-dev</code> on your local machine
+      and upload the project including the <code>vendor/</code> folder.
     </div>
 
-    <h3>পদক্ষেপ ৭ — .htaccess চেক করুন</h3>
+    <h3>Step 7 — Check the Backend .htaccess</h3>
     <p>
-      <code>public_html/api/public/.htaccess</code> ফাইলটি আছে কিনা দেখুন।
-      না থাকলে নিচেরটা তৈরি করুন:
+      Check whether the <code>public_html/api/public/.htaccess</code> file exists.
+      If not, create it with the following:
     </p>
     <pre><code>&lt;IfModule mod_rewrite.c&gt;
     &lt;IfModule mod_negotiation.c&gt;
@@ -432,10 +432,10 @@ php artisan storage:link</code></pre>
     RewriteRule ^ index.php [L]
 &lt;/IfModule&gt;</code></pre>
 
-    <h3>পদক্ষেপ ৮ — Frontend-এর .htaccess তৈরি করুন</h3>
+    <h3>Step 8 — Create the Frontend .htaccess</h3>
     <p>
-      React app-এর জন্য <code>public_html/app/.htaccess</code> তৈরি করুন
-      (React Router-এর জন্য সব request index.html-এ redirect করতে হবে):
+      Create <code>public_html/app/.htaccess</code> for the React app
+      (needed to redirect all requests to index.html for React Router):
     </p>
     <pre><code>&lt;IfModule mod_rewrite.c&gt;
     RewriteEngine On
@@ -450,85 +450,85 @@ php artisan storage:link</code></pre>
     RewriteRule ^ index.html [L]
 &lt;/IfModule&gt;</code></pre>
 
-    <h3>পদক্ষেপ ৯ — Installation Wizard চালান</h3>
+    <h3>Step 9 — Run the Installation Wizard</h3>
     <p>
-      Browser-এ <code>https://api.yourdomain.com</code> খুলুন।
-      Automatically <code>/install</code> এ redirect হবে।
-      4টি step সম্পন্ন করুন: <strong>License → Database → Admin → Finalize</strong>.
+      Open <code>https://api.yourdomain.com</code> in your browser.
+      You will be automatically redirected to <code>/install</code>.
+      Complete all 4 steps: <strong>License → Database → Admin → Finalize</strong>.
     </p>
 
-    <h3>পদক্ষেপ ১০ — Cron Job সেটআপ করুন</h3>
+    <h3>Step 10 — Set Up the Cron Job</h3>
     <p>cPanel → <strong>Cron Jobs</strong> → "Add New Cron Job":</p>
     <pre><code>* * * * * /usr/bin/php /home/yourusername/public_html/api/artisan schedule:run >> /dev/null 2>&1</code></pre>
     <div class="callout callout-info">
-      <strong>ℹ php path:</strong> আপনার hosting-এ php binary path আলাদা হতে পারে।
-      Terminal-এ <code>which php</code> চালিয়ে দেখুন।
+      <strong>ℹ PHP path:</strong> The PHP binary path may differ on your hosting.
+      Run <code>which php</code> in the Terminal to find out.
     </div>
 
-    <h3>পদক্ষেপ ১১ — Queue Worker সেটআপ করুন</h3>
-    <p>SMS notification queue-এর জন্য। cPanel → <strong>Cron Jobs</strong>:</p>
+    <h3>Step 11 — Set Up the Queue Worker</h3>
+    <p>For the SMS notification queue. cPanel → <strong>Cron Jobs</strong>:</p>
     <pre><code>* * * * * /usr/bin/php /home/yourusername/public_html/api/artisan queue:work --stop-when-empty >> /dev/null 2>&1</code></pre>
     <div class="callout callout-warning">
-      <strong>⚠ Shared hosting limitation:</strong> বেশিরভাগ shared hosting-এ persistent background process চালানো যায় না।
-      তাই <code>queue:work</code> এর বদলে <code>queue:work --stop-when-empty</code> ব্যবহার করুন
-      এবং cron দিয়ে প্রতি মিনিটে চালান।
+      <strong>⚠ Shared hosting limitation:</strong> Most shared hosting does not allow persistent background processes.
+      Therefore use <code>queue:work --stop-when-empty</code> instead of <code>queue:work</code>
+      and run it every minute via cron.
     </div>
 
     <div class="callout callout-success">
-      <strong>✅ সব শেষ!</strong> এখন <code>https://api.yourdomain.com/admin</code> → admin dashboard,
-      <code>https://app.yourdomain.com</code> → customer app।
+      <strong>✅ All done!</strong> Now <code>https://api.yourdomain.com/admin</code> → admin dashboard,
+      <code>https://app.yourdomain.com</code> → customer app.
     </div>
   </section>
 
   <!-- LOCAL INSTALLATION -->
   <section id="local-install">
-    <h2>Local Machine-এ Install করার পদ্ধতি (Laragon / XAMPP)</h2>
+    <h2>Local Machine Installation (Laragon / XAMPP)</h2>
     <p>
-      Windows-এ <strong>Laragon</strong> বা <strong>XAMPP</strong> দিয়ে local development environment সেটআপ করুন।
-      Laragon সবচেয়ে সহজ এবং recommended।
+      Set up a local development environment on Windows using <strong>Laragon</strong> or <strong>XAMPP</strong>.
+      Laragon is the easiest and recommended option.
     </p>
 
     <h3>Option A — Laragon (Recommended)</h3>
 
-    <h4>পদক্ষেপ ১ — Laragon ইনস্টল করুন</h4>
+    <h4>Step 1 — Install Laragon</h4>
     <ol class="steps">
       <li>
-        <a href="https://laragon.org/download/" target="_blank">laragon.org/download</a> থেকে
-        <strong>Laragon Full</strong> (6.0+) ডাউনলোড করে ইনস্টল করুন।
-        এতে PHP 8.2, MySQL, Apache, Composer, Node.js সব আসে।
+        Download and install <strong>Laragon Full</strong> (6.0+) from
+        <a href="https://laragon.org/download/" target="_blank">laragon.org/download</a>.
+        It comes with PHP 8.2, MySQL, Apache, Composer, and Node.js.
       </li>
-      <li>Laragon চালু করুন → <strong>Start All</strong> ক্লিক করুন।</li>
+      <li>Start Laragon → click <strong>Start All</strong>.</li>
     </ol>
 
-    <h4>পদক্ষেপ ২ — Project রাখুন</h4>
+    <h4>Step 2 — Place the Project</h4>
     <p>
-      Laragon-এর default root folder: <code>C:\laragon\www\</code><br>
-      Project ফোল্ডার রাখুন: <code>C:\laragon\www\bus-app\</code>
+      Laragon's default root folder: <code>C:\laragon\www\</code><br>
+      Place the project folder at: <code>C:\laragon\www\bus-app\</code>
     </p>
     <pre><code>C:\laragon\www\bus-app\
 ├── backend\      &lt;-- Laravel
 └── frontend\     &lt;-- React</code></pre>
 
-    <h4>পদক্ষেপ ৩ — Database তৈরি করুন</h4>
+    <h4>Step 3 — Create the Database</h4>
     <p>
-      Laragon → <strong>Database</strong> icon ক্লিক করুন (HeidiSQL খুলবে)।
-      Left panel → right click → <strong>Create new → Database</strong> → নাম দিন <code>sonyabus</code>।
+      Click the <strong>Database</strong> icon in Laragon (HeidiSQL will open).
+      Left panel → right click → <strong>Create new → Database</strong> → name it <code>sonyabus</code>.
     </p>
 
-    <h4>পদক্ষেপ ৪ — Backend সেটআপ করুন</h4>
-    <p>Laragon Terminal বা Windows Terminal খুলুন:</p>
+    <h4>Step 4 — Set Up the Backend</h4>
+    <p>Open Laragon Terminal or Windows Terminal:</p>
     <pre><code>cd C:\laragon\www\bus-app\backend
 
-# .env তৈরি করুন
+# create .env
 copy .env.example .env
 
-# APP_KEY generate
+# generate APP_KEY
 php artisan key:generate</code></pre>
 
-    <p><code>.env</code> ফাইলটি Notepad++ বা VS Code দিয়ে edit করুন:</p>
+    <p>Edit the <code>.env</code> file with Notepad++ or VS Code:</p>
     <pre><code>APP_ENV=local
 APP_DEBUG=true
-APP_URL=http://bus-app.test/api   # অথবা http://localhost:8000
+APP_URL=http://bus-app.test/api   # or http://localhost:8000
 APP_FRONTEND_URL=http://localhost:5173
 ENVATO_ITEM_ID=12345678
 
@@ -537,7 +537,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=sonyabus
 DB_USERNAME=root
-DB_PASSWORD=        # Laragon-এ default password নেই</code></pre>
+DB_PASSWORD=        # no default password in Laragon</code></pre>
 
     <pre><code># Composer dependencies
 composer install
@@ -545,63 +545,62 @@ composer install
 # Storage link
 php artisan storage:link</code></pre>
 
-    <h4>পদক্ষেপ ৫ — Virtual Host সেটআপ (Laragon Auto Virtual Host)</h4>
+    <h4>Step 5 — Virtual Host Setup (Laragon Auto Virtual Host)</h4>
     <p>
-      Laragon automatically virtual host তৈরি করে। Laragon → <strong>Menu → Apache → sites-enabled</strong>
-      এ যান, অথবা Laragon-এ <strong>Menu → Laragon → Preferences → Services &amp; Ports</strong>
-      নিশ্চিত করুন "Auto Virtual Hosts" চালু আছে।
+      Laragon automatically creates virtual hosts. Go to Laragon → <strong>Menu → Apache → sites-enabled</strong>,
+      or in Laragon → <strong>Menu → Laragon → Preferences → Services &amp; Ports</strong>
+      make sure "Auto Virtual Hosts" is enabled.
     </p>
     <p>
-      <code>C:\laragon\www\bus-app\backend\public</code> কে serve করতে
-      Laragon-এর Virtual Host নিজেই কনফিগার করে। Browser-এ যান:
-      <code>http://bus-app.test</code> — কিন্তু এটি root serve করবে।
+      Laragon's Virtual Host will automatically configure itself to serve
+      <code>C:\laragon\www\bus-app\backend\public</code>. Go to your browser:
+      <code>http://bus-app.test</code> — but this will serve the root.
     </p>
     <div class="callout callout-info">
-      <strong>ℹ সহজ উপায়:</strong> Laragon Virtual Host ঝামেলা এড়িয়ে
-      <code>php artisan serve</code> ব্যবহার করুন (নিচে দেখুন)।
+      <strong>ℹ Easy way:</strong> To avoid the Laragon Virtual Host hassle,
+      use <code>php artisan serve</code> (see below).
     </div>
 
-    <h4>পদক্ষেপ ৬ — Backend Server চালু করুন</h4>
+    <h4>Step 6 — Start the Backend Server</h4>
     <pre><code>cd C:\laragon\www\bus-app\backend
 php artisan serve</code></pre>
-    <p>Backend চলবে: <code>http://localhost:8000</code></p>
+    <p>Backend runs at: <code>http://localhost:8000</code></p>
 
-    <h4>পদক্ষেপ ৭ — Frontend সেটআপ করুন</h4>
-    <p>নতুন Terminal খুলুন:</p>
+    <h4>Step 7 — Set Up the Frontend</h4>
+    <p>Open a new Terminal:</p>
     <pre><code>cd C:\laragon\www\bus-app\frontend
 
-# .env তৈরি করুন
+# create .env
 copy .env.example .env</code></pre>
 
-    <p><code>frontend\.env</code> edit করুন:</p>
+    <p>Edit <code>frontend\.env</code>:</p>
     <pre><code>VITE_API_BASE_URL=http://localhost:8000/api
 VITE_ZINIPAY_API_KEY=your_zinipay_test_key</code></pre>
 
     <pre><code>npm install
 npm run dev</code></pre>
-    <p>Frontend চলবে: <code>http://localhost:5173</code></p>
+    <p>Frontend runs at: <code>http://localhost:5173</code></p>
 
-    <h4>পদক্ষেপ ৮ — Installation Wizard</h4>
+    <h4>Step 8 — Installation Wizard</h4>
     <p>
-      Browser-এ <code>http://localhost:8000</code> খুলুন → automatically <code>/install</code> এ যাবে।
-      4 step সম্পন্ন করুন।
+      Open <code>http://localhost:8000</code> in your browser → you will be automatically redirected to <code>/install</code>.
+      Complete all 4 steps.
     </p>
     <div class="callout callout-info">
-      <strong>ℹ Local license verification:</strong> Local machine-এ Envato API call করতে
-      internet connection লাগবে। Purchase code test করতে real purchase code ব্যবহার করুন।
+      <strong>ℹ Local license verification:</strong> You need an internet connection to call the Envato API on your local machine. Use a real purchase code to test.
       <br><br>
-      <strong>Development-এ license bypass করতে</strong> (testing এর জন্য):
-      <code>.env</code>-এ <code>APP_LICENSED=true</code> দিয়ে manually migration run করুন:
+      <strong>To bypass the license in development</strong> (for testing):
+      set <code>APP_LICENSED=true</code> in <code>.env</code> and run migrations manually:
       <pre style="margin:8px 0 0;"><code>php artisan migrate
 php artisan db:seed  # optional demo data</code></pre>
     </div>
 
-    <h4>পদক্ষেপ ৯ — Queue Worker চালু করুন (SMS-এর জন্য)</h4>
+    <h4>Step 9 — Start the Queue Worker (for SMS)</h4>
     <pre><code>cd C:\laragon\www\bus-app\backend
 php artisan queue:work</code></pre>
 
     <div class="callout callout-success">
-      <strong>✅ Local setup সম্পন্ন!</strong><br>
+      <strong>✅ Local setup complete!</strong><br>
       Admin: <code>http://localhost:8000/admin</code><br>
       Customer App: <code>http://localhost:5173</code>
     </div>
@@ -610,20 +609,20 @@ php artisan queue:work</code></pre>
 
     <h3>Option B — XAMPP</h3>
 
-    <h4>পদক্ষেপ ১ — XAMPP সেটআপ</h4>
+    <h4>Step 1 — XAMPP Setup</h4>
     <ol class="steps">
       <li>
-        <a href="https://www.apachefriends.org/" target="_blank">apachefriends.org</a> থেকে
-        XAMPP (PHP 8.2+) ইনস্টল করুন।
+        Install XAMPP (PHP 8.2+) from
+        <a href="https://www.apachefriends.org/" target="_blank">apachefriends.org</a>.
       </li>
-      <li>XAMPP Control Panel → <strong>Apache</strong> এবং <strong>MySQL</strong> Start করুন।</li>
+      <li>In the XAMPP Control Panel, <strong>Start</strong> <strong>Apache</strong> and <strong>MySQL</strong>.</li>
       <li>
-        Project রাখুন: <code>C:\xampp\htdocs\bus-app\</code>
+        Place the project at: <code>C:\xampp\htdocs\bus-app\</code>
       </li>
     </ol>
 
-    <h4>পদক্ষেপ ২ — Virtual Host কনফিগার করুন</h4>
-    <p><code>C:\xampp\apache\conf\extra\httpd-vhosts.conf</code> ফাইলে add করুন:</p>
+    <h4>Step 2 — Configure Virtual Host</h4>
+    <p>Add the following to <code>C:\xampp\apache\conf\extra\httpd-vhosts.conf</code>:</p>
     <pre><code>&lt;VirtualHost *:80&gt;
     DocumentRoot "C:/xampp/htdocs/bus-app/backend/public"
     ServerName bus-api.local
@@ -634,42 +633,42 @@ php artisan queue:work</code></pre>
     &lt;/Directory&gt;
 &lt;/VirtualHost&gt;</code></pre>
 
-    <p><code>C:\Windows\System32\drivers\etc\hosts</code> ফাইলে (Admin হিসেবে) add করুন:</p>
+    <p>Add this to your <code>C:\Windows\System32\drivers\etc\hosts</code> file (as Administrator):</p>
     <pre><code>127.0.0.1   bus-api.local</code></pre>
 
-    <p>XAMPP → Apache → <strong>Restart</strong> করুন।</p>
+    <p>In XAMPP → Apache → click <strong>Restart</strong>.</p>
 
-    <h4>পদক্ষেপ ৩ — Database তৈরি করুন</h4>
-    <p>Browser-এ <code>http://localhost/phpmyadmin</code> → নতুন database তৈরি করুন: <code>sonyabus</code></p>
+    <h4>Step 3 — Create the Database</h4>
+    <p>In your browser, go to <code>http://localhost/phpmyadmin</code> → create a new database: <code>sonyabus</code></p>
 
-    <h4>পদক্ষেপ ৪ — Backend সেটআপ করুন</h4>
-    <p>XAMPP Shell বা Windows Terminal (cmd) খুলুন:</p>
+    <h4>Step 4 — Set Up the Backend</h4>
+    <p>Open XAMPP Shell or Windows Terminal (cmd):</p>
     <pre><code>cd C:\xampp\htdocs\bus-app\backend
 copy .env.example .env
 php artisan key:generate
 composer install
 php artisan storage:link</code></pre>
 
-    <p><code>.env</code> edit করুন:</p>
+    <p>Edit <code>.env</code>:</p>
     <pre><code>APP_URL=http://bus-api.local
 APP_FRONTEND_URL=http://localhost:5173
 DB_HOST=127.0.0.1
 DB_DATABASE=sonyabus
 DB_USERNAME=root
-DB_PASSWORD=     # XAMPP-এ default password নেই</code></pre>
+DB_PASSWORD=     # no default password in XAMPP</code></pre>
 
-    <h4>পদক্ষেপ ৫ — Frontend চালু করুন</h4>
+    <h4>Step 5 — Start the Frontend</h4>
     <pre><code>cd C:\xampp\htdocs\bus-app\frontend
 copy .env.example .env
-# VITE_API_BASE_URL=http://bus-api.local/api দিন
+# set VITE_API_BASE_URL=http://bus-api.local/api
 npm install
 npm run dev</code></pre>
 
-    <h4>পদক্ষেপ ৬ — Installation Wizard</h4>
-    <p>Browser-এ <code>http://bus-api.local</code> খুলুন → <code>/install</code> wizard সম্পন্ন করুন।</p>
+    <h4>Step 6 — Installation Wizard</h4>
+    <p>Open <code>http://bus-api.local</code> in your browser → complete the <code>/install</code> wizard.</p>
 
     <div class="callout callout-success">
-      <strong>✅ XAMPP setup সম্পন্ন!</strong><br>
+      <strong>✅ XAMPP setup complete!</strong><br>
       Admin: <code>http://bus-api.local/admin</code><br>
       Customer App: <code>http://localhost:5173</code>
     </div>
@@ -826,29 +825,245 @@ server {
   <!-- ADMIN PANEL -->
   <section id="admin-panel">
     <h2>Admin Panel Overview</h2>
-    <p>Access the admin panel at <code>/admin/login</code> with an admin or super-admin account.</p>
-    <table>
-      <tr><th>Menu</th><th>Permission key</th><th>What you can do</th></tr>
-      <tr><td>Coach Services</td><td><code>coach-services</code></td><td>View live schedule availability, block/unblock seats</td></tr>
-      <tr><td>Bookings Logs</td><td><code>bookings</code></td><td>View, create, edit, cancel bookings; approve cancel requests</td></tr>
-      <tr><td>Cancel Requests</td><td><code>cancel-requests</code></td><td>Review and approve passenger cancellation requests</td></tr>
-      <tr><td>Stations</td><td><code>stations</code></td><td>Manage bus terminal stations</td></tr>
-      <tr><td>Coaches</td><td><code>buses</code></td><td>Register buses, set seat layout (2+2, 1+2, sleeper)</td></tr>
-      <tr><td>Routes</td><td><code>routes</code></td><td>Define origin–destination pairs with boarding/dropping points</td></tr>
-      <tr><td>Schedules</td><td><code>schedules</code></td><td>Create departure timetables with fare and bus assignment</td></tr>
-      <tr><td>Coupons</td><td><code>promotions</code></td><td>Create promo codes with flat discount amounts</td></tr>
-      <tr><td>Users &amp; Roles</td><td><code>users</code></td><td>Manage customer and admin accounts, assign menu permissions</td></tr>
-      <tr><td>Ticket Reports</td><td><code>reports</code></td><td>11 report types with PDF &amp; Excel export</td></tr>
-      <tr><td>License</td><td>Super Admin only</td><td>View license status, re-verify after domain migration</td></tr>
-      <tr><td>Site Settings</td><td>Super Admin only</td><td>Site name, favicon, maintenance mode, SEO, footer text</td></tr>
-      <tr><td>Integrations</td><td>Super Admin only</td><td>Configure SMS, mail, and ZiniPay gateways</td></tr>
-    </table>
-    <h3>Role system</h3>
+    <p>Access the admin panel at <code>/admin/login</code> with an admin or super-admin account. The panel uses a tabbed single-page interface — click any item in the sidebar to load that section without a page reload.</p>
+
+    <div class="callout callout-info">
+      <strong>ℹ Permissions:</strong> Each menu item below is gated by a permission key. Admins only see the menus assigned to them in <em>Users &amp; Roles</em>. Super Admins see everything.
+    </div>
+
+    <!-- Dashboard -->
+    <h3>Dashboard</h3>
+    <p>The landing page after login. It shows real-time business metrics:</p>
     <ul>
-      <li><strong>super_admin</strong> — unrestricted access to everything including system settings.</li>
-      <li><strong>admin</strong> — access limited to menus granted in their <em>Menu Permissions</em> list. A null permissions list means full admin access.</li>
-      <li><strong>user</strong> — customer-only; cannot access the admin panel.</li>
+      <li>Total bookings, total revenue, sold seats count.</li>
+      <li>Recent booking activity feed.</li>
+      <li>Date-range filter to narrow down statistics to a specific period.</li>
     </ul>
+
+    <!-- Coach Services -->
+    <h3>Coach Services</h3>
+    <p><em>Permission:</em> <code>coach-services</code></p>
+    <p>The live fleet monitor. Search for available coach services and manage seat availability in real time.</p>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>From Station</td><td>Filter by departure station (or "All").</td></tr>
+      <tr><td>To Station</td><td>Filter by destination station (or "All").</td></tr>
+      <tr><td>Journey Date</td><td>Pick a date — defaults to today.</td></tr>
+      <tr><td>Coach Type</td><td>All, AC, or Non-AC.</td></tr>
+    </table>
+    <p>After clicking <strong>Search Buses</strong>, each matching schedule shows its interactive seat map. You can click any available seat to <strong>block</strong> it (e.g. for offline sales or maintenance) or click a blocked seat to <strong>unblock</strong> it. A <em>Live</em> toggle refreshes the seat map every 5 seconds so you always see current occupancy.</p>
+
+    <!-- Bookings Logs -->
+    <h3>Bookings Logs</h3>
+    <p><em>Permission:</em> <code>bookings</code></p>
+    <p>A live, searchable log of every reservation. Supports manual booking creation on behalf of walk-in customers.</p>
+    <table>
+      <tr><th>Column</th><th>Description</th></tr>
+      <tr><td>PNR Code</td><td>Unique booking reference (e.g. SE00123).</td></tr>
+      <tr><td>Passenger Name</td><td>Name of the primary passenger.</td></tr>
+      <tr><td>Contact Information</td><td>Phone &amp; email.</td></tr>
+      <tr><td>Journey Details</td><td>Route, date, departure time, coach.</td></tr>
+      <tr><td>Seats</td><td>Selected seat numbers.</td></tr>
+      <tr><td>Fare Paid</td><td>Total amount paid.</td></tr>
+      <tr><td>Status</td><td>PENDING, PAID, SOLD, BOOKED, CANCEL_REQUESTED, CANCELLED.</td></tr>
+      <tr><td>Operations</td><td>Edit, cancel, or request cancellation.</td></tr>
+    </table>
+    <h4>Creating a manual booking</h4>
+    <ol class="steps">
+      <li>Select a <strong>Schedule</strong>.</li>
+      <li>Enter <strong>Passenger Name</strong>, <strong>Phone</strong>, and <strong>Email</strong>.</li>
+      <li>Enter <strong>Seat Numbers</strong> (comma-separated, e.g. <code>A1,A2</code>).</li>
+      <li>Enter the <strong>Total Fare</strong> in BDT.</li>
+      <li>Choose <strong>Payment Method</strong> (bKash, Nagad, Card, Cash, ZiniPay).</li>
+      <li>Set the <strong>Status</strong> and submit.</li>
+    </ol>
+
+    <!-- Cancel Requests -->
+    <h3>Cancel Requests</h3>
+    <p><em>Permission:</em> <code>cancel-requests</code></p>
+    <p>Lists all passenger-initiated cancellation requests that await your approval. Each row shows the PNR, passenger, contact, journey, bus, seats, fare, and request timestamp. Click <strong>Approve</strong> to confirm the cancellation — the booking status becomes <code>CANCELLED</code> and the seats are released for rebooking. Refunds are handled according to your own policy.</p>
+
+    <!-- Stations -->
+    <h3>Stations</h3>
+    <p><em>Permission:</em> <code>stations</code></p>
+    <p>Manage the list of bus terminal stations that serve as origin and destination points. To add a station, enter its name (e.g. "Dhaka", "Chittagong") and save. Stations are referenced when creating routes.</p>
+
+    <!-- Coaches -->
+    <h3>Coaches</h3>
+    <p><em>Permission:</em> <code>buses</code></p>
+    <p>Register the buses in your fleet. Each coach record has the following fields:</p>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Operator Company</td><td>Name of the operating company (e.g. Sonya Enterprise).</td></tr>
+      <tr><td>Coach Registration No.</td><td>Unique fleet identifier (e.g. SE-4122).</td></tr>
+      <tr><td>Comfort Class</td><td>AC (Air Conditioned) or Non AC (Economy).</td></tr>
+      <tr><td>Seat Layout Pattern</td><td>2+2 (Standard), 1+2 (AC Executive), 2+2_last5 (Non-AC with 5 in back row), or Sleeper (Multi-Deck).</td></tr>
+      <tr><td>Total Seats Capacity</td><td>Number of seats (10–100). Defaults adjust based on the chosen layout.</td></tr>
+      <tr><td>Seat Layout Grid</td><td>Custom drag-and-drop designer to define exact seat positions, aisles, and labels.</td></tr>
+    </table>
+    <div class="callout callout-info">
+      <strong>ℹ Seat Layout Designer:</strong> Click <strong>Customize Layout (Drag &amp; Drop)</strong> to open a visual editor where you can add/remove rows and columns, drag cells to swap them, and configure each cell's type (seat, aisle, etc.) and label.
+    </div>
+
+    <!-- Routes -->
+    <h3>Routes</h3>
+    <p><em>Permission:</em> <code>routes</code></p>
+    <p>Define origin–destination connections with optional stop points. Each route stores:</p>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Departure Station</td><td>Origin station (selected from the Stations list).</td></tr>
+      <tr><td>Arrival Station</td><td>Destination station (selected from the Stations list).</td></tr>
+      <tr><td>Distance</td><td>Estimated distance (e.g. 250 km).</td></tr>
+      <tr><td>Duration</td><td>Estimated travel time (e.g. 5.5 Hours).</td></tr>
+      <tr><td>Boarding Points</td><td>List of pickup points along the route.</td></tr>
+      <tr><td>Dropping Points</td><td>List of drop-off points along the route.</td></tr>
+    </table>
+
+    <!-- Schedules -->
+    <h3>Schedules</h3>
+    <p><em>Permission:</em> <code>schedules</code></p>
+    <p>Create departure timetables by combining a bus and a route. Each schedule has:</p>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Bus Coach</td><td>Select from your registered coaches.</td></tr>
+      <tr><td>Route</td><td>Select a configured route.</td></tr>
+      <tr><td>Departure Date &amp; Time</td><td>When the coach departs.</td></tr>
+      <tr><td>Arrival Date &amp; Time</td><td>When the coach is expected to arrive.</td></tr>
+      <tr><td>Fare Price (BDT)</td><td>Price per seat for this journey.</td></tr>
+    </table>
+    <p>Once saved, the schedule appears in customer search results and is bookable from the Coach Services seat map.</p>
+
+    <!-- Coupons -->
+    <h3>Coupons</h3>
+    <p><em>Permission:</em> <code>promotions</code></p>
+    <p>Create flat-discount promo codes that customers apply during checkout.</p>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Coupon Code</td><td>The code customers enter (e.g. SONYANEW).</td></tr>
+      <tr><td>Discount Amount (BDT)</td><td>Flat amount deducted from the total fare.</td></tr>
+      <tr><td>Description</td><td>Details shown to customers (e.g. "10% off Eid Special").</td></tr>
+    </table>
+    <p>Active coupons are displayed on the customer app's <strong>Offers</strong> page.</p>
+
+    <!-- Users & Roles -->
+    <h3>Users &amp; Roles</h3>
+    <p><em>Permission:</em> <code>users</code></p>
+    <p>Manage all customer and staff accounts. The user table shows ID, name, email, role, and join date. Editing a user lets you change:</p>
+    <ul>
+      <li><strong>Full Name</strong> and <strong>Email Address</strong>.</li>
+      <li><strong>Role</strong> — see the Role System below.</li>
+      <li><strong>Menu Permissions</strong> — checkboxes for each admin menu (only required for the <em>admin</em> role).</li>
+    </ul>
+
+    <h4>Role System</h4>
+    <table>
+      <tr><th>Role</th><th>Access</th></tr>
+      <tr><td><strong>super_admin</strong></td><td>Unrestricted access to everything — system settings, license, gateways, and all management menus.</td></tr>
+      <tr><td><strong>admin</strong></td><td>Access limited to the menus checked in <em>Menu Permissions</em>. A null (empty) permissions list grants full admin access.</td></tr>
+      <tr><td><strong>user</strong></td><td>Customer-only. Cannot log into the admin panel.</td></tr>
+    </table>
+    <p>Available menu permission keys: <code>coach-services</code>, <code>bookings</code>, <code>cancel-requests</code>, <code>stations</code>, <code>buses</code>, <code>routes</code>, <code>schedules</code>, <code>promotions</code>, <code>users</code>, <code>reports</code>.</p>
+
+    <!-- Ticket Reports -->
+    <h3>Ticket Reports</h3>
+    <p><em>Permission:</em> <code>reports</code></p>
+    <p>Generate and export business reports. Every report supports date-range filtering and export to <strong>PDF</strong> or <strong>Excel</strong>. The 11 report types are:</p>
+    <ol>
+      <li>Booking Report</li>
+      <li>Cancellation Report</li>
+      <li>Passenger Report</li>
+      <li>Revenue Report</li>
+      <li>Route Sales Report</li>
+      <li>Seat Occupancy Report</li>
+      <li>Agent Sales Report</li>
+      <li>Selling Report</li>
+      <li>Payment Report</li>
+      <li>Refund Report</li>
+      <li>Cancel Report</li>
+    </ol>
+
+    <!-- License -->
+    <h3>License</h3>
+    <p><em>Super Admin only.</em> View the current license activation status and purchase details. After migrating to a new domain, use the <strong>Re-verify</strong> button to re-validate the purchase code against the new domain.</p>
+
+    <!-- Site Settings -->
+    <h3>Site Settings</h3>
+    <p><em>Super Admin only.</em> Configure everything that affects the customer-facing website and admin branding. All changes apply in real time.</p>
+
+    <h4>Favicon</h4>
+    <p>Upload a custom favicon (ICO, PNG, SVG — max 512 KB) shown in browser tabs.</p>
+
+    <h4>Site Logo</h4>
+    <p>Upload a logo image (PNG, SVG, JPG — max 1 MB, recommended 40–60 px height) that appears in the admin header, admin sidebar, and customer navbar. If no logo is uploaded, the <strong>Text Logo Label</strong> is used instead.</p>
+
+    <h4>Website Identity</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Website Title</td><td>Shown in browser tabs and search results.</td></tr>
+      <tr><td>Text Logo Label</td><td>Fallback text logo (max 50 chars).</td></tr>
+    </table>
+
+    <h4>Footer Management</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Company Name</td><td>Displayed in the footer.</td></tr>
+      <tr><td>Copyright Text</td><td>Copyright line at the bottom of the site.</td></tr>
+      <tr><td>Footer Links</td><td>JSON array of links. Use <code>{"label":"Text","tab":"home"}</code> for internal tabs (home, cancel, offers, profile) or <code>{"label":"Text","url":"https://..."}</code> for external links.</td></tr>
+    </table>
+
+    <h4>Maintenance Mode</h4>
+    <p>Toggle a switch to take the customer website offline. Visitors see a maintenance page while the admin dashboard stays accessible. You can also edit the maintenance message shown to visitors.</p>
+
+    <h4>SEO Settings</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Meta Description</td><td>150–160 char description for Google search results.</td></tr>
+      <tr><td>Meta Keywords</td><td>Comma-separated keywords.</td></tr>
+      <tr><td>OG Title / Description / Image</td><td>Open Graph metadata for Facebook/Twitter sharing (recommended OG image: 1200×630 px).</td></tr>
+      <tr><td>Google Analytics ID</td><td>GA4 Measurement ID (e.g. G-XXXXXXXXXX). Leave blank to disable.</td></tr>
+    </table>
+
+    <!-- Integrations & Gateways -->
+    <h3>Integrations &amp; Gateways</h3>
+    <p><em>Super Admin only.</em> Configure third-party services for SMS, email, and online payments. Each section has a <strong>Save</strong> button; use the Diagnostics section at the bottom to test each connection.</p>
+
+    <h4>SMS Gateway</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Gateway Provider Name</td><td>Display name (e.g. SMS.NET.BD).</td></tr>
+      <tr><td>Provider API Driver</td><td>One of: <code>smsnetbd</code>, <code>bulksmsbd</code>, <code>custom</code>, <code>get_query</code>.</td></tr>
+      <tr><td>Gateway API URL</td><td>Endpoint URL of the SMS provider.</td></tr>
+      <tr><td>API Authentication Key</td><td>Secret key or token.</td></tr>
+      <tr><td>Sender ID / Mask</td><td>Optional branded sender name.</td></tr>
+      <tr><td>Message Template</td><td>SMS body with placeholders <code>{PNR}</code>, <code>{SEATS}</code>, <code>{FARE}</code>, <code>{STATUS}</code>.</td></tr>
+      <tr><td>Active toggle</td><td>Enable or disable the SMS service.</td></tr>
+    </table>
+
+    <h4>Mail Dispatcher (SMTP)</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Mail Driver</td><td>SMTP (production) or Log (development).</td></tr>
+      <tr><td>SMTP Host / Port</td><td>Server address and port (e.g. 587 for TLS).</td></tr>
+      <tr><td>SMTP Username / Password</td><td>Authentication credentials.</td></tr>
+      <tr><td>Transport Encryption</td><td>TLS/STARTTLS, SSL, or None.</td></tr>
+      <tr><td>From Email / From Name</td><td>Sender identity for all outgoing mail.</td></tr>
+    </table>
+    <p>Used for password reset emails and receipts. Settings are saved to both the database and <code>.env</code>.</p>
+
+    <h4>ZiniPay Payment Gateway</h4>
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>ZiniPay API Secret Key</td><td>Secret key from your ZiniPay merchant dashboard.</td></tr>
+      <tr><td>ZiniPay Base Endpoint URL</td><td>API base URL (default: https://api.zinipay.com).</td></tr>
+    </table>
+    <p>Keys are stored in the database and synced to <code>.env</code>. Also set the callback URLs in your ZiniPay merchant dashboard (see the <a href="#payments">ZiniPay Setup</a> section).</p>
+
+    <h4>Diagnostics</h4>
+    <p>Run connectivity tests for SMS, Mail, and ZiniPay before going live. Each test sends a sample request and reports success or error details.</p>
+
+    <!-- Profile -->
+    <h3>Profile</h3>
+    <p>Every logged-in admin can view and update their own account — name, email, and password. This menu does not require any special permission.</p>
   </section>
 
   <!-- CUSTOMER APP -->
@@ -864,6 +1079,146 @@ server {
       <li><strong>Offers</strong> — displays active promo codes from the admin panel.</li>
       <li><strong>Maintenance mode</strong> — if enabled in Admin → Site Settings, the app shows a maintenance page (site-settings endpoint remains accessible).</li>
     </ul>
+  </section>
+
+  <!-- USER MANUAL -->
+  <section id="user-manual">
+    <h2>User Manual</h2>
+    <p>This section walks you through the day-to-day usage of SonyaBus — both the <strong>Admin Panel</strong> and the <strong>Customer App</strong>.</p>
+
+    <!-- ADMIN MANUAL -->
+    <h3>Admin Panel Manual</h3>
+
+    <h4>Dashboard</h4>
+    <p>The dashboard gives you a quick overview of your business — total bookings, revenue, sold seats, and recent activity. Use the date-range filter to view reports for a specific period.</p>
+
+    <h4>Managing Stations</h4>
+    <ol class="steps">
+      <li>Go to <strong>Stations</strong> in the sidebar.</li>
+      <li>Click <strong>Add Station</strong> and enter the station name (e.g. "Dhaka", "Chittagong").</li>
+      <li>Save. Stations are used as origin and destination points when creating routes.</li>
+    </ol>
+
+    <h4>Managing Coaches (Buses)</h4>
+    <ol class="steps">
+      <li>Go to <strong>Coaches</strong> → <strong>Add Coach</strong>.</li>
+      <li>Enter the coach name, registration number, coach type (AC / Non-AC / Sleeper), and total seats.</li>
+      <li>Set the seat layout: <strong>2+2</strong> (standard), <strong>1+2</strong> (premium), or <strong>1+1</strong> (sleeper). The seat map preview updates automatically.</li>
+      <li>Save. The coach is now available to assign to schedules.</li>
+    </ol>
+
+    <h4>Managing Routes</h4>
+    <ol class="steps">
+      <li>Go to <strong>Routes</strong> → <strong>Add Route</strong>.</li>
+      <li>Select an <strong>Origin</strong> and <strong>Destination</strong> station.</li>
+      <li>(Optional) Add boarding and dropping points with their times.</li>
+      <li>Save. Routes are reusable across multiple schedules.</li>
+    </ol>
+
+    <h4>Creating Schedules</h4>
+    <ol class="steps">
+      <li>Go to <strong>Schedules</strong> → <strong>Add Schedule</strong>.</li>
+      <li>Select the <strong>Route</strong>, <strong>Coach</strong>, and set the departure date and time.</li>
+      <li>Enter the ticket fare per seat.</li>
+      <li>Choose the schedule status: <strong>Active</strong> (bookable) or <strong>Inactive</strong> (hidden from customers).</li>
+      <li>Save. The schedule will now appear in customer search results.</li>
+    </ol>
+
+    <h4>Managing Bookings</h4>
+    <p>The <strong>Bookings Logs</strong> page shows all customer reservations. You can:</p>
+    <ul>
+      <li><strong>View</strong> booking details — passenger info, seats, fare, payment status.</li>
+      <li><strong>Create</strong> a manual booking on behalf of a customer.</li>
+      <li><strong>Edit</strong> passenger details or seat assignments.</li>
+      <li><strong>Cancel</strong> a booking (refund handled per your policy).</li>
+    </ul>
+    <p>Customer-initiated cancellation requests appear under <strong>Cancel Requests</strong>. Review and approve them to process refunds.</p>
+
+    <h4>Coach Services (Live Seat Map)</h4>
+    <p>The <strong>Coach Services</strong> page shows real-time seat availability for each schedule. You can manually <strong>block</strong> or <strong>unblock</strong> seats (e.g. for maintenance or to hold seats for offline sales).</p>
+
+    <h4>Promotions &amp; Coupons</h4>
+    <ol class="steps">
+      <li>Go to <strong>Coupons</strong> → <strong>Add Coupon</strong>.</li>
+      <li>Enter the promo code (e.g. <code>EID20</code>), discount amount, and expiry date.</li>
+      <li>Set usage limits (per user / total) if needed.</li>
+      <li>Save. Customers can apply the code during checkout.</li>
+    </ol>
+
+    <h4>Reports</h4>
+    <p>SonyaBus ships with <strong>11 report types</strong> accessible from the <strong>Ticket Reports</strong> menu:</p>
+    <ol>
+      <li>Ticket Selling Report — all paid ticket sales by date, route, coach type, and payment method.</li>
+      <li>Booking Report — active bookings (PAID, SOLD, BOOKED) with full status breakdown.</li>
+      <li>Revenue Report — total revenue from paid bookings, split by AC / Non-AC and method.</li>
+      <li>Passenger Report — passenger travel history with boarding, dropping, gender details.</li>
+      <li>Seat Occupancy Report — per-schedule booked vs available seats and occupancy percentage.</li>
+      <li>Cancellation Report — full cancellation log with booking date, route, and fare released.</li>
+      <li>Ticket Cancel Report — cancelled tickets export with Excel and PDF support.</li>
+      <li>Refund Report — online-payment cancellations eligible for refund with invoice IDs.</li>
+      <li>Payment Report — payment transaction log broken down by method with amounts.</li>
+      <li>Route-wise Sales Report — aggregated sales per route (bookings, seats, revenue ranked).</li>
+      <li>Agent / Counter Sales — aggregated sales per operator with routes covered and revenue.</li>
+    </ol>
+    <p>Every report supports filtering by date range and exporting as <strong>PDF</strong> or <strong>Excel</strong>.</p>
+
+    <h4>Users &amp; Roles</h4>
+    <ul>
+      <li><strong>Super Admin</strong> — full access, including system settings and license.</li>
+      <li><strong>Admin</strong> — access limited to menus granted in <em>Menu Permissions</em>. A null permissions list grants full admin access.</li>
+      <li><strong>User</strong> — customer-only; cannot log into the admin panel.</li>
+    </ul>
+    <p>To add an admin: go to <strong>Users &amp; Roles</strong> → <strong>Add User</strong>, set the role to <em>admin</em>, and select which menu items they can access.</p>
+
+    <h4>Site Settings</h4>
+    <p>Under <strong>Site Settings</strong> (Super Admin only) you can update the site name, favicon, logo, footer text, SEO meta tags, and toggle <strong>Maintenance Mode</strong>.</p>
+
+    <h4>Integrations &amp; Gateways</h4>
+    <p>Configure payment (ZiniPay), SMS, and mail settings from <strong>Integrations</strong> (Super Admin only). Each section includes a "Send Test" button to verify the connection before going live.</p>
+
+    <hr style="margin: 32px 0; border-color: var(--border);">
+
+    <!-- CUSTOMER MANUAL -->
+    <h3>Customer App Manual</h3>
+
+    <h4>Searching for Buses</h4>
+    <ol class="steps">
+      <li>Open the customer app and select your <strong>Origin</strong> and <strong>Destination</strong>.</li>
+      <li>Pick a <strong>date</strong> and optionally filter by coach type (AC / Non-AC).</li>
+      <li>Click <strong>Search</strong>. Available schedules appear with departure time, arrival time, fare, and available seats.</li>
+    </ol>
+
+    <h4>Selecting Seats</h4>
+    <p>Choose a schedule to open the interactive seat map:</p>
+    <ul>
+      <li><span class="badge badge-green">Available</span> — seats you can select.</li>
+      <li><span class="badge badge-red">Booked</span> — already sold (shown as M/F).</li>
+      <li><span class="badge badge-blue">Blocked</span> — unavailable (reserved by the operator).</li>
+    </ul>
+    <p>Click available seats to select them. Seats are temporarily held for <strong>2 minutes</strong> while you complete checkout — if you exceed the time, the seats are released.</p>
+
+    <h4>Checkout &amp; Payment</h4>
+    <ol class="steps">
+      <li>Enter passenger details (name, phone, email).</li>
+      <li>Apply a promo code if you have one — the discount is applied instantly.</li>
+      <li>Review the total fare and click <strong>Pay Now</strong>.</li>
+      <li>You will be redirected to the ZiniPay payment page. Complete the payment there.</li>
+      <li>On success, you return to the app and the booking is confirmed. An SMS with your PNR and seat numbers is sent to your phone.</li>
+    </ol>
+
+    <h4>My Tickets</h4>
+    <p>After logging in, go to <strong>My Tickets</strong> to view all your bookings. Each ticket shows the PNR, schedule details, seat numbers, fare, and status.</p>
+
+    <h4>Cancelling a Ticket</h4>
+    <ol class="steps">
+      <li>Open the ticket in <strong>My Tickets</strong>.</li>
+      <li>Click <strong>Request Cancellation</strong>.</li>
+      <li>The request is sent to the admin. You will receive an SMS notification once the admin approves it.</li>
+      <li>Refunds are processed according to the operator's cancellation policy.</li>
+    </ol>
+
+    <h4>Offers</h4>
+    <p>The <strong>Offers</strong> page lists all active promo codes from the admin. Copy a code and apply it during checkout to get the discount.</p>
   </section>
 
   <!-- PAYMENTS -->
@@ -975,7 +1330,7 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
   <section id="troubleshooting">
     <h2>Troubleshooting</h2>
 
-    <h3>সাধারণ সমস্যা</h3>
+    <h3>General Issues</h3>
     <table>
       <tr><th>Symptom</th><th>Likely cause &amp; fix</th></tr>
       <tr>
@@ -1012,7 +1367,7 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
       </tr>
       <tr>
         <td>License wizard: "ENVATO_ITEM_ID is not configured"</td>
-        <td><code>.env</code> ফাইলে <code>ENVATO_ITEM_ID=</code> এর পরে আপনার CodeCanyon item ID দিন এবং <code>php artisan config:clear</code> চালান।</td>
+        <td>Add your CodeCanyon item ID after <code>ENVATO_ITEM_ID=</code> in the <code>.env</code> file and run <code>php artisan config:clear</code>.</td>
       </tr>
       <tr>
         <td>License wizard: "Invalid or expired personal token"</td>
@@ -1020,150 +1375,149 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
       </tr>
       <tr>
         <td>License wizard: "purchase code is for a different product"</td>
-        <td>আপনি অন্য কোনো CodeCanyon item-এর purchase code দিচ্ছেন। SonyaBus-এর purchase code ব্যবহার করুন।</td>
+        <td>You are using a purchase code from a different CodeCanyon item. Use the purchase code for SonyaBus.</td>
       </tr>
     </table>
 
-    <h3>cPanel-এ সাধারণ সমস্যা</h3>
+    <h3>Common cPanel Issues</h3>
     <table>
-      <tr><th>সমস্যা</th><th>সমাধান</th></tr>
+      <tr><th>Problem</th><th>Solution</th></tr>
       <tr>
-        <td>cPanel-এ site খুললে <code>Object not found</code> বা index দেখায়</td>
+        <td>Opening the site on cPanel shows <code>Object not found</code> or the index</td>
         <td>
-          Subdomain-এর Document Root ভুল সেট আছে।
-          cPanel → <strong>Domains</strong> → <code>api.yourdomain.com</code> এর Document Root
-          <code>public_html/api/public</code> করুন — <code>public_html/api</code> নয়।
+          The subdomain Document Root is set incorrectly.
+          cPanel → <strong>Domains</strong> → set the Document Root for <code>api.yourdomain.com</code>
+          to <code>public_html/api/public</code> — not <code>public_html/api</code>.
         </td>
       </tr>
       <tr>
         <td><code>composer: command not found</code></td>
         <td>
-          Terminal-এ <code>composer</code> নেই। Local machine-এ
-          <code>composer install --no-dev</code> চালিয়ে <code>vendor/</code> folder সহ upload করুন।
-          অথবা hosting provider-এর Composer Manager ব্যবহার করুন।
+          <code>composer</code> is not available in the Terminal. Run
+          <code>composer install --no-dev</code> on your local machine and upload the project
+          including the <code>vendor/</code> folder. Or use your hosting provider's Composer Manager.
         </td>
       </tr>
       <tr>
         <td>PHP version error: <code>requires PHP 8.2</code></td>
         <td>
-          cPanel → <strong>MultiPHP Manager</strong> → আপনার domain select করুন →
-          PHP version <strong>8.2</strong> বা higher select করুন।
+          cPanel → <strong>MultiPHP Manager</strong> → select your domain →
+          set PHP version to <strong>8.2</strong> or higher.
         </td>
       </tr>
       <tr>
-        <td><code>.env</code> ফাইল দেখা যাচ্ছে না File Manager-এ</td>
+        <td><code>.env</code> file is not visible in File Manager</td>
         <td>
-          cPanel File Manager → Settings → <strong>"Show Hidden Files (dotfiles)"</strong> চেক করুন।
-          <code>.env</code> একটি hidden file।
+          cPanel File Manager → Settings → check <strong>"Show Hidden Files (dotfiles)"</strong>.
+          <code>.env</code> is a hidden file.
         </td>
       </tr>
       <tr>
-        <td>Database connection error wizard-এ</td>
+        <td>Database connection error in the wizard</td>
         <td>
-          cPanel MySQL-এ database user-কে database-এ assign করতে হয়।
-          cPanel → <strong>MySQL Databases</strong> → "Add User to Database" → ALL PRIVILEGES দিন।
-          DB_HOST সাধারণত <code>localhost</code> (127.0.0.1 নয়)।
+          In cPanel MySQL, the database user must be assigned to the database.
+          cPanel → <strong>MySQL Databases</strong> → "Add User to Database" → grant ALL PRIVILEGES.
+          DB_HOST is usually <code>localhost</code> (not 127.0.0.1).
         </td>
       </tr>
       <tr>
         <td><code>storage/logs</code> write permission error</td>
         <td>
           cPanel File Manager → <code>public_html/api/storage</code> → right click →
-          <strong>Change Permissions</strong> → <code>755</code> থেকে <code>775</code> করুন।
-          Recursively apply করুন।
+          <strong>Change Permissions</strong> → set from <code>755</code> to <code>775</code>.
+          Apply recursively.
         </td>
       </tr>
       <tr>
-        <td>React app route refresh করলে 404 হয়</td>
+        <td>React app shows 404 on route refresh</td>
         <td>
-          <code>public_html/app/.htaccess</code> ফাইল নেই বা ভুল।
-          Installation guide-এর <strong>পদক্ষেপ ৮</strong> এর .htaccess content ব্যবহার করুন।
+          The <code>public_html/app/.htaccess</code> file is missing or incorrect.
+          Use the .htaccess content from <strong>Step 8</strong> of the installation guide.
         </td>
       </tr>
       <tr>
         <td>SSL/HTTPS mixed content warning</td>
         <td>
-          <code>APP_URL</code> এবং <code>APP_FRONTEND_URL</code> উভয়ই <code>https://</code> দিয়ে শুরু হওয়া উচিত।
-          cPanel → <strong>SSL/TLS</strong> → Let's Encrypt certificate install করুন।
+          Both <code>APP_URL</code> and <code>APP_FRONTEND_URL</code> must start with <code>https://</code>.
+          cPanel → <strong>SSL/TLS</strong> → install a Let's Encrypt certificate.
         </td>
       </tr>
       <tr>
-        <td>Cron job কাজ করছে না</td>
+        <td>Cron job is not working</td>
         <td>
-          Terminal-এ <code>which php</code> চালিয়ে সঠিক PHP path বের করুন।
-          Cron command-এ সেই path ব্যবহার করুন, যেমন: <code>/opt/cpanel/ea-php82/root/usr/bin/php</code>
+          Run <code>which php</code> in the Terminal to find the correct PHP path.
+          Use that path in the cron command, e.g.: <code>/opt/cpanel/ea-php82/root/usr/bin/php</code>
         </td>
       </tr>
     </table>
 
-    <h3>Local (Laragon/XAMPP)-এ সাধারণ সমস্যা</h3>
+    <h3>Common Local (Laragon/XAMPP) Issues</h3>
     <table>
-      <tr><th>সমস্যা</th><th>সমাধান</th></tr>
+      <tr><th>Problem</th><th>Solution</th></tr>
       <tr>
-        <td>Laragon-এ <code>php artisan serve</code> চালালে port conflict</td>
+        <td>Port conflict when running <code>php artisan serve</code> in Laragon</td>
         <td>
-          <code>php artisan serve --port=8001</code> দিয়ে অন্য port ব্যবহার করুন।
-          তারপর frontend <code>.env</code>-এ <code>VITE_API_BASE_URL=http://localhost:8001/api</code> আপডেট করুন।
+          Use a different port: <code>php artisan serve --port=8001</code>.
+          Then update <code>VITE_API_BASE_URL=http://localhost:8001/api</code> in the frontend <code>.env</code>.
         </td>
       </tr>
       <tr>
         <td><code>SQLSTATE: Connection refused</code> error</td>
         <td>
-          Laragon বা XAMPP-এ MySQL চালু নেই। Laragon → <strong>Start All</strong>
-          অথবা XAMPP Control Panel → MySQL → <strong>Start</strong> করুন।
+          MySQL is not running in Laragon or XAMPP. In Laragon → <strong>Start All</strong>
+          or in the XAMPP Control Panel → MySQL → click <strong>Start</strong>.
         </td>
       </tr>
       <tr>
-        <td>Frontend-এ API call করলে CORS error</td>
+        <td>CORS error when making API calls from the frontend</td>
         <td>
-          <code>backend/config/cors.php</code> এ <code>allowed_origins</code>-এ
-          <code>http://localhost:5173</code> আছে কিনা দেখুন।
-          থাকলে <code>php artisan config:clear</code> চালান।
+          Check that <code>http://localhost:5173</code> is in <code>allowed_origins</code>
+          in <code>backend/config/cors.php</code>. If yes, run <code>php artisan config:clear</code>.
         </td>
       </tr>
       <tr>
-        <td>Windows-এ <code>php artisan key:generate</code> কাজ করছে না</td>
+        <td><code>php artisan key:generate</code> not working on Windows</td>
         <td>
-          <code>.env</code> ফাইল নেই। আগে <code>copy .env.example .env</code> চালান,
-          তারপর <code>php artisan key:generate</code>।
+          The <code>.env</code> file doesn't exist. First run <code>copy .env.example .env</code>,
+          then run <code>php artisan key:generate</code>.
         </td>
       </tr>
       <tr>
-        <td>npm install-এ <code>node-gyp</code> error</td>
+        <td><code>node-gyp</code> error during <code>npm install</code></td>
         <td>
-          Windows Build Tools install করুন:
+          Install Windows Build Tools:
           <code>npm install --global windows-build-tools</code>
-          অথবা Node.js LTS version ব্যবহার করুন (20 LTS recommended)।
+          or use the Node.js LTS version (20 LTS recommended).
         </td>
       </tr>
       <tr>
-        <td>Laragon-এ Virtual Host-এ 403 Forbidden</td>
+        <td>403 Forbidden on Laragon Virtual Host</td>
         <td>
-          Laragon → Menu → Apache → <code>httpd-vhosts.conf</code> edit করুন।
-          Document root <code>backend/public</code> হওয়া নিশ্চিত করুন,
-          <code>backend</code> নয়। Apache restart করুন।
+          In Laragon → Menu → Apache → edit <code>httpd-vhosts.conf</code>.
+          Make sure the Document root is <code>backend/public</code>,
+          not <code>backend</code>. Restart Apache.
         </td>
       </tr>
       <tr>
-        <td>Local-এ License verify হচ্ছে না</td>
+        <td>License not verifying locally</td>
         <td>
-          Internet connection চেক করুন (Envato API call লাগে)।
-          Testing-এর জন্য <code>.env</code>-এ <code>APP_LICENSED=true</code> দিয়ে
-          <code>php artisan migrate</code> manually run করুন।
+          Check your internet connection (the Envato API call is required).
+          For testing, set <code>APP_LICENSED=true</code> in <code>.env</code>
+          and run <code>php artisan migrate</code> manually.
         </td>
       </tr>
       <tr>
-        <td>Queue worker ছাড়া SMS যাচ্ছে না</td>
+        <td>SMS not sending without a queue worker</td>
         <td>
-          Local-এ আলাদা terminal-এ <code>php artisan queue:work</code> চালান।
-          অথবা testing-এর জন্য <code>.env</code>-এ <code>QUEUE_CONNECTION=sync</code> দিন
-          (synchronous — no worker needed, but blocks the request)।
+          Run <code>php artisan queue:work</code> in a separate terminal locally.
+          Or for testing, set <code>QUEUE_CONNECTION=sync</code> in <code>.env</code>
+          (synchronous — no worker needed, but blocks the request).
         </td>
       </tr>
     </table>
 
-    <h3>Log ফাইল দেখার পদ্ধতি</h3>
-    <p>যেকোনো error debug করতে প্রথমে log দেখুন:</p>
+    <h3>How to View Log Files</h3>
+    <p>To debug any error, check the logs first:</p>
     <pre><code># Terminal থেকে
 tail -f storage/logs/laravel.log
 
