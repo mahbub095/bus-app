@@ -40,7 +40,6 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     let adminPassengerEmail = '';
     let adminGender         = 'M';
     let adminPaymentMethod  = 'Cash';
-    let adminBlockMode      = false;
     let pollTimer           = null;
     let holdTimerInterval   = null;
     let isFetching          = false;
@@ -53,17 +52,140 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     // ─── Inline seat styles (bypasses all CSS specificity issues) ─────────────
-    // Using inline style= so nothing — Tailwind, cascade order, !important rules
-    // from other selectors — can override the selected green colour.
     const SEAT_STYLES = {
         selected:  'background:#22c55e;border-color:#16a34a;color:#fff;box-shadow:0 0 10px rgba(34,197,94,.45);cursor:pointer;',
-        available: 'background:#fff;border-color:#d1d5db;color:#374151;cursor:pointer;',
-        blocked:   'background:#6b7280;border-color:#4b5563;color:#f3f4f6;cursor:not-allowed;opacity:.85;',
+        available: 'background:var(--bg-seat-map,#fff);border-color:#d1d5db;color:#374151;cursor:pointer;',
+        blocked:   'background:#6b7280;border-color:#4b5563;color:#f3f4f6;cursor:pointer;opacity:.85;',
         booked_m:  'background:#fecaca;border-color:#f87171;color:#7f1d1d;cursor:pointer;',
         booked_f:  'background:#fdf4ff;border-color:#f0abfc;color:#a21caf;cursor:pointer;',
         sold_m:    'background:#ef4444;border-color:#b91c1c;color:#fff;cursor:pointer;',
         sold_f:    'background:#ec4899;border-color:#be185d;color:#fff;cursor:pointer;',
     };
+
+    // ─── Seat action popover state ─────────────────────────────────────────────
+    let activeSeatPopover = null; // { seat, scheduleId, x, y }
+
+    function closeSeatPopover() {
+        const existing = document.getElementById('cs-seat-popover');
+        if (existing) existing.remove();
+        activeSeatPopover = null;
+    }
+
+    function showSeatPopover(seatEl, seatCode, status, scheduleId, schedule) {
+        closeSeatPopover();
+
+        const rect = seatEl.getBoundingClientRect();
+        const listEl = document.getElementById('cs-bus-list');
+        const listRect = listEl ? listEl.getBoundingClientRect() : { left: 0, top: 0 };
+
+        const isBookedOrSold = status.startsWith('booked_') || status.startsWith('sold_');
+        const isBlocked = status === 'blocked';
+        const bookingData = isBookedOrSold ? schedule?.seat_bookings?.[seatCode] : null;
+
+        const popover = document.createElement('div');
+        popover.id = 'cs-seat-popover';
+        popover.style.cssText = `
+            position:fixed;
+            left:${rect.left + rect.width / 2}px;
+            top:${rect.bottom + 6}px;
+            transform:translateX(-50%);
+            background:var(--bg-card,#1e1e2e);
+            border:1px solid var(--border-color,rgba(255,255,255,.12));
+            border-radius:10px;
+            padding:12px 14px;
+            min-width:200px;
+            max-width:260px;
+            box-shadow:0 8px 24px rgba(0,0,0,.35);
+            z-index:9999;
+            font-size:13px;
+            color:var(--text-primary,#e2e8f0);
+        `;
+
+        let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <strong style="font-size:14px;">Seat ${escapeHtml(seatCode)}</strong>
+            <button id="cs-popover-close" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;line-height:1;padding:0 2px;">×</button>
+        </div>`;
+
+        if (isBookedOrSold && bookingData) {
+            html += `
+            <div style="background:rgba(255,255,255,.05);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;line-height:1.6;">
+                <div><span style="color:var(--text-muted);">Passenger:</span> <strong>${escapeHtml(bookingData.passenger_name)}</strong></div>
+                <div><span style="color:var(--text-muted);">Phone:</span> ${escapeHtml(bookingData.passenger_phone)}</div>
+                <div><span style="color:var(--text-muted);">PNR:</span> <span style="color:var(--primary);">${escapeHtml(bookingData.pnr || '—')}</span></div>
+                <div><span style="color:var(--text-muted);">Fare:</span> ${formatBdt(bookingData.total_fare)}</div>
+                <div><span style="color:var(--text-muted);">Payment:</span> ${escapeHtml(bookingData.payment_method)}</div>
+                <div><span style="color:var(--text-muted);">Status:</span> ${escapeHtml(bookingData.status)}</div>
+            </div>
+            <button id="cs-popover-cancel" data-booking-id="${bookingData.booking_id}"
+                style="width:100%;padding:7px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:6px;color:#f87171;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:6px;">
+                ✕ Cancel This Booking
+            </button>
+            <button id="cs-popover-block" data-seat="${escapeHtml(seatCode)}" data-schedule="${scheduleId}"
+                style="width:100%;padding:7px 10px;background:rgba(107,114,128,.15);border:1px solid rgba(107,114,128,.4);border-radius:6px;color:#9ca3af;cursor:not-allowed;font-size:12px;opacity:.5;"
+                disabled title="Cancel the booking first to block this seat">
+                🔒 Block Seat (cancel first)
+            </button>`;
+        } else if (isBlocked) {
+            html += `
+            <div style="color:var(--text-muted);font-size:12px;margin-bottom:10px;">This seat is blocked — customers cannot book it.</div>
+            <button id="cs-popover-unblock" data-seat="${escapeHtml(seatCode)}" data-schedule="${scheduleId}"
+                style="width:100%;padding:7px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);border-radius:6px;color:#4ade80;cursor:pointer;font-size:12px;font-weight:600;">
+                🔓 Unblock Seat
+            </button>`;
+        } else {
+            // available
+            html += `
+            <div style="color:var(--text-muted);font-size:12px;margin-bottom:10px;">This seat is available.</div>
+            <button id="cs-popover-block" data-seat="${escapeHtml(seatCode)}" data-schedule="${scheduleId}"
+                style="width:100%;padding:7px 10px;background:rgba(107,114,128,.15);border:1px solid rgba(107,114,128,.4);border-radius:6px;color:#9ca3af;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:6px;">
+                🔒 Block Seat
+            </button>
+            <button id="cs-popover-select" data-seat="${escapeHtml(seatCode)}"
+                style="width:100%;padding:7px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);border-radius:6px;color:#4ade80;cursor:pointer;font-size:12px;font-weight:600;">
+                ✓ Select for Booking
+            </button>`;
+        }
+
+        html += `</div>`;
+        popover.innerHTML = html;
+        popover.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const button = ev.target.closest('button');
+            if (!button) return;
+            if (button.id === 'cs-popover-close') {
+                closeSeatPopover();
+                return;
+            }
+            if (button.id === 'cs-popover-unblock' || button.id === 'cs-popover-block') {
+                if (button.disabled) return;
+                const seat = button.dataset.seat;
+                const sid = parseInt(button.dataset.schedule, 10);
+                closeSeatPopover();
+                toggleSeatBlock(sid, seat);
+                return;
+            }
+            if (button.id === 'cs-popover-cancel') {
+                const bookingId = button.dataset.bookingId;
+                closeSeatPopover();
+                handleCancelBooking(bookingId);
+            }
+        });
+        document.body.appendChild(popover);
+        activeSeatPopover = { seat: seatCode, scheduleId };
+
+        // Keep popover within viewport
+        const pop = document.getElementById('cs-seat-popover');
+        if (pop) {
+            const popRect = pop.getBoundingClientRect();
+            if (popRect.right > window.innerWidth - 8) {
+                pop.style.left = `${window.innerWidth - popRect.width - 12}px`;
+                pop.style.transform = 'none';
+            }
+            if (popRect.bottom > window.innerHeight - 8) {
+                pop.style.top = `${rect.top - popRect.height - 6}px`;
+            }
+        }
+    }
 
     // ─── General helpers ───────────────────────────────────────────────────────
     const stationName = id => stations.find(s => s.id === parseInt(id, 10))?.name || '';
@@ -173,8 +295,8 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         const viewOutline = isViewing ? 'outline:3px solid #6366f1;outline-offset:2px;z-index:1;' : '';
 
         let title = isPicking ? 'selected' : status;
-        if (status === 'blocked')                         title = adminBlockMode ? 'Blocked — click to unblock' : 'Blocked';
-        else if (adminBlockMode && status === 'available') title = 'Available — click to block';
+        if (status === 'blocked') title = 'Blocked — click to manage';
+        else if (String(status).startsWith('booked_') || String(status).startsWith('sold_')) title = 'Click to view or cancel';
 
         // Build hold timer badge for selected seats
         const timerHtml = isPicking && adminSeatExpirations[seatCode]
@@ -245,7 +367,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     function renderPaymentToggles() {
-        return ['Cash','bKash','Nagad','Card'].map(m =>
+        return ['Cash','ZiniPay'].map(m =>
             `<button type="button" class="payment-toggle ${adminPaymentMethod === m ? 'active' : ''}" data-payment="${escapeHtml(m)}">${escapeHtml(m)}</button>`
         ).join('');
     }
@@ -268,9 +390,18 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             </div>`;
     }
 
+    function syncBlockSelectedButton() {
+        const count = adminSelectedSeats.length;
+        document.querySelectorAll('.cs-block-selected').forEach(btn => {
+            btn.disabled = count === 0;
+            btn.textContent = `Block selected${count ? ` (${count})` : ''}`;
+        });
+    }
+
     function updateBookingExtras(schedule) {
         const el = document.getElementById(`cs-booking-extras-${schedule.id}`);
         if (el) el.innerHTML = renderBookingExtrasHtml(schedule);
+        syncBlockSelectedButton();
     }
 
     // ─── Booking sidebar ───────────────────────────────────────────────────────
@@ -320,13 +451,52 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             <label>Payment Method</label>
             <div class="payment-toggle-group" id="cs-payment-toggles">${renderPaymentToggles()}</div>
             <div id="cs-booking-error" style="color:#dc2626;font-size:13px;display:none;margin-bottom:8px;"></div>
-            <button type="button" class="btn-ticket-submit" id="cs-booking-submit">Submit</button>
+            <div style="display:flex;gap:8px;">
+                <button type="button" class="btn-ticket-submit" id="cs-booking-submit" style="flex:1;">Submit</button>
+                <button type="button" class="btn btn-secondary" id="cs-reserve-submit" style="flex:1;padding:10px;font-size:14px;font-weight:600;border-radius:8px;">Reserve Seat</button>
+            </div>
             <div id="cs-booking-extras-${schedule.id}">${renderBookingExtrasHtml(schedule)}</div>
         </div></div>`;
     }
 
     // ─── Results rendering ─────────────────────────────────────────────────────
+    function renderSeatManager(schedule) {
+        const map = getSeatMap(schedule);
+        const blocked = [];
+        const occupied = [];
+        Object.entries(map).forEach(([seat, status]) => {
+            if (status === 'blocked') blocked.push(seat);
+            else if (String(status).startsWith('booked_') || String(status).startsWith('sold_')) {
+                const info = schedule.seat_bookings?.[seat];
+                occupied.push({
+                    seat,
+                    label: info?.passenger_name ? `${seat} · ${info.passenger_name}` : seat,
+                    status: info?.status || status,
+                });
+            }
+        });
+        blocked.sort();
+        occupied.sort((a, b) => a.seat.localeCompare(b.seat));
+        const chip = 'padding:4px 8px;border-radius:999px;border:1px solid var(--border-color,rgba(255,255,255,.16));background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font-size:12px;';
+        const blockedHtml = blocked.length
+            ? blocked.map(seat => `<button type="button" class="cs-unblock-chip" data-seat="${escapeHtml(seat)}" data-schedule="${schedule.id}" title="Unblock ${escapeHtml(seat)}" style="${chip}">${escapeHtml(seat)} · Unblock</button>`).join('')
+            : `<span style="color:var(--text-muted);font-size:12px;">None</span>`;
+        const occupiedHtml = occupied.length
+            ? occupied.map(item => `<button type="button" class="cs-occupied-chip" data-seat="${escapeHtml(item.seat)}" data-schedule="${schedule.id}" title="${escapeHtml(item.status)}" style="${chip}">${escapeHtml(item.label)}</button>`).join('')
+            : `<span style="color:var(--text-muted);font-size:12px;">None</span>`;
+        const count = adminSelectedSeats.length;
+        return `<div class="seat-map-toolbar" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"><strong style="font-size:12px;min-width:88px;">Blocked</strong>${blockedHtml}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"><strong style="font-size:12px;min-width:88px;">Sold</strong>${occupiedHtml}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <button type="button" class="btn btn-secondary cs-block-selected" data-schedule-id="${schedule.id}" ${count ? '' : 'disabled'} style="padding:6px 12px;font-size:12px;">Block selected${count ? ` (${count})` : ''}</button>
+                <span class="seat-map-toolbar-hint">Click an available seat to book it. Unblock from the list, or open a sold seat to cancel that booking.</span>
+            </div>
+        </div>`;
+    }
+
     function renderResults() {
+        closeSeatPopover();
         const listEl  = document.getElementById('cs-bus-list');
         const countEl = document.getElementById('cs-results-count');
         if (!listEl) return;
@@ -383,12 +553,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                                     <span id="cs-seat-map-live-text-${sched.id}">${lastFetchedTimeText || 'Live'}</span>
                                 </span>
                             </h3>
-                            <div class="seat-map-toolbar">
-                                <button type="button" class="btn btn-secondary cs-block-mode-toggle ${adminBlockMode?'active':''}" data-schedule-id="${sched.id}" style="padding:6px 12px;font-size:12px;">
-                                    ${adminBlockMode ? 'Done blocking' : 'Manage blocked seats'}
-                                </button>
-                                <span class="seat-map-toolbar-hint">${adminBlockMode ? 'Click an available seat to block it, or a blocked seat to unblock.' : 'Only admins can block seats. Customers cannot book blocked seats.'}</span>
-                            </div>
+                            ${renderSeatManager(sched)}
                             <div id="cs-seat-map-${sched.id}">${renderSeatMap(sched)}</div>
                         </div>
                         <div id="cs-sidebar-${sched.id}">${renderBookingSidebar(sched)}</div>
@@ -435,6 +600,12 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         if (!listEl || coachListEventsBound) return;
         coachListEventsBound = true;
 
+        document.addEventListener('click', (ev) => {
+            const pop = document.getElementById('cs-seat-popover');
+            if (!pop || pop.contains(ev.target)) return;
+            closeSeatPopover();
+        });
+
         listEl.addEventListener('click', e => {
             // Toggle map expand/collapse
             const toggleBtn = e.target.closest('.cs-toggle-map');
@@ -444,11 +615,11 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 if (expandedScheduleId === id) {
                     // Release all holds for the current schedule before collapsing
                     releaseAllAdminHolds(expandedScheduleId);
-                    expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {}; adminBlockMode = false;
+                    expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {};
                 } else {
                     // Release any holds on the previously expanded schedule
                     if (expandedScheduleId) releaseAllAdminHolds(expandedScheduleId);
-                    expandedScheduleId = id; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {}; adminBlockMode = false;
+                    expandedScheduleId = id; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {};
                     adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = ''; adminDroppingPoint = '';
                     const sched = searchResults.find(s => s.id === id);
                     if (sched?.boarding_points?.[0]) adminBoardingPoint = sched.boarding_points[0].value;
@@ -468,14 +639,31 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             }
 
             if (e.target.id === 'cs-booking-submit') { const s = searchResults.find(s => s.id === expandedScheduleId); if (s) handleBookingSubmit(s); return; }
+            if (e.target.id === 'cs-reserve-submit') { const s = searchResults.find(s => s.id === expandedScheduleId); if (s) handleReserveSeat(s); return; }
             if (e.target.id === 'cs-cancel-booking-btn' && selectedSeatBooking) { handleCancelBooking(selectedSeatBooking.booking_id); return; }
             if (e.target.id === 'cs-back-to-book-btn') { selectedSeatBooking = null; renderResults(); return; }
 
-            // Block mode toggle
-            const blockBtn = e.target.closest('.cs-block-mode-toggle');
-            if (blockBtn) {
-                const schedId = parseInt(blockBtn.dataset.scheduleId, 10);
-                if (expandedScheduleId === schedId) { adminBlockMode = !adminBlockMode; if (adminBlockMode) adminSelectedSeats = []; renderResults(); }
+            const unblockChip = e.target.closest('.cs-unblock-chip');
+            if (unblockChip) {
+                e.stopPropagation();
+                toggleSeatBlock(parseInt(unblockChip.dataset.schedule, 10), unblockChip.dataset.seat);
+                return;
+            }
+
+            const occupiedChip = e.target.closest('.cs-occupied-chip');
+            if (occupiedChip) {
+                e.stopPropagation();
+                const seatCode = occupiedChip.dataset.seat;
+                const scheduleId = parseInt(occupiedChip.dataset.schedule, 10);
+                const schedule = searchResults.find(s => s.id === scheduleId);
+                const seatEl = listEl.querySelector(`.seat[data-seat="${CSS.escape(seatCode)}"][data-schedule="${scheduleId}"]`);
+                if (schedule && seatEl) showSeatPopover(seatEl, seatCode, seatEl.dataset.status, scheduleId, schedule);
+                return;
+            }
+
+            const blockSelectedBtn = e.target.closest('.cs-block-selected');
+            if (blockSelectedBtn && !blockSelectedBtn.disabled) {
+                blockSelectedSeats(parseInt(blockSelectedBtn.dataset.scheduleId, 10));
                 return;
             }
 
@@ -490,18 +678,9 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             const schedule   = searchResults.find(s => s.id === scheduleId);
             if (!schedule) return;
 
-            // Block / unblock
-            if (status === 'blocked' || (adminBlockMode && status === 'available')) {
-                if (!adminBlockMode && status === 'blocked') { alert('Turn on "Manage blocked seats" to unblock this seat.'); return; }
-                toggleSeatBlock(scheduleId, seatCode); return;
-            }
-
-            // Click booked/sold seat → show booking details
-            if (status !== 'available') {
-                if (schedule.seat_bookings?.[seatCode]) {
-                    selectedSeatBooking = { seat: seatCode, ...schedule.seat_bookings[seatCode] };
-                    adminSelectedSeats = []; renderResults();
-                }
+            if (status === 'blocked' || String(status).startsWith('booked_') || String(status).startsWith('sold_')) {
+                e.stopPropagation();
+                showSeatPopover(seatEl, seatCode, status, scheduleId, schedule);
                 return;
             }
 
@@ -545,6 +724,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                             adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
                             delete adminSeatExpirations[seatCode];
                             toggleSeatVisual(seatEl, false);
+                            syncBlockSelectedButton();
                             alert(data.message || 'Seat is no longer available.');
                         }
                     })
@@ -553,6 +733,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                         adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
                         delete adminSeatExpirations[seatCode];
                         toggleSeatVisual(seatEl, false);
+                        syncBlockSelectedButton();
                         alert('Network error while reserving seat. Please try again.');
                     });
                 }
@@ -586,12 +767,12 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     // ─── API actions ───────────────────────────────────────────────────────────
-    async function toggleSeatBlock(scheduleId, seat) {
+    async function toggleSeatBlock(scheduleId, seat, { silent = false } = {}) {
         const url = toggleBlockUrlTemplate.replace('__ID__', String(scheduleId));
         try {
             const res  = await fetch(url, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify({ seat }) });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) { alert(data.message || 'Could not update blocked seat.'); return; }
+            if (!res.ok) { alert(data.message || 'Could not update blocked seat.'); return false; }
             const sched = searchResults.find(s => s.id === scheduleId);
             if (sched && data.seat_map) {
                 sched.seat_map = data.seat_map;
@@ -599,8 +780,28 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 sched.available_seats_count = data.available_seats_count ?? sched.available_seats_count;
                 adminSelectedSeats = adminSelectedSeats.filter(s => (data.seat_map[s] || 'available') === 'available');
             }
-            captureBookingFormState(); renderResults();
-        } catch { alert('Network error while updating blocked seat.'); }
+            if (!silent) { captureBookingFormState(); renderResults(); }
+            return true;
+        } catch {
+            alert('Network error while updating blocked seat.');
+            return false;
+        }
+    }
+
+    async function blockSelectedSeats(scheduleId) {
+        const seats = [...adminSelectedSeats];
+        if (!seats.length) return;
+        for (const seat of seats) {
+            const ok = await toggleSeatBlock(scheduleId, seat, { silent: true });
+            if (!ok) break;
+            delete adminSeatExpirations[seat];
+            fetch(releaseSeatUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ schedule_id: scheduleId, seat_number: seat }),
+            }).catch(() => {});
+        }
+        await fetchCoachServices(true);
     }
 
     async function fetchCoachServices(silent = false) {
@@ -680,20 +881,53 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         if (!adminSelectedSeats.length) { showErr(errorEl, 'Please select at least one seat.'); return; }
         if (!name || !phone || !email || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
         const pricing = calcPricing(schedule, adminSelectedSeats.length, adminPaymentMethod);
-        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:'PAID' };
+
+        // Resolve status based on payment method:
+        //   Cash         → SOLD    (cash payment = ticket sold)
+        //   bKash/Nagad/Card → BOOKED (admin reservation, pending online payment)
+        //   ZiniPay      → PENDING (until payment confirmed)
+        const pm = adminPaymentMethod.toLowerCase();
+        const resolvedStatus = pm === 'zinipay' ? 'PENDING'
+            : (pm === 'cash' ? 'SOLD' : 'BOOKED');
+
+        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:resolvedStatus };
         try {
             const res = await fetch(bookUrl, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify(payload) });
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                // Holds are cleared by the booking transaction on the server;
-                // also clear client state
-                adminSelectedSeats.forEach(seat => delete adminSeatExpirations[seat]);
-                adminSelectedSeats = []; selectedSeatBooking = null; adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = '';
+                clearBookingFormFields(schedule);
                 await fetchCoachServices(true);
                 alert('Booking created successfully.' + (data.sms?.success ? ' SMS sent.' : '')); return;
             }
             const data = await res.json().catch(() => ({})); showErr(errorEl, data.message || 'Failed to create booking.');
         } catch { showErr(errorEl, 'Network error while submitting.'); }
+    }
+
+    /**
+     * Reserve selected seats — always creates a BOOKED status booking
+     * regardless of payment method. The seats show as Booked (M) / Booked (F)
+     * on both the admin and frontend seat maps.
+     */
+    async function handleReserveSeat(schedule) {
+        captureBookingFormState();
+        const errorEl = document.getElementById('cs-booking-error');
+        const name = adminPassengerName.trim(), phone = adminPassengerPhone.trim(), email = adminPassengerEmail.trim();
+        if (!adminSelectedSeats.length) { showErr(errorEl, 'Please select at least one seat.'); return; }
+        if (!name || !phone || !email || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
+        const pricing = calcPricing(schedule, adminSelectedSeats.length, adminPaymentMethod);
+
+        // Reserve always uses BOOKED status — the seat shows as Booked (M/F) on the map
+        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:'BOOKED' };
+        try {
+            const res = await fetch(bookUrl, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify(payload) });
+            if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                clearBookingFormFields(schedule);
+                await fetchCoachServices(true);
+                alert('Seat reserved successfully (Booked status). Seats are now held for this passenger.'); return;
+            }
+            const data = await res.json().catch(() => ({})); showErr(errorEl, data.message || 'Failed to reserve seat.');
+        } catch { showErr(errorEl, 'Network error while reserving.'); }
     }
 
     async function handleCancelBooking(bookingId) {
@@ -708,6 +942,53 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     function showErr(el, msg) { if (!el) return; el.style.display = 'block'; el.textContent = msg; }
+
+    /**
+     * Clear all booking form fields — both module variables AND the HTML
+     * input elements in the sidebar so the form is visually blank for the
+     * next booking.
+     */
+    function clearBookingFormFields(schedule) {
+        // Clear module variables
+        adminSelectedSeats.forEach(seat => delete adminSeatExpirations[seat]);
+        adminSelectedSeats  = [];
+        selectedSeatBooking = null;
+        adminPassengerPhone = '';
+        adminPassengerName  = '';
+        adminPassengerEmail = '';
+        adminGender         = 'M';
+        adminPaymentMethod  = 'Cash';
+        const sched = searchResults.find(s => s.id === schedule.id);
+        adminBoardingPoint = sched?.boarding_points?.[0]?.value || '';
+        adminDroppingPoint = '';
+
+        // Clear HTML input elements directly
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        set('cs-booking-phone', '');
+        set('cs-booking-name', '');
+        set('cs-booking-email', '');
+        set('cs-booking-gender', 'M');
+        set('cs-boarding-point', adminBoardingPoint);
+        set('cs-dropping-point', '');
+
+        // Hide any error message
+        const errorEl = document.getElementById('cs-booking-error');
+        if (errorEl) { errorEl.style.display = 'none'; errorEl.textContent = ''; }
+
+        // Reset payment toggle buttons to Cash
+        document.querySelectorAll('#cs-payment-toggles .payment-toggle').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.payment === 'Cash')
+        );
+
+        // Update boarding/dropping info text
+        const bpInfoEl = document.getElementById('cs-boarding-info');
+        const dpInfoEl = document.getElementById('cs-dropping-info');
+        if (bpInfoEl) {
+            const bp = sched?.boarding_points?.find(p => p.value === adminBoardingPoint);
+            bpInfoEl.textContent = bp ? `Reporting: ${bp.reporting_time||'—'} · Departure: ${bp.departure_time||'—'}` : 'Select a boarding point';
+        }
+        if (dpInfoEl) dpInfoEl.textContent = 'Select a dropping point';
+    }
 
     /**
      * Release all admin-held seats for the given schedule (best-effort fire-and-forget).

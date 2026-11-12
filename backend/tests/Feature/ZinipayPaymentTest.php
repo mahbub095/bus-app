@@ -185,7 +185,7 @@ class ZinipayPaymentTest extends TestCase
         
         $booking = Booking::where('seat_numbers', 'D5')->first();
         $this->assertNotNull($booking);
-        $this->assertEquals('BOOKED', $booking->status);
+        $this->assertEquals('SOLD', $booking->status);
     }
 
     public function test_callback_handles_failed_payment()

@@ -16,7 +16,7 @@ use Tests\TestCase;
 /**
  * Covers:
  *  - Booking creation: bKash/Nagad/Card → SOLD  (Bug #2 regression)
- *  - Booking creation: Cash → BOOKED (admin only)
+ *  - Booking creation: Cash → SOLD (admin only)
  *  - Booking creation: ZiniPay → PENDING + payment_url
  *  - Promo code discount applied correctly
  *  - Max 4 seats validation
@@ -24,7 +24,7 @@ use Tests\TestCase;
  *  - Customer cancel flow (PENDING, SOLD, already cancelled)
  *  - Seat hold / release
  *  - holdSeat blocks a seat with recent PENDING booking (Bug #5 regression)
- *  - Admin SMS sent for BOOKED (cash) bookings  (Bug #3 regression)
+ *  - Admin SMS sent for SOLD (cash) bookings  (Bug #3 regression)
  *  - resolveStatus: bkash/nagad/card → SOLD, not BOOKED  (Bug #2 regression)
  */
 class BookingFlowTest extends TestCase
@@ -169,7 +169,7 @@ class BookingFlowTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_create_cash_booking_with_booked_status(): void
+    public function admin_can_create_cash_booking_with_sold_status(): void
     {
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/bookings', [
@@ -182,7 +182,7 @@ class BookingFlowTest extends TestCase
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('booking.status', 'BOOKED');
+            ->assertJsonPath('booking.status', 'SOLD');
     }
 
     // =========================================================================
