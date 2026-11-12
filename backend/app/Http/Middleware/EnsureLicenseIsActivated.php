@@ -29,10 +29,9 @@ class EnsureLicenseIsActivated
      */
     private function isAlwaysAllowed(string $path): bool
     {
-        // Exact matches
+        // Exact matches — only system/payment routes bypass everything
         $exact = [
             'up',
-            'admin/login',
             'payment/callback',
             'payment/cancel',
             'api/payment/webhook',
@@ -55,11 +54,22 @@ class EnsureLicenseIsActivated
     }
 
     /**
+     * Paths allowed even when not installed (but not bypassing install check).
+     * admin/login is only accessible after install is complete.
+     */
+    private function isAllowedBeforeInstall(string $path): bool
+    {
+        return false; // Nothing else — only install/* routes
+    }
+
+    /**
      * Check whether the install wizard has been completed.
      */
     private function isInstalled(): bool
     {
-        $flag = env('APP_INSTALLED', false);
+        // config() works with both cached and uncached config.
+        // env() returns NULL when config:cache is active — never use it here.
+        $flag = config('app.installed', false);
 
         if ($flag === true || $flag === 1) {
             return true;
@@ -69,6 +79,7 @@ class EnsureLicenseIsActivated
             return true;
         }
 
+        // Fallback: physical lock file written by InstallFinalize command
         return file_exists(storage_path('framework/installed'));
     }
 
@@ -82,8 +93,8 @@ class EnsureLicenseIsActivated
         }
 
         // ── STAGE 1: Install gate ────────────────────────────────────────
-        // If install hasn't been completed, block everything except the
-        // install routes (already handled above).
+        // If install hasn't been completed, ONLY install/* routes are allowed.
+        // admin/login, API routes, everything else → redirect to /install.
         if (! $this->isInstalled()) {
             if ($request->expectsJson() || str_starts_with($path, 'api/')) {
                 return response()->json([
@@ -93,10 +104,12 @@ class EnsureLicenseIsActivated
                 ], 403);
             }
 
-            // Only redirect to /install if we're NOT already heading there
-            // (belt-and-suspenders guard; isAlwaysAllowed() above should
-            // have already returned for install routes).
             return redirect('/install');
+        }
+
+        // ── admin/login is allowed after install is done ─────────────────
+        if ($path === 'admin/login') {
+            return $next($request);
         }
 
         // ── STAGE 2: License gate (install is done) ──────────────────────

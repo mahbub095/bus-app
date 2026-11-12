@@ -57,8 +57,9 @@ return [
     'frontend_url' => env('APP_FRONTEND_URL', 'http://localhost:5173'),
 
     // Installation & license flags — read via config() so they work with config:cache
-    'installed' => env('APP_INSTALLED', false),
-    'licensed'  => env('APP_LICENSED',  false),
+    'installed'           => env('APP_INSTALLED', false),
+    'licensed'            => env('APP_LICENSED',  false),
+    'envato_skip_verify'  => env('ENVATO_SKIP_VERIFY', false),
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
