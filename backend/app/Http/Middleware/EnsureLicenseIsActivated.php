@@ -111,7 +111,6 @@ class EnsureLicenseIsActivated
         if ($path === 'admin/login') {
             return $next($request);
         }
-
         // ── STAGE 2: License gate (install is done) ──────────────────────
 
         // Public customer API — exact paths

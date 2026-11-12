@@ -21,7 +21,7 @@ import { escapeHtml, formatTime, formatBdt } from './utils.js';
 import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
 
 (function () {
-    const { stations, searchUrl, cancelUrlTemplate, toggleBlockUrlTemplate, bookUrl } = window.CoachServices;
+    const { stations, searchUrl, cancelUrlTemplate, toggleBlockUrlTemplate, bookUrl, holdSeatUrl, releaseSeatUrl, seatHoldMinutes = 2 } = window.CoachServices;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     // ─── Module state ──────────────────────────────────────────────────────────
@@ -31,6 +31,8 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     let expandedScheduleId  = null;
     let selectedSeatBooking = null;
     let adminSelectedSeats  = [];
+    // Map of seatCode → ISO expiry string from server
+    let adminSeatExpirations = {};
     let adminBoardingPoint  = '';
     let adminDroppingPoint  = '';
     let adminPassengerPhone = '';
@@ -40,6 +42,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     let adminPaymentMethod  = 'Cash';
     let adminBlockMode      = false;
     let pollTimer           = null;
+    let holdTimerInterval   = null;
     let isFetching          = false;
     let coachListEventsBound = false;
     let lastFetchedTimeText = '';
@@ -108,6 +111,58 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             .map(([key,label]) => `<div class="legend-item"><div class="legend-dot status-${key}"></div><span>${label}</span></div>`).join('');
     }
 
+    // ─── Seat hold countdown helpers ──────────────────────────────────────────
+    function formatCountdown(expiresAt) {
+        if (!expiresAt) return '';
+        const diff = new Date(expiresAt) - new Date();
+        if (diff <= 0) return '0:00';
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        return `${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function startHoldTimerTick() {
+        if (holdTimerInterval) return;
+        holdTimerInterval = setInterval(() => {
+            // Check for expired holds
+            const now = new Date();
+            const expired = Object.entries(adminSeatExpirations)
+                .filter(([, exp]) => new Date(exp) <= now)
+                .map(([seat]) => seat);
+
+            if (expired.length > 0) {
+                expired.forEach(seat => {
+                    adminSelectedSeats = adminSelectedSeats.filter(s => s !== seat);
+                    delete adminSeatExpirations[seat];
+                });
+                // Release on server (best-effort, fire-and-forget)
+                if (expandedScheduleId) {
+                    expired.forEach(seat => {
+                        fetch(releaseSeatUrl, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: JSON.stringify({ schedule_id: expandedScheduleId, seat_number: seat }),
+                        }).catch(() => {});
+                    });
+                }
+                captureBookingFormState();
+                refreshSeatMapOnly();
+                alert(`Hold expired for seat(s): ${expired.join(', ')}. Please re-select.`);
+                return;
+            }
+
+            // Update countdown badges in-place without a full re-render
+            Object.entries(adminSeatExpirations).forEach(([seat, exp]) => {
+                const badge = document.getElementById(`hold-timer-${CSS.escape(seat)}`);
+                if (badge) badge.textContent = formatCountdown(exp);
+            });
+        }, 1000);
+    }
+
+    function stopHoldTimerTick() {
+        if (holdTimerInterval) { clearInterval(holdTimerInterval); holdTimerInterval = null; }
+    }
+
     // ─── Seat cell rendering ───────────────────────────────────────────────────
     function renderSeatCell(schedule, seatCode, seatMap) {
         const status    = seatMap[seatCode] || 'available';
@@ -121,12 +176,17 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         if (status === 'blocked')                         title = adminBlockMode ? 'Blocked — click to unblock' : 'Blocked';
         else if (adminBlockMode && status === 'available') title = 'Available — click to block';
 
+        // Build hold timer badge for selected seats
+        const timerHtml = isPicking && adminSeatExpirations[seatCode]
+            ? `<span id="hold-timer-${seatCode}" style="font-size:9px;line-height:1;display:block;margin-top:2px;opacity:.85;">${formatCountdown(adminSeatExpirations[seatCode])}</span>`
+            : '';
+
         return `<div class="seat selectable"
-                     style="${baseStyle}${viewOutline}"
+                     style="${baseStyle}${viewOutline}flex-direction:column;align-items:center;justify-content:center;"
                      data-seat="${seatCode}"
                      data-schedule="${schedule.id}"
                      data-status="${status}"
-                     title="${seatStatusLabel(title)}">${seatCode}</div>`;
+                     title="${seatStatusLabel(title)}">${seatCode}${timerHtml}</div>`;
     }
 
     // ─── Grid generation ───────────────────────────────────────────────────────
@@ -349,9 +409,24 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
     }
 
     // Direct DOM mutation for instant seat toggle — no full re-render needed
-    function toggleSeatVisual(seatEl, isNowSelected) {
-        seatEl.style.cssText = isNowSelected ? SEAT_STYLES.selected : SEAT_STYLES.available;
+    function toggleSeatVisual(seatEl, isNowSelected, expiresAt = null) {
+        seatEl.style.cssText = (isNowSelected ? SEAT_STYLES.selected : SEAT_STYLES.available)
+            + 'flex-direction:column;align-items:center;justify-content:center;';
         seatEl.title = seatStatusLabel(isNowSelected ? 'selected' : 'available');
+        const seatCode = seatEl.dataset.seat;
+        // Update or remove the hold timer badge
+        let badge = seatEl.querySelector(`#hold-timer-${CSS.escape(seatCode)}`);
+        if (isNowSelected && expiresAt) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.id = `hold-timer-${seatCode}`;
+                badge.style.cssText = 'font-size:9px;line-height:1;display:block;margin-top:2px;opacity:.85;';
+                seatEl.appendChild(badge);
+            }
+            badge.textContent = formatCountdown(expiresAt);
+        } else if (badge) {
+            badge.remove();
+        }
     }
 
     // ─── Event binding ─────────────────────────────────────────────────────────
@@ -367,9 +442,13 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 captureBookingFormState();
                 const id = parseInt(toggleBtn.dataset.id, 10);
                 if (expandedScheduleId === id) {
-                    expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = []; adminBlockMode = false;
+                    // Release all holds for the current schedule before collapsing
+                    releaseAllAdminHolds(expandedScheduleId);
+                    expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {}; adminBlockMode = false;
                 } else {
-                    expandedScheduleId = id; selectedSeatBooking = null; adminSelectedSeats = []; adminBlockMode = false;
+                    // Release any holds on the previously expanded schedule
+                    if (expandedScheduleId) releaseAllAdminHolds(expandedScheduleId);
+                    expandedScheduleId = id; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {}; adminBlockMode = false;
                     adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = ''; adminDroppingPoint = '';
                     const sched = searchResults.find(s => s.id === id);
                     if (sched?.boarding_points?.[0]) adminBoardingPoint = sched.boarding_points[0].value;
@@ -430,10 +509,53 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             // for instant green feedback, then update the fare sidebar
             if (adminSelectedSeats.includes(seatCode)) {
                 adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
+                delete adminSeatExpirations[seatCode];
                 toggleSeatVisual(seatEl, false);
+                // Release hold on server (best-effort)
+                if (expandedScheduleId) {
+                    fetch(releaseSeatUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({ schedule_id: expandedScheduleId, seat_number: seatCode }),
+                    }).catch(() => {});
+                }
             } else {
+                // Optimistically select, then confirm with server hold
                 adminSelectedSeats.push(seatCode);
-                toggleSeatVisual(seatEl, true);
+                const optimisticExpiry = new Date(Date.now() + seatHoldMinutes * 60 * 1000).toISOString();
+                adminSeatExpirations[seatCode] = optimisticExpiry;
+                toggleSeatVisual(seatEl, true, optimisticExpiry);
+                startHoldTimerTick();
+
+                if (expandedScheduleId) {
+                    fetch(holdSeatUrl, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({ schedule_id: expandedScheduleId, seat_number: seatCode }),
+                    })
+                    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                    .then(({ ok, data }) => {
+                        if (ok && data.success) {
+                            // Replace optimistic expiry with server-issued one
+                            adminSeatExpirations[seatCode] = data.expires_at;
+                            const badge = document.getElementById(`hold-timer-${seatCode}`);
+                            if (badge) badge.textContent = formatCountdown(data.expires_at);
+                        } else {
+                            // Roll back — seat was grabbed by someone else
+                            adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
+                            delete adminSeatExpirations[seatCode];
+                            toggleSeatVisual(seatEl, false);
+                            alert(data.message || 'Seat is no longer available.');
+                        }
+                    })
+                    .catch(() => {
+                        // Roll back on network error
+                        adminSelectedSeats = adminSelectedSeats.filter(s => s !== seatCode);
+                        delete adminSeatExpirations[seatCode];
+                        toggleSeatVisual(seatEl, false);
+                        alert('Network error while reserving seat. Please try again.');
+                    });
+                }
             }
             selectedSeatBooking = null;
             updateBookingExtras(schedule);
@@ -498,7 +620,13 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 if (sched) {
                     const map   = getSeatMap(sched);
                     const still = adminSelectedSeats.filter(seat => map[seat] === 'available');
-                    if (still.length < adminSelectedSeats.length) alert('One or more selected seats were just booked. Selection updated.');
+                    if (still.length < adminSelectedSeats.length) {
+                        // Some seats got booked by someone else — clean up expirations too
+                        adminSelectedSeats.filter(seat => !still.includes(seat)).forEach(seat => {
+                            delete adminSeatExpirations[seat];
+                        });
+                        alert('One or more selected seats were just booked. Selection updated.');
+                    }
                     adminSelectedSeats = still;
                 }
             }
@@ -533,8 +661,10 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
               date = document.getElementById('cs-date')?.value || '',
               coachType = document.getElementById('cs-coach-type')?.value || 'All';
         if (from && to && from === to) { alert('Departure and destination must be different.'); return; }
+        // Release any active holds before changing the search
+        if (expandedScheduleId) releaseAllAdminHolds(expandedScheduleId);
         searchParams = { from, to, date, coachType };
-        searchDone = true; expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = [];
+        searchDone = true; expandedScheduleId = null; selectedSeatBooking = null; adminSelectedSeats = []; adminSeatExpirations = {};
         adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = ''; adminDroppingPoint = '';
         const emptyHint = document.getElementById('cs-empty-hint');
         if (emptyHint) emptyHint.style.display = 'none';
@@ -555,6 +685,9 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             const res = await fetch(bookUrl, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify(payload) });
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
+                // Holds are cleared by the booking transaction on the server;
+                // also clear client state
+                adminSelectedSeats.forEach(seat => delete adminSeatExpirations[seat]);
                 adminSelectedSeats = []; selectedSeatBooking = null; adminPassengerPhone = ''; adminPassengerName = ''; adminPassengerEmail = '';
                 await fetchCoachServices(true);
                 alert('Booking created successfully.' + (data.sms?.success ? ' SMS sent.' : '')); return;
@@ -576,6 +709,22 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
 
     function showErr(el, msg) { if (!el) return; el.style.display = 'block'; el.textContent = msg; }
 
+    /**
+     * Release all admin-held seats for the given schedule (best-effort fire-and-forget).
+     */
+    function releaseAllAdminHolds(scheduleId) {
+        const seatsToRelease = Object.keys(adminSeatExpirations);
+        seatsToRelease.forEach(seat => {
+            fetch(releaseSeatUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ schedule_id: scheduleId, seat_number: seat }),
+            }).catch(() => {});
+        });
+        adminSeatExpirations = {};
+        adminSelectedSeats = [];
+    }
+
     // ─── Polling ───────────────────────────────────────────────────────────────
     function startPolling() {
         stopPolling();
@@ -593,12 +742,30 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             if (t && t.style.display !== 'none' && searchDone) fetchCoachServices(true);
         }, 5_000);
     }
-    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+    function stopPolling() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        stopHoldTimerTick();
+    }
 
     // ─── Init ──────────────────────────────────────────────────────────────────
     document.getElementById('cs-search-btn')?.addEventListener('click', handleSearch);
     bindCoachListEvents();
     window.coachServicesModule = { startPolling, stopPolling };
+
+    // Release all admin holds when page is closed/refreshed
+    window.addEventListener('beforeunload', () => {
+        if (expandedScheduleId && Object.keys(adminSeatExpirations).length > 0) {
+            Object.keys(adminSeatExpirations).forEach(seat => {
+                try {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', releaseSeatUrl, false); // synchronous
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken || '');
+                    xhr.send(JSON.stringify({ schedule_id: expandedScheduleId, seat_number: seat }));
+                } catch { /* ignore */ }
+            });
+        }
+    });
 
     // Auto-initialize search parameters
     const initialFrom = document.getElementById('cs-from')?.value || '';

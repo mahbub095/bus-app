@@ -72,6 +72,9 @@
         cancelUrlTemplate: @json(route('admin.bookings.cancel.api', ['id' => '__ID__'])),
         toggleBlockUrlTemplate: @json(route('admin.schedules.seats.toggle-block', ['id' => '__ID__'])),
         bookUrl: @json(route('admin.bookings.store')),
+        holdSeatUrl: @json(route('admin.seats.hold')),
+        releaseSeatUrl: @json(route('admin.seats.release')),
+        seatHoldMinutes: 2,
     };
 </script>
 @vite('resources/js/admin/coach-services.js')
