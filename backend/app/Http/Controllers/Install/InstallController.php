@@ -21,7 +21,7 @@ class InstallController extends Controller
 
     private function isInstallLocked(): bool
     {
-        $flag = env('APP_INSTALLED', false);
+        $flag = config('app.installed', false);
         return $flag === true
             || $flag === 1
             || (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true));
@@ -35,8 +35,7 @@ class InstallController extends Controller
             return true;
         }
 
-        // APP_LICENSED=true means a previous step already verified the key.
-        $flag = env('APP_LICENSED', false);
+        $flag = config('app.licensed', false);
         return $flag === true
             || $flag === 1
             || (is_string($flag) && in_array(strtolower($flag), ['true', '1'], true));

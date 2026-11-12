@@ -175,7 +175,7 @@ class LicenseService
     /** Returns true when a valid license is active for this installation. */
     public function isActivated(): bool
     {
-        $flag = env('APP_LICENSED', false);
+        $flag = config('app.licensed', false);
         if (! $flag || $flag === 'false') {
             return false;
         }
@@ -381,7 +381,7 @@ class LicenseService
 
     private function isLocalBypassEnabled(): bool
     {
-        $flag = env('ENVATO_SKIP_VERIFY', false);
+        $flag = config('app.envato_skip_verify', env('ENVATO_SKIP_VERIFY', false));
         return app()->environment('local')
             && ($flag === true || $flag === 1 || (is_string($flag) && strtolower($flag) === 'true') || $flag === '1');
     }

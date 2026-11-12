@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
-        \App\Console\Commands\InstallRun::class,
+        \App\Console\Commands\InstallFinalize::class,
+        \App\Console\Commands\InstallDemoSeed::class,
+        \App\Console\Commands\InstallReset::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         // License guard runs on every web & API request except /install/*
