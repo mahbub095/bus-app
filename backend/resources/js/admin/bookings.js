@@ -250,6 +250,16 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
 
     window.bookingsLogsModule = { startPolling, stopPolling };
 
+    const paymentSelect = document.querySelector('#booking-form select[name="payment_method"]');
+    const statusSelect = document.querySelector('#booking-form select[name="status"]');
+    if (paymentSelect && statusSelect) {
+        paymentSelect.addEventListener('change', () => {
+            if (String(paymentSelect.value).toLowerCase() === 'cash') {
+                statusSelect.value = 'SOLD';
+            }
+        });
+    }
+
     // Auto-fetch if bookings tab is currently displayed
     const tabEl = document.getElementById('tab-content-bookings');
     if (window.location.hash === '#bookings' || (tabEl && tabEl.style.display !== 'none')) {

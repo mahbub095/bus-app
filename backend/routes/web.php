@@ -47,7 +47,13 @@ Route::get('/install/demo-seed/status', [InstallController::class, 'demoSeedStat
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', fn () => view('admin.login'));
+Route::get('/', function () {
+    // If not installed yet, go straight to the install wizard.
+    if (! config('app.installed') && ! file_exists(storage_path('framework/installed'))) {
+        return redirect('/install');
+    }
+    return view('admin.login');
+});
 
 Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payment.cancel');
@@ -90,6 +96,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::middleware('menu_permission:coach-services')->group(function () {
             Route::get('/coach-services/search', [AjaxController::class, 'searchCoachServices'])->name('admin.coach-services.search');
             Route::post('/schedules/{id}/seats/toggle-block', [AjaxController::class, 'toggleBlockedSeat'])->name('admin.schedules.seats.toggle-block');
+            Route::post('/seats/hold', [AjaxController::class, 'holdSeat'])->name('admin.seats.hold');
+            Route::post('/seats/release', [AjaxController::class, 'releaseSeat'])->name('admin.seats.release');
         });
         Route::middleware('menu_permission:bookings')->group(function () {
             Route::post('/bookings/{id}/cancel', [AjaxController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');

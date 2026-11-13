@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\AdminBookingService;
 use App\Services\AdminDashboardAnalyticsService;
 use App\Services\CoachServicesService;
+use App\Services\SeatMapService;
 use Illuminate\Http\Request;
 
 /**
@@ -17,6 +18,7 @@ class AjaxController extends Controller
         protected CoachServicesService $coachServicesService,
         protected AdminBookingService $adminBookingService,
         protected AdminDashboardAnalyticsService $dashboardAnalyticsService,
+        protected SeatMapService $seatMapService,
     ) {
     }
 
@@ -89,5 +91,55 @@ class AjaxController extends Controller
         $result = $this->adminBookingService->requestCancellation((int) $id);
 
         return response()->json($result['body'], $result['status']);
+    }
+
+    /**
+     * Hold a seat on behalf of the logged-in admin user so frontend users
+     * cannot book the same seat while the admin is filling in the form.
+     */
+    public function holdSeat(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'seat_number' => 'required|string',
+        ]);
+
+        // Admin users are authenticated via the web (session) guard.
+        // We prefix their ID with a large constant so it never collides with
+        // customer Sanctum user IDs in the cache hold records.
+        $userId = (int) $request->user()->id;
+
+        $result = $this->seatMapService->holdSeat(
+            (int) $validated['schedule_id'],
+            $validated['seat_number'],
+            $userId
+        );
+
+        if ($result['success']) {
+            return response()->json($result, 200);
+        }
+
+        return response()->json(['message' => $result['message']], 422);
+    }
+
+    /**
+     * Release a held seat for the logged-in admin user.
+     */
+    public function releaseSeat(Request $request)
+    {
+        $validated = $request->validate([
+            'schedule_id' => 'required|exists:schedules,id',
+            'seat_number' => 'required|string',
+        ]);
+
+        $userId = (int) $request->user()->id;
+
+        $result = $this->seatMapService->releaseSeat(
+            (int) $validated['schedule_id'],
+            $validated['seat_number'],
+            $userId
+        );
+
+        return response()->json($result, 200);
     }
 }

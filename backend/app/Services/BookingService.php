@@ -150,6 +150,12 @@ class BookingService
 
         $status = $input['status'] ?? $this->resolveStatus($paymentMethod);
 
+        // Counter cash is a completed sale — unless the admin explicitly
+        // reserved the seat (BOOKED). Keep cancel states if an admin set them.
+        if ($paymentMethod === 'cash' && ! in_array($status, ['CANCELLED', 'CANCEL_REQUESTED', 'BOOKED'], true)) {
+            $status = 'SOLD';
+        }
+
         $booking = Booking::create([
             'schedule_id' => $schedule->id,
             'passenger_name' => $input['passenger_name'],
@@ -315,11 +321,7 @@ class BookingService
             return 'PENDING';
         }
 
-        if (in_array($paymentMethod, ['bkash', 'nagad', 'card'])) {
-            return 'SOLD';
-        }
-
-        return 'BOOKED';
+        return 'SOLD';
     }
 
     /** @return list<string> */
