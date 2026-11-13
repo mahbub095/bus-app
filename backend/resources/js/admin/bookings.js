@@ -208,6 +208,18 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
 
     // ─── Data fetching ────────────────────────────────────────────────────────
 
+    /** Build query params from the date filter inputs. */
+    function getFilters() {
+        const params = new URLSearchParams();
+        const period = document.getElementById('bookings-period')?.value || 'all';
+        params.set('period', period);
+        if (period === 'custom') {
+            params.set('from_date', document.getElementById('bookings-from-date')?.value || '');
+            params.set('to_date', document.getElementById('bookings-to-date')?.value || '');
+        }
+        return params;
+    }
+
     /**
      * Fetch the latest bookings from the API and re-render the table.
      * @param {boolean} silent — when true, suppresses the "update failed" text on error
@@ -217,7 +229,9 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         isFetching = true;
 
         try {
-            const res = await fetch(logsUrl, { headers: { Accept: 'application/json' } });
+            const params = getFilters();
+            const url = params.toString() ? `${logsUrl}?${params}` : logsUrl;
+            const res = await fetch(url, { headers: { Accept: 'application/json' } });
             if (!res.ok) return;
 
             const data = await res.json();
@@ -247,6 +261,26 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         }
         setLiveText('Live paused');
     }
+
+    // ─── Date filter wiring ──────────────────────────────────────────────────
+    document.getElementById('bookings-period')?.addEventListener('change', () => {
+        const period = document.getElementById('bookings-period')?.value;
+        const customEl = document.getElementById('bookings-custom-dates');
+        if (customEl) customEl.style.display = period === 'custom' ? 'flex' : 'none';
+    });
+
+    document.getElementById('bookings-apply-filter')?.addEventListener('click', () => {
+        const period = document.getElementById('bookings-period')?.value;
+        if (period === 'custom') {
+            const from = document.getElementById('bookings-from-date')?.value;
+            const to = document.getElementById('bookings-to-date')?.value;
+            if (!from || !to) {
+                alert('Please select both From and To dates for custom range.');
+                return;
+            }
+        }
+        fetchLogs();
+    });
 
     window.bookingsLogsModule = { startPolling, stopPolling };
 

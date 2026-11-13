@@ -33,14 +33,14 @@ class AjaxController extends Controller
         );
     }
 
-    public function bookingLogsApi()
+    public function bookingLogsApi(Request $request)
     {
-        return response()->json($this->adminBookingService->getBookingLogs());
+        return response()->json($this->adminBookingService->getBookingLogs($request));
     }
 
-    public function cancelRequestsLogsApi()
+    public function cancelRequestsLogsApi(Request $request)
     {
-        return response()->json($this->adminBookingService->getCancelRequestsLogs());
+        return response()->json($this->adminBookingService->getCancelRequestsLogs($request));
     }
 
     public function searchCoachServices(Request $request)

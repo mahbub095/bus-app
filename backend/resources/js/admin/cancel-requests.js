@@ -83,6 +83,18 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
 
     // ─── Data fetching ────────────────────────────────────────────────────────
 
+    /** Build query params from the date filter inputs. */
+    function getFilters() {
+        const params = new URLSearchParams();
+        const period = document.getElementById('cancel-period')?.value || 'all';
+        params.set('period', period);
+        if (period === 'custom') {
+            params.set('from_date', document.getElementById('cancel-from-date')?.value || '');
+            params.set('to_date', document.getElementById('cancel-to-date')?.value || '');
+        }
+        return params;
+    }
+
     /**
      * Fetch the latest cancellation requests from the API and re-render the table.
      * @param {boolean} silent — when true, suppresses the "update failed" text on error
@@ -92,7 +104,9 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
         isFetching = true;
 
         try {
-            const res = await fetch(logsUrl, { headers: { Accept: 'application/json' } });
+            const params = getFilters();
+            const url = params.toString() ? `${logsUrl}?${params}` : logsUrl;
+            const res = await fetch(url, { headers: { Accept: 'application/json' } });
             if (!res.ok) return;
 
             const data = await res.json();
@@ -122,6 +136,26 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
         }
         setLiveText('Live paused');
     }
+
+    // ─── Date filter wiring ──────────────────────────────────────────────────
+    document.getElementById('cancel-period')?.addEventListener('change', () => {
+        const period = document.getElementById('cancel-period')?.value;
+        const customEl = document.getElementById('cancel-custom-dates');
+        if (customEl) customEl.style.display = period === 'custom' ? 'flex' : 'none';
+    });
+
+    document.getElementById('cancel-apply-filter')?.addEventListener('click', () => {
+        const period = document.getElementById('cancel-period')?.value;
+        if (period === 'custom') {
+            const from = document.getElementById('cancel-from-date')?.value;
+            const to = document.getElementById('cancel-to-date')?.value;
+            if (!from || !to) {
+                alert('Please select both From and To dates for custom range.');
+                return;
+            }
+        }
+        fetchLogs();
+    });
 
     window.cancelRequestsLogsModule = { startPolling, stopPolling };
 
