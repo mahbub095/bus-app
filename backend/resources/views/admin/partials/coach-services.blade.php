@@ -75,6 +75,9 @@
         holdSeatUrl: @json(route('admin.seats.hold')),
         releaseSeatUrl: @json(route('admin.seats.release')),
         seatHoldMinutes: 2,
+        siteName: @json($siteSettings['footer_company_name'] ?? $siteSettings['logo_text'] ?? 'Bus Company'),
+        siteLogoUrl: @json($siteSettings['logo_url'] ?? null),
+        siteAddress: @json($siteSettings['footer_address'] ?? ''),
     };
 </script>
 @vite('resources/js/admin/coach-services.js')

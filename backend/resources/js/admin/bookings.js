@@ -31,6 +31,9 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
     let isFetching  = false;
     // Keyed by booking ID so edit buttons can look up the full record without re-fetching
     let bookingsMap = {};
+    let allBookings = [];
+    let currentPage = 1;
+    let perPage = 10;
 
     /** Update the "live" indicator text next to the panel title. */
     function setLiveText(text) {
@@ -47,7 +50,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         if (!Array.isArray(bookings) || bookings.length === 0) {
             bodyEl.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted)">
+                    <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted)">
                         No reservation records found.
                     </td>
                 </tr>`;
@@ -60,6 +63,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
             const routeFrom  = b.schedule?.route?.from        || 'N/A';
             const routeTo    = b.schedule?.route?.to          || 'N/A';
             const busName    = b.schedule?.bus?.operator_name || 'N/A';
+            const coachRegNo = b.schedule?.bus?.coach_number || 'N/A';
             const updateUrl  = buildUrl(updateRouteTemplate,  b.id);
             const destroyUrl = buildUrl(destroyRouteTemplate, b.id);
 
@@ -102,6 +106,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
                             ${escapeHtml(formatDateTime(b.schedule?.departure_time))}
                         </div>
                     </td>
+                    <td style="font-weight:600; color:var(--text-secondary);">${escapeHtml(coachRegNo)}</td>
                     <td style="font-weight:bold;">${escapeHtml(b.seat_numbers)}</td>
                     <td style="color:var(--gold); font-weight:bold;">BDT ${Number(b.total_fare || 0).toLocaleString()}</td>
                     <td><span class="badge-status ${statusBadgeClass(b.status)}">${escapeHtml(b.status)}</span></td>
@@ -127,6 +132,26 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
 
         bindEditButtons();
         bindCancelButtons();
+    }
+
+    /** Render the pagination bar and the rows for the current page. */
+    function renderPagination() {
+        const total = allBookings.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = total === 0 ? 0 : (currentPage - 1) * perPage + 1;
+        const end = Math.min(currentPage * perPage, total);
+
+        const infoEl = document.getElementById('bookings-page-info');
+        const prevEl = document.getElementById('bookings-prev-page');
+        const nextEl = document.getElementById('bookings-next-page');
+
+        if (infoEl) infoEl.textContent = `Showing ${start}–${end} of ${total}`;
+        if (prevEl) prevEl.disabled = currentPage <= 1;
+        if (nextEl) nextEl.disabled = currentPage >= totalPages;
+
+        const slice = allBookings.slice((currentPage - 1) * perPage, currentPage * perPage);
+        renderRows(slice);
     }
 
     /** Attach click listeners to all "Edit" buttons after a re-render. */
@@ -235,7 +260,9 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
             if (!res.ok) return;
 
             const data = await res.json();
-            renderRows(data.bookings || []);
+            allBookings = data.bookings || [];
+            currentPage = 1;
+            renderPagination();
 
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             setLiveText(`Live — last updated ${time} (refreshes every 5s)`);
@@ -280,6 +307,22 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
             }
         }
         fetchLogs();
+    });
+
+    // ─── Pagination wiring ────────────────────────────────────────────────────
+    document.getElementById('bookings-per-page')?.addEventListener('change', (e) => {
+        perPage = parseInt(e.target.value, 10) || 10;
+        currentPage = 1;
+        renderPagination();
+    });
+
+    document.getElementById('bookings-prev-page')?.addEventListener('click', () => {
+        if (currentPage > 1) { currentPage--; renderPagination(); }
+    });
+
+    document.getElementById('bookings-next-page')?.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(allBookings.length / perPage));
+        if (currentPage < totalPages) { currentPage++; renderPagination(); }
     });
 
     window.bookingsLogsModule = { startPolling, stopPolling };

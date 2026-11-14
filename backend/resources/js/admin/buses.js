@@ -69,8 +69,16 @@ function handleEditBusClick(btn) {
             total_seats:      btn.dataset.seats,
             // Treat literal "null" strings and empty values as an empty grid
             seat_layout_grid: (btn.dataset.grid === 'null' || !btn.dataset.grid) ? '' : btn.dataset.grid,
+            logo_url:         btn.dataset.logo || '',
         },
     });
+
+    // Show existing logo preview — read from BusLogos map (not data-* to avoid huge attributes)
+    const logoData = (window.BusLogos && window.BusLogos[btn.dataset.id]) || '';
+    // Reset file input first
+    const fileInput = document.getElementById('bus-coach-logo-input');
+    if (fileInput) fileInput.value = '';
+    showExistingLogoPreview(logoData);
 
     const form = document.getElementById('bus-form');
     if (form) {
@@ -504,7 +512,65 @@ function saveLayoutDesign() {
     closeLayoutDesigner();
 }
 
-// ─── Global exports (required for inline onclick handlers in blade templates) ──
+// ─── Logo preview helpers ─────────────────────────────────────────────────────
+
+/**
+ * Show a live preview of the chosen logo file without uploading.
+ * Called by the file input's onchange handler.
+ */
+function previewBusLogo(input) {
+    const previewDiv = document.getElementById('bus-logo-preview');
+    const previewImg = document.getElementById('bus-logo-preview-img');
+    if (!previewDiv || !previewImg) return;
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            previewDiv.style.display = 'flex';
+            previewDiv.style.alignItems = 'center';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+/**
+ * Clear the logo preview and reset the file input.
+ * Also sets a hidden flag so the controller knows to clear the logo.
+ */
+function clearBusLogo() {
+    const previewDiv = document.getElementById('bus-logo-preview');
+    const previewImg = document.getElementById('bus-logo-preview-img');
+    const fileInput  = document.getElementById('bus-coach-logo-input');
+    const keepInput  = document.getElementById('bus-logo-keep');
+
+    if (previewImg) previewImg.src = '';
+    if (previewDiv) previewDiv.style.display = 'none';
+    if (fileInput)  fileInput.value = '';
+    if (keepInput)  keepInput.value = '0';
+}
+
+/**
+ * Show an existing base64 logo in the preview div.
+ * Called after populating the edit form.
+ */
+function showExistingLogoPreview(logoDataUrl) {
+    const previewDiv = document.getElementById('bus-logo-preview');
+    const previewImg = document.getElementById('bus-logo-preview-img');
+    const keepInput  = document.getElementById('bus-logo-keep');
+
+    if (!previewDiv || !previewImg) return;
+
+    if (logoDataUrl && logoDataUrl.startsWith('data:')) {
+        previewImg.src = logoDataUrl;
+        previewDiv.style.display = 'flex';
+        previewDiv.style.alignItems = 'center';
+        if (keepInput) keepInput.value = '1';
+    } else {
+        previewDiv.style.display = 'none';
+        if (keepInput) keepInput.value = '0';
+    }
+}
 window.adjustDefaultSeats      = adjustDefaultSeats;
 window.handleEditBusClick      = handleEditBusClick;
 window.openLayoutDesigner      = openLayoutDesigner;
@@ -517,6 +583,8 @@ window.addDesignerRow          = addDesignerRow;
 window.removeDesignerRow       = removeDesignerRow;
 window.addDesignerColumn       = addDesignerColumn;
 window.removeDesignerColumn    = removeDesignerColumn;
+window.previewBusLogo          = previewBusLogo;
+window.clearBusLogo            = clearBusLogo;
 
 // Event delegation for edit buttons
 document.addEventListener('click', (e) => {

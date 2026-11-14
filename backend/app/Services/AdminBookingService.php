@@ -240,6 +240,7 @@ class AdminBookingService
                 'departure_time' => optional($booking->schedule?->departure_time)->toIso8601String(),
                 'bus' => [
                     'operator_name' => $booking->schedule?->bus?->operator_name,
+                    'coach_number'  => $booking->schedule?->bus?->coach_number,
                 ],
                 'route' => [
                     'from' => $booking->schedule?->route?->departureStation?->name,

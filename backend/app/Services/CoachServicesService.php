@@ -97,6 +97,7 @@ class CoachServicesService
                     'total_seats' => $schedule->bus->total_seats,
                     'seat_layout' => $schedule->bus->seat_layout,
                     'seat_layout_grid' => $schedule->bus->seat_layout_grid,
+                    'logo_url' => $schedule->bus->logo_url,
                 ],
                 'route' => [
                     'id' => $schedule->route->id,

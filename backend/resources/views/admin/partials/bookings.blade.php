@@ -37,13 +37,14 @@
         </div>
 
         <div class="table-wrapper">
-            <table class="admin-table">
+            <table class="admin-table" style="min-width: 900px;">
                 <thead>
                     <tr>
                         <th>PNR Code</th>
                         <th>Passenger Name</th>
                         <th>Contact Information</th>
                         <th>Journey Details</th>
+                        <th>Coach Reg. No.</th>
                         <th>Seats</th>
                         <th>Fare Paid</th>
                         <th>Status</th>
@@ -52,12 +53,27 @@
                 </thead>
                 <tbody id="bookings-log-body">
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                        <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted)">
                             Open this tab to load live booking logs…
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        {{-- Pagination controls --}}
+        <div class="bookings-pagination-bar" style="display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;">
+            <div class="input-group" style="flex:0 0 auto;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Per page</label>
+                <select id="bookings-per-page" class="coupon-input" style="height:38px;">
+                    <option value="10" selected>10</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <span id="bookings-page-info" style="flex:0 0 auto; font-size:13px; color:var(--text-secondary);">Showing 0–0 of 0</span>
+            <button id="bookings-prev-page" class="btn btn-secondary btn-sm" disabled>← Prev</button>
+            <button id="bookings-next-page" class="btn btn-secondary btn-sm">Next →</button>
         </div>
     </div>
 
