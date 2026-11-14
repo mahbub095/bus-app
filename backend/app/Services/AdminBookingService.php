@@ -3,16 +3,72 @@
 namespace App\Services;
 
 use App\Models\Booking;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AdminBookingService
 {
-    public function getBookingLogs(): array
+    /**
+     * Resolve a date range from the request's period / custom-date parameters.
+     * Returns null when no filtering should be applied (period = "all").
+     *
+     * @return array{0:Carbon,1:Carbon}|null
+     */
+    private function resolveLogDateRange(Request $request): ?array
     {
-        $recentBookings = Booking::with([
+        $period = $request->input('period', 'all');
+
+        if ($period === 'all') {
+            return null;
+        }
+
+        $now = Carbon::now();
+
+        return match ($period) {
+            'today'      => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'yesterday'  => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
+            'this_week'  => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'this_month'  => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            'this_year'   => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
+            'custom'      => $this->resolveCustomRange($request),
+            default       => null,
+        };
+    }
+
+    /**
+     * Parse the from_date / to_date inputs for a custom date range.
+     *
+     * @return array{0:Carbon,1:Carbon}|null
+     */
+    private function resolveCustomRange(Request $request): ?array
+    {
+        $from = $request->input('from_date');
+        $to = $request->input('to_date');
+
+        if (! $from || ! $to) {
+            return null;
+        }
+
+        return [
+            Carbon::parse($from)->startOfDay(),
+            Carbon::parse($to)->endOfDay(),
+        ];
+    }
+
+    public function getBookingLogs(Request $request): array
+    {
+        $query = Booking::with([
             'schedule.bus',
             'schedule.route.departureStation',
             'schedule.route.arrivalStation',
-        ])
+        ]);
+
+        $range = $this->resolveLogDateRange($request);
+        if ($range) {
+            $query->whereBetween('created_at', $range);
+        }
+
+        $recentBookings = $query
             ->orderBy('created_at', 'desc')
             ->limit(100)
             ->get();
@@ -23,14 +79,21 @@ class AdminBookingService
         ];
     }
 
-    public function getCancelRequestsLogs(): array
+    public function getCancelRequestsLogs(Request $request): array
     {
-        $cancelRequests = Booking::where('status', 'CANCEL_REQUESTED')
+        $query = Booking::where('status', 'CANCEL_REQUESTED')
             ->with([
                 'schedule.bus',
                 'schedule.route.departureStation',
                 'schedule.route.arrivalStation',
-            ])
+            ]);
+
+        $range = $this->resolveLogDateRange($request);
+        if ($range) {
+            $query->whereBetween('updated_at', $range);
+        }
+
+        $cancelRequests = $query
             ->orderBy('updated_at', 'desc')
             ->limit(100)
             ->get();
@@ -177,6 +240,7 @@ class AdminBookingService
                 'departure_time' => optional($booking->schedule?->departure_time)->toIso8601String(),
                 'bus' => [
                     'operator_name' => $booking->schedule?->bus?->operator_name,
+                    'coach_number'  => $booking->schedule?->bus?->coach_number,
                 ],
                 'route' => [
                     'from' => $booking->schedule?->route?->departureStation?->name,

@@ -11,6 +11,7 @@
                         <th>Coach Type</th>
                         <th>Seat Layout</th>
                         <th>Total Seat Capacity</th>
+                        <th>Logo</th>
                         <th>Operations</th>
                     </tr>
                 </thead>
@@ -37,6 +38,13 @@
                             </td>
                             <td>{{ $bus->total_seats }} Seats</td>
                             <td>
+                                @if($bus->logo_url)
+                                    <img src="{{ $bus->logo_url }}" alt="{{ $bus->operator_name }}" style="height:36px; border-radius:4px; object-fit:contain;">
+                                @else
+                                    <span style="color:var(--text-muted); font-size:11px;">No logo</span>
+                                @endif
+                            </td>
+                            <td>
                                 <div class="action-btns">
                                     <button type="button" class="btn btn-secondary btn-sm edit-bus-btn"
                                         data-id="{{ $bus->id }}" data-action="{{ route('admin.buses.update', $bus->id) }}"
@@ -58,7 +66,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted)">No coaches
+                            <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted)">No coaches
                                 found.</td>
                         </tr>
                     @endforelse
@@ -70,7 +78,7 @@
 
     <div class="booking-form-sidebar">
         <h3 class="booking-summary-title" id="bus-form-title">Register New Bus Coach</h3>
-        <form class="booking-form-fields" id="bus-form" action="{{ route('admin.buses.store') }}" method="POST">
+        <form class="booking-form-fields" id="bus-form" action="{{ route('admin.buses.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('POST')
             <input type="hidden" name="_edit_id" value="">
@@ -112,6 +120,21 @@
                     <span>🎨 Customize Layout (Drag & Drop)</span>
                 </button>
                 <input type="hidden" name="seat_layout_grid" id="seat-layout-grid-input">
+            </div>
+            <div class="input-group">
+                <label>Operator Logo (Optional)</label>
+                <div id="bus-logo-preview" style="display:none; margin-bottom:8px;">
+                    <img id="bus-logo-preview-img" src="" alt="Logo preview"
+                         style="height:48px; border-radius:6px; border:1px solid var(--border-color); object-fit:contain;">
+                    <button type="button" id="bus-logo-clear" onclick="clearBusLogo()"
+                            style="margin-left:10px; background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px; font-weight:600;">
+                        ✕ Remove logo
+                    </button>
+                </div>
+                <input type="hidden" name="logo_url_keep" id="bus-logo-keep" value="1">
+                <input type="file" name="coach_logo" id="bus-coach-logo-input" class="coupon-input" accept="image/*"
+                       style="padding:8px 12px;" onchange="previewBusLogo(this)">
+                <small style="color:var(--text-secondary); font-size:11px;">PNG, JPG, SVG — max 1MB. Leave blank to keep existing logo.</small>
             </div>
             <button class="btn btn-primary" id="bus-form-submit" type="submit" style="height: 42px; margin-top: 10px;">
                 Register Coach
@@ -402,5 +425,13 @@
         z-index: 2;
     }
 </style>
+
+<script>
+    // Logo data map — keyed by bus ID, values are base64 data URLs
+    // Stored in JS (not in data-* attributes) to avoid massive HTML attributes
+    window.BusLogos = @json(
+        $buses->mapWithKeys(fn($b) => [$b->id => $b->logo_url])
+    );
+</script>
 
 @vite('resources/js/admin/buses.js')

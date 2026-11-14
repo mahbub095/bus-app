@@ -8,14 +8,43 @@
                 Live disabled
             </span>
         </h3>
+
+        {{-- Date filter bar --}}
+        <div class="log-filter-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:16px; padding:12px 16px; background:rgba(99,102,241,0.05); border-radius:var(--border-radius-sm);">
+            <div class="input-group" style="flex:0 0 auto; min-width:170px;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Date Filter</label>
+                <select id="bookings-period" class="coupon-input" style="height:38px;">
+                    <option value="all">All Records</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="this_week">This Week</option>
+                    <option value="this_month">This Month</option>
+                    <option value="this_year">This Year</option>
+                    <option value="custom">Custom Date Range</option>
+                </select>
+            </div>
+            <div id="bookings-custom-dates" style="display:none; gap:12px; align-items:flex-end;">
+                <div class="input-group" style="flex:0 0 auto; min-width:150px;">
+                    <label style="font-size:12px; font-weight:600; margin-bottom:4px;">From Date</label>
+                    <input type="date" id="bookings-from-date" class="coupon-input" style="height:38px;">
+                </div>
+                <div class="input-group" style="flex:0 0 auto; min-width:150px;">
+                    <label style="font-size:12px; font-weight:600; margin-bottom:4px;">To Date</label>
+                    <input type="date" id="bookings-to-date" class="coupon-input" style="height:38px;">
+                </div>
+            </div>
+            <button type="button" id="bookings-apply-filter" class="btn btn-primary" style="height:38px; padding:0 18px;">Apply Filter</button>
+        </div>
+
         <div class="table-wrapper">
-            <table class="admin-table">
+            <table class="admin-table" style="min-width: 900px;">
                 <thead>
                     <tr>
                         <th>PNR Code</th>
                         <th>Passenger Name</th>
                         <th>Contact Information</th>
                         <th>Journey Details</th>
+                        <th>Coach Reg. No.</th>
                         <th>Seats</th>
                         <th>Fare Paid</th>
                         <th>Status</th>
@@ -24,12 +53,27 @@
                 </thead>
                 <tbody id="bookings-log-body">
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                        <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted)">
                             Open this tab to load live booking logs…
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        {{-- Pagination controls --}}
+        <div class="bookings-pagination-bar" style="display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;">
+            <div class="input-group" style="flex:0 0 auto;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Per page</label>
+                <select id="bookings-per-page" class="coupon-input" style="height:38px;">
+                    <option value="10" selected>10</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <span id="bookings-page-info" style="flex:0 0 auto; font-size:13px; color:var(--text-secondary);">Showing 0–0 of 0</span>
+            <button id="bookings-prev-page" class="btn btn-secondary btn-sm" disabled>← Prev</button>
+            <button id="bookings-next-page" class="btn btn-secondary btn-sm">Next →</button>
         </div>
     </div>
 

@@ -120,6 +120,10 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 style="width:100%;padding:7px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:6px;color:#f87171;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:6px;">
                 ✕ Cancel This Booking
             </button>
+            <button id="cs-popover-print" data-seat="${escapeHtml(seatCode)}" data-schedule="${scheduleId}"
+                style="width:100%;padding:7px 10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#818cf8;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:6px;">
+                🖨️ Print Ticket
+            </button>
             <button id="cs-popover-block" data-seat="${escapeHtml(seatCode)}" data-schedule="${scheduleId}"
                 style="width:100%;padding:7px 10px;background:rgba(107,114,128,.15);border:1px solid rgba(107,114,128,.4);border-radius:6px;color:#9ca3af;cursor:not-allowed;font-size:12px;opacity:.5;"
                 disabled title="Cancel the booking first to block this seat">
@@ -168,6 +172,13 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
                 const bookingId = button.dataset.bookingId;
                 closeSeatPopover();
                 handleCancelBooking(bookingId);
+            }
+            if (button.id === 'cs-popover-print') {
+                const seat = button.dataset.seat;
+                const sid = parseInt(button.dataset.schedule, 10);
+                closeSeatPopover();
+                const sched = searchResults.find(s => s.id === sid);
+                if (sched) printSingleTicket(sched, seat);
             }
         });
         document.body.appendChild(popover);
@@ -508,9 +519,13 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         listEl.innerHTML = searchResults.map(sched => {
             const isExpanded = expandedScheduleId === sched.id;
             const availColor = sched.available_seats_count === 0 ? 'var(--danger)' : 'var(--success)';
+            const logoHtml = sched.bus.logo_url
+                ? `<img src="${escapeHtml(sched.bus.logo_url)}" alt="${escapeHtml(sched.bus.operator_name)}" style="height:36px;max-width:100px;object-fit:contain;margin-bottom:4px;border-radius:4px;">`
+                : '';
             return `<div class="bus-card" data-schedule-id="${sched.id}">
                 <div class="bus-main-info">
                     <div class="operator-block">
+                        ${logoHtml}
                         <span class="operator-name">${escapeHtml(sched.bus.operator_name)}</span>
                         <span style="font-size:11px;color:var(--text-muted);">Coach ${escapeHtml(sched.bus.coach_number)}</span>
                         <span class="coach-tag ${sched.bus.coach_type==='AC'?'ac':''}">${escapeHtml(sched.bus.coach_type)}</span>
@@ -664,6 +679,15 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             const blockSelectedBtn = e.target.closest('.cs-block-selected');
             if (blockSelectedBtn && !blockSelectedBtn.disabled) {
                 blockSelectedSeats(parseInt(blockSelectedBtn.dataset.scheduleId, 10));
+                return;
+            }
+
+            // Print sold tickets
+            const printBtn = e.target.closest('.cs-print-sold');
+            if (printBtn) {
+                const scheduleId = parseInt(printBtn.dataset.scheduleId, 10);
+                const schedule = searchResults.find(s => s.id === scheduleId);
+                if (schedule) printSoldTickets(schedule);
                 return;
             }
 
@@ -939,6 +963,208 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             if (res.ok) { selectedSeatBooking = null; await fetchCoachServices(true); }
             else alert(data.message || 'Failed to cancel booking.');
         } catch { alert('Network error during cancellation.'); }
+    }
+
+    // ─── Print tickets ─────────────────────────────────────────────────────────
+    function printSingleTicket(schedule, seatCode) {
+        printSoldTickets(schedule, [seatCode]);
+    }
+
+    function printSoldTickets(schedule, overrideSeats = null) {
+        const { siteName = 'Bus Company', siteLogoUrl = null, siteAddress = '' } = window.CoachServices;
+        const seatMap = getSeatMap(schedule);
+
+        // Use overrideSeats if provided (single-ticket print), otherwise collect all sold/booked
+        const soldSeats = overrideSeats
+            ? overrideSeats
+            : Object.entries(seatMap)
+                .filter(([, status]) => status.startsWith('sold_') || status.startsWith('booked_'))
+                .map(([seat]) => seat)
+                .sort();
+
+        if (!soldSeats.length) {
+            alert('No sold or booked seats found for this schedule.');
+            return;
+        }
+
+        const logoHtml = siteLogoUrl
+            ? `<img src="${siteLogoUrl}" alt="${siteName}" style="height:48px;object-fit:contain;">`
+            : `<div style="font-size:22px;font-weight:800;color:#333;">${siteName}</div>`;
+
+        const busLogoHtml = schedule.bus?.logo_url
+            ? `<img src="${schedule.bus.logo_url}" alt="${schedule.bus.operator_name}" style="height:40px;object-fit:contain;">`
+            : '';
+
+        const formatDT = (iso) => {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-BD', { day:'2-digit', month:'short', year:'numeric' })
+                + ' ' + d.toLocaleTimeString('en-BD', { hour:'2-digit', minute:'2-digit', hour12:true });
+        };
+
+        const formatDate = (iso) => {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString('en-BD', { day:'2-digit', month:'short', year:'numeric' });
+        };
+
+        const formatTime = (iso) => {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleTimeString('en-BD', { hour:'2-digit', minute:'2-digit', hour12:true });
+        };
+
+        const tickets = soldSeats.map(seat => {
+            const booking = schedule.seat_bookings?.[seat] || {};
+            const pnr = booking.pnr || `—`;
+            const passenger = booking.passenger_name || '—';
+            const phone = booking.passenger_phone || '—';
+            const fare = booking.total_fare ? `BDT ${Number(booking.total_fare).toLocaleString()}` : '—';
+            const issuedAt = booking.issued_at || booking.created_at || '';
+            const bp = schedule.boarding_points?.[0] || {};
+            const dp = schedule.dropping_points?.[0] || {};
+
+            return `
+        <div class="ticket" style="
+            page-break-after: always;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 0;
+            max-width: 540px;
+            margin: 0 auto 32px auto;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        ">
+            <!-- Header -->
+            <div style="
+                background: #f97316;
+                color: white;
+                padding: 14px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <div style="font-size:20px;font-weight:800;letter-spacing:1px;">${siteName}</div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:2px;opacity:0.9;">E-TICKET</div>
+            </div>
+
+            <!-- PNR + Bus logo -->
+            <div style="padding:16px 20px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">BOOKING REFERENCE (PNR)</div>
+                    <div style="font-size:24px;font-weight:800;color:#1f2937;letter-spacing:2px;">${escapeHtml(pnr)}</div>
+                </div>
+                <div style="text-align:right;">
+                    ${busLogoHtml}
+                    <div style="font-size:12px;font-weight:700;color:#374151;margin-top:4px;">${escapeHtml(schedule.bus?.operator_name || '—')}</div>
+                    ${siteAddress ? `<div style="font-size:10px;color:#6b7280;max-width:200px;">${escapeHtml(siteAddress)}</div>` : ''}
+                </div>
+            </div>
+
+            <!-- Route -->
+            <div style="padding:16px 20px 8px;text-align:center;">
+                <div style="font-size:18px;font-weight:700;color:#1f2937;">${escapeHtml(schedule.route?.from || '—')} → ${escapeHtml(schedule.route?.to || '—')}</div>
+            </div>
+
+            <!-- Journey Details -->
+            <div style="padding:8px 20px 16px;border-bottom:1px solid #f3f4f6;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Journey Date</td>
+                        <td style="padding:4px 0;font-weight:600;">${formatDate(schedule.departure_time)}</td>
+                        <td style="padding:4px 0;color:#6b7280;">Departure</td>
+                        <td style="padding:4px 0;font-weight:600;">${formatTime(schedule.departure_time)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Reporting</td>
+                        <td style="padding:4px 0;font-weight:600;">${escapeHtml(bp.reporting_time || '—')}</td>
+                        <td style="padding:4px 0;color:#6b7280;">Coach</td>
+                        <td style="padding:4px 0;font-weight:600;">${escapeHtml(schedule.bus?.coach_number || '—')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Boarding</td>
+                        <td colspan="3" style="padding:4px 0;font-weight:600;">${escapeHtml(bp.departure_time || '—')} — ${escapeHtml(bp.label || schedule.route?.from || '—')} Counter</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Dropping</td>
+                        <td colspan="3" style="padding:4px 0;font-weight:600;">${escapeHtml(dp.arrival_time || '—')} — ${escapeHtml(dp.label || schedule.route?.to || '—')} Counter</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Seat(s)</td>
+                        <td style="padding:4px 0;font-weight:700;color:#f97316;">${escapeHtml(seat)}</td>
+                        <td></td><td></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Passenger details -->
+            <div style="padding:12px 20px;border-bottom:1px solid #f3f4f6;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Passenger</td>
+                        <td style="padding:4px 0;font-weight:600;">${escapeHtml(passenger)}</td>
+                        <td style="padding:4px 0;color:#6b7280;">Mobile</td>
+                        <td style="padding:4px 0;font-weight:600;">${escapeHtml(phone)}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Seat Fare</td>
+                        <td style="padding:4px 0;font-weight:600;">${fare}</td>
+                        <td style="padding:4px 0;color:#6b7280;">Issued</td>
+                        <td style="padding:4px 0;font-size:11px;color:#6b7280;">${escapeHtml(formatDT(issuedAt))}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:4px 0;color:#6b7280;">Total Paid</td>
+                        <td colspan="3" style="padding:4px 0;font-weight:800;color:#f97316;font-size:15px;">${fare}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- T&C -->
+            <div style="padding:12px 20px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6;">
+                <strong style="display:block;margin-bottom:4px;">Terms &amp; Conditions</strong>
+                Tickets are non-refundable within 3 hours of departure. Arrive 30 minutes early.
+                <br><br>
+                <strong style="display:block;margin-bottom:4px;">Luggage Policy</strong>
+                Free 10 kg luggage per seat. Excess charged at the counter.
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:10px 20px;text-align:center;font-size:11px;color:#9ca3af;">
+                www.${siteName.toLowerCase().replace(/\s+/g,'')} &nbsp;·&nbsp; Issued by ${siteName}
+            </div>
+        </div>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sold Tickets — ${escapeHtml(schedule.route?.from || '')} → ${escapeHtml(schedule.route?.to || '')} — ${formatDate(schedule.departure_time)}</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 20px; background: #fff; }
+    @media print {
+        body { margin: 0; }
+        .ticket { page-break-after: always; }
+        .ticket:last-child { page-break-after: avoid; }
+    }
+</style>
+</head>
+<body>
+<div style="font-family:Arial,sans-serif;text-align:center;margin-bottom:24px;padding:12px;border-bottom:2px solid #f3f4f6;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+        ${logoHtml}
+    </div>
+    <div style="font-size:14px;color:#6b7280;margin-top:8px;">Sold Tickets — ${escapeHtml(schedule.route?.from || '—')} → ${escapeHtml(schedule.route?.to || '—')} | ${formatDate(schedule.departure_time)} | ${soldSeats.length} ticket(s)</div>
+</div>
+${tickets}
+</body>
+</html>`;
+
+        const win = window.open('', '_blank');
+        if (!win) { alert('Please allow popups for this site to print tickets.'); return; }
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 500);
     }
 
     function showErr(el, msg) { if (!el) return; el.style.display = 'block'; el.textContent = msg; }
