@@ -41,6 +41,11 @@ class BookingController extends BaseController
 
     public function mine(Request $request)
     {
+        $validated = $request->validate([
+            'page'     => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:50',
+        ]);
+
         $bookings = Booking::with([
             'schedule.bus',
             'schedule.route.departureStation',
@@ -48,11 +53,10 @@ class BookingController extends BaseController
         ])
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate((int) ($validated['per_page'] ?? 10))
+            ->through(fn ($booking) => $this->bookingService->formatForApi($booking));
 
-        return response()->json(
-            $bookings->map(fn ($b) => $this->bookingService->formatForApi($b))->values()
-        );
+        return response()->json($bookings);
     }
 
     public function cancel(Request $request, $id)

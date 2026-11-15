@@ -241,6 +241,7 @@ class AdminBookingService
                 'bus' => [
                     'operator_name' => $booking->schedule?->bus?->operator_name,
                     'coach_number'  => $booking->schedule?->bus?->coach_number,
+                    'logo_url'      => $booking->schedule?->bus?->logo_url,
                 ],
                 'route' => [
                     'from' => $booking->schedule?->route?->departureStation?->name,

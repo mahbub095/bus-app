@@ -136,8 +136,7 @@ class UserAuthController extends BaseController
             ]
         );
 
-        // Log the code
-        Log::info("Password reset code for {$user->email}: {$code}");
+        // Do not log reset codes — they are sensitive credentials
 
         // Send the email
         try {

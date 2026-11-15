@@ -11,10 +11,18 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withCommands([
+        \App\Console\Commands\InstallFinalize::class,
+        \App\Console\Commands\InstallDemoSeed::class,
+        \App\Console\Commands\InstallReset::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // License guard runs on every web & API request except /install/*
+        $middleware->append(\App\Http\Middleware\EnsureLicenseIsActivated::class);
+
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
-            'super_admin' => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
+            'admin'           => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'super_admin'     => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
             'menu_permission' => \App\Http\Middleware\EnsureUserHasMenuPermission::class,
         ]);
     })

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AjaxController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BusController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RouteController;
@@ -13,8 +14,32 @@ use App\Http\Controllers\Admin\SiteSettingsController;
 use App\Http\Controllers\Admin\GatewaySettingsController;
 use App\Http\Controllers\Admin\StationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Install\InstallController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Installation Wizard (license-gated; bypasses EnsureLicenseIsActivated)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/install', [InstallController::class, 'showLicense'])->name('install.license');
+Route::post('/install/license/verify', [InstallController::class, 'verifyLicense'])->name('install.license.verify');
+Route::get('/install/license/verify', fn() => redirect('/install'));
+
+Route::get('/install/database', [InstallController::class, 'showDatabase'])->name('install.database');
+Route::post('/install/database/save', [InstallController::class, 'saveDatabase'])->name('install.database.save');
+Route::get('/install/database/save', fn() => redirect('/install/database'));
+
+Route::get('/install/finalize', [InstallController::class, 'showFinalize'])->name('install.finalize');
+Route::post('/install/finalize/run', [InstallController::class, 'runFinalize'])->name('install.finalize.run');
+Route::get('/install/finalize/run', fn() => redirect('/install/finalize'));
+Route::get('/install/finalize/status', [InstallController::class, 'finalizeStatus'])->name('install.finalize.status');
+
+Route::get('/install/complete', [InstallController::class, 'complete'])->name('install.complete');
+Route::post('/install/demo-seed/start', [InstallController::class, 'startDemoSeed'])->name('install.demo-seed.start');
+Route::get('/install/demo-seed/status', [InstallController::class, 'demoSeedStatus'])->name('install.demo-seed.status');
 
 /*
 |--------------------------------------------------------------------------
@@ -22,7 +47,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', fn () => view('admin.login'));
+Route::get('/', function () {
+    // If not installed yet, go straight to the install wizard.
+    if (! config('app.installed') && ! file_exists(storage_path('framework/installed'))) {
+        return redirect('/install');
+    }
+    return view('admin.login');
+});
 
 Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payment.cancel');
@@ -30,11 +61,12 @@ Route::get('/payment/cancel', [PaymentController::class, 'cancel'])->name('payme
 /*
 |--------------------------------------------------------------------------
 | Admin authentication (session)
+| Rate-limited: 10 attempts per minute per IP to prevent brute-force.
 |--------------------------------------------------------------------------
 */
 
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/admin/login', [AuthController::class, 'login']);
+Route::post('/admin/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
@@ -64,6 +96,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::middleware('menu_permission:coach-services')->group(function () {
             Route::get('/coach-services/search', [AjaxController::class, 'searchCoachServices'])->name('admin.coach-services.search');
             Route::post('/schedules/{id}/seats/toggle-block', [AjaxController::class, 'toggleBlockedSeat'])->name('admin.schedules.seats.toggle-block');
+            Route::post('/seats/hold', [AjaxController::class, 'holdSeat'])->name('admin.seats.hold');
+            Route::post('/seats/release', [AjaxController::class, 'releaseSeat'])->name('admin.seats.release');
         });
         Route::middleware('menu_permission:bookings')->group(function () {
             Route::post('/bookings/{id}/cancel', [AjaxController::class, 'cancelBookingApi'])->name('admin.bookings.cancel.api');
@@ -219,12 +253,24 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | License Management (Super Admin)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('super_admin')->group(function () {
+        Route::get('/admin/license', [LicenseController::class, 'info'])->name('admin.license.info');
+        Route::post('/admin/license/re-verify', [LicenseController::class, 'reVerify'])->name('admin.license.re-verify');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | System Settings & Configuration (Super Admin)
     |--------------------------------------------------------------------------
     */
     Route::middleware('super_admin')->group(function () {
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
+        Route::post('/admin/site-settings/logo', [SiteSettingsController::class, 'uploadLogo'])->name('admin.site-settings.logo');
+        Route::delete('/admin/site-settings/logo', [SiteSettingsController::class, 'deleteLogo'])->name('admin.site-settings.logo.delete');
         
         // Gateways & Integrations separate configuration update routes
         Route::post('/admin/gateway-settings/sms', [GatewaySettingsController::class, 'updateSms'])->name('admin.gateway-settings.update-sms');

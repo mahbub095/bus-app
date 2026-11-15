@@ -6,6 +6,25 @@
      On standalone pages (report detail), pass $activeTab = 'reports'.
 ====================================================================== --}}
 <aside class="admin-sidebar">
+    {{-- Sidebar logo — shown on mobile when the top navbar is scrolled away --}}
+    <a href="/admin" class="sidebar-brand">
+        @if(!empty($siteSettings['logo_url'] ?? null))
+            <img src="{{ $siteSettings['logo_url'] }}"
+                 alt="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
+                 class="sidebar-brand-img">
+        @elseif(!empty($siteSettings['logo_text'] ?? null))
+            <div class="logo-icon" style="width:30px;height:30px;font-size:15px;border-radius:8px;flex-shrink:0;">
+                {{ strtoupper(substr($siteSettings['logo_text'], 0, 1)) }}
+            </div>
+            <span class="sidebar-brand-text">
+                {{ $siteSettings['logo_text'] }}
+            </span>
+        @else
+            <div class="logo-icon" style="width:30px;height:30px;font-size:15px;border-radius:8px;flex-shrink:0;">S</div>
+            <span class="sidebar-brand-text">SonyaBus</span>
+        @endif
+    </a>
+
     <div class="sidebar-section-label">Overview</div>
     <a href="/admin" class="sidebar-nav-item {{ ($activeTab ?? '') === 'dashboard' ? 'active' : '' }}" data-tab="dashboard">
         <span class="sidebar-nav-icon">📊</span>
@@ -80,6 +99,10 @@
 
     <div class="sidebar-section-label">System</div>
     @if(Auth::user()->isSuperAdmin())
+    <a href="/admin#license" class="sidebar-nav-item {{ ($activeTab ?? '') === 'license' ? 'active' : '' }}" data-tab="license">
+        <span class="sidebar-nav-icon">🔑</span>
+        License
+    </a>
     <a href="/admin#site-settings" class="sidebar-nav-item {{ ($activeTab ?? '') === 'site-settings' ? 'active' : '' }}" data-tab="site-settings">
         <span class="sidebar-nav-icon">⚙️</span>
         Site Settings

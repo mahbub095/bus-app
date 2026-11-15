@@ -30,7 +30,7 @@ function initFlashAlerts() {
 
 // ─── Tab switching ────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+function initAdminTabSwitching() {
     initFlashAlerts();
 
     const navItems          = document.querySelectorAll('.sidebar-nav-item');
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const knownTabs = [
             'stations', 'buses', 'routes', 'schedules', 'promotions', 'users',
             'coach-services', 'bookings', 'cancel-requests', 'reports',
-            'site-settings', 'gateways', 'profile',
+            'license', 'site-settings', 'gateways', 'profile',
         ];
         for (const tab of knownTabs) {
             if (query.has(`${tab}_page`)) return tab;
@@ -121,7 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardOverview?.style.setProperty('display', isDashboard ? 'block' : 'none');
         adminHeader?.style.setProperty('display',       isDashboard ? 'block' : 'none');
 
-        if (updateHash) window.location.hash = tabName;
+        if (updateHash) {
+            const nextHash = `#${tabName}`;
+            if (window.location.hash !== nextHash) {
+                history.replaceState(null, '', nextHash);
+            }
+        }
 
         // Start or stop live-polling modules depending on which tab is active
         window.coachServicesModule?.[ tabName === 'coach-services' ? 'startPolling' : 'stopPolling']();
@@ -203,7 +208,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         input.value = getCurrentTab();
     });
-});
+
+    window.switchAdminTab = switchTab;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminTabSwitching);
+} else {
+    initAdminTabSwitching();
+}
 
 // ─── CRUD form helpers ────────────────────────────────────────────────────────
 

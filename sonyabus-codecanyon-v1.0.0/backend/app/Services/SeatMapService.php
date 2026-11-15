@@ -229,8 +229,8 @@ class SeatMapService
             }
 
             $gender = strtoupper((string) ($booking->passenger_gender ?? 'M')) === 'F' ? 'F' : 'M';
-            $isCounter = strtolower((string) $booking->payment_method) === 'cash';
-            $statusKey = ($isCounter ? 'booked' : 'sold') . '_' . strtolower($gender);
+            $prefix = ($booking->status === 'BOOKED') ? 'booked' : 'sold';
+            $statusKey = $prefix . '_' . strtolower($gender);
 
             foreach ($this->parseSeatList($booking->seat_numbers) as $seat) {
                 if (! isset($map[$seat]) || $map[$seat] === 'blocked') {
