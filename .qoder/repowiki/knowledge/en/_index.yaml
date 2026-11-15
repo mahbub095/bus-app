@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: dev
 nodes_managed: true
-exported_at: "2026-11-15T06:30:56Z"
+exported_at: "2026-11-15T09:13:00Z"
 modules:
     "":
-        dir_name: SonyaBus Bus Booking Platform (Root)
-        title: SonyaBus Bus Booking Platform (Root)
+        dir_name: SonyaBus Bus Ticketing Platform (Monorepo Distribution)
+        title: SonyaBus Bus Ticketing Platform (Monorepo Distribution)
         scope:
             - README.md
             - CODECANYON_RELEASE_GUIDE.md
@@ -42,8 +42,8 @@ modules:
         depends_on: []
         related_to: []
     backend:
-        dir_name: Bus Booking Laravel Backend
-        title: Bus Booking Laravel Backend
+        dir_name: Bus Booking Laravel Application
+        title: Bus Booking Laravel Application
         scope:
             - backend/
         source_files: []
@@ -57,10 +57,13 @@ modules:
             - backend/site_settings_license_sms
             - backend/user_auth
         depends_on: []
-        related_to: []
+        related_to:
+            - path: codecanyon_release
+            - path: frontend
+            - path: load_testing
     backend/admin_dashboard_reports:
-        dir_name: Admin Dashboard & Reporting Services
-        title: Admin Dashboard & Reporting Services
+        dir_name: Admin Dashboard & Business Report Services
+        title: Admin Dashboard & Business Report Services
         scope:
             - backend/app/Services/AdminDashboardService.php
             - backend/app/Services/AdminDashboardAnalyticsService.php
@@ -82,8 +85,7 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: frontend
-            - path: load_testing
+            - path: backend/promotions_domain
     backend/installation_flow:
         dir_name: Installation Wizard & Bootstrap Commands
         title: Installation Wizard & Bootstrap Commands
@@ -96,7 +98,8 @@ modules:
         source_files: []
         children: []
         depends_on: []
-        related_to: []
+        related_to:
+            - path: backend/site_settings_license_sms
     backend/promotions_domain:
         dir_name: Promotion Code Domain
         title: Promotion Code Domain
@@ -108,7 +111,7 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: load_testing
+            - path: backend/bookings_domain
     backend/routes_schedules_stations_buses:
         dir_name: Bus Fleet, Routes & Schedules Domain Layer
         title: Bus Fleet, Routes & Schedules Domain Layer
@@ -127,12 +130,10 @@ modules:
         source_files: []
         children: []
         depends_on: []
-        related_to:
-            - path: frontend
-            - path: load_testing
+        related_to: []
     backend/shared_infrastructure:
-        dir_name: Laravel HTTP & Console Route Definitions
-        title: Laravel HTTP & Console Route Definitions
+        dir_name: Laravel Route Definitions (API, Web Admin & Console)
+        title: Laravel Route Definitions (API, Web Admin & Console)
         scope:
             - backend/routes/api.php
             - backend/routes/web.php
@@ -160,6 +161,7 @@ modules:
         children: []
         depends_on: []
         related_to:
+            - path: backend/installation_flow
             - path: frontend
     backend/user_auth:
         dir_name: User & Admin Authentication
@@ -171,9 +173,7 @@ modules:
         source_files: []
         children: []
         depends_on: []
-        related_to:
-            - path: frontend
-            - path: load_testing
+        related_to: []
     codecanyon_release:
         dir_name: SonyaBus Bus Booking Platform (CodeCanyon Release)
         title: SonyaBus Bus Booking Platform (CodeCanyon Release)
@@ -182,7 +182,8 @@ modules:
         source_files: []
         children: []
         depends_on: []
-        related_to: []
+        related_to:
+            - path: backend
     frontend:
         dir_name: SonyaBus Customer Frontend (React + Vite)
         title: SonyaBus Customer Frontend (React + Vite)
@@ -192,10 +193,8 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: backend/bookings_domain
-            - path: backend/routes_schedules_stations_buses
+            - path: backend
             - path: backend/site_settings_license_sms
-            - path: backend/user_auth
     load_testing:
         dir_name: k6 Load & Performance Test Suite
         title: k6 Load & Performance Test Suite
@@ -205,7 +204,4 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: backend/bookings_domain
-            - path: backend/promotions_domain
-            - path: backend/routes_schedules_stations_buses
-            - path: backend/user_auth
+            - path: backend

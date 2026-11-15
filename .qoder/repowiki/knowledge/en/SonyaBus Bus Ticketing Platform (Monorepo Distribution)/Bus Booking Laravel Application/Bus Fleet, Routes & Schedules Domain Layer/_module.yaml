@@ -1,0 +1,18 @@
+schema_version: 1
+module_path: backend/routes_schedules_stations_buses
+title: Bus Fleet, Routes & Schedules Domain Layer
+scope:
+    - backend/app/Http/Controllers/API/StationController.php
+    - backend/app/Http/Controllers/Admin/BusController.php
+    - backend/app/Http/Controllers/Admin/RouteController.php
+    - backend/app/Http/Controllers/Admin/ScheduleController.php
+    - backend/app/Models/Bus.php
+    - backend/app/Models/Route.php
+    - backend/app/Models/Schedule.php
+    - backend/app/Models/Station.php
+    - backend/app/Services/CoachServicesService.php
+    - backend/app/Services/RouteService.php
+    - backend/app/Services/SeatMapService.php
+source_files: []
+depends_on: []
+related_to: []

@@ -1,1 +1,0 @@
-Defines all HTTP and console endpoints for the bus booking application, separating public API, admin web dashboard, installation wizard, and Artisan commands.

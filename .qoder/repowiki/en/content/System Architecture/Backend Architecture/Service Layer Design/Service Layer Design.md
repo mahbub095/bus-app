@@ -6,11 +6,20 @@
 - [SeatMapService.php](file://backend/app/Services/SeatMapService.php)
 - [ZinipayService.php](file://backend/app/Services/ZinipayService.php)
 - [SmsGatewayService.php](file://backend/app/Services/SmsGatewayService.php)
+- [AdminBookingService.php](file://backend/app/Services/AdminBookingService.php)
 - [API BookingController.php](file://backend/app/Http/Controllers/API/BookingController.php)
 - [Admin BookingController.php](file://backend/app/Http/Controllers/Admin/BookingController.php)
+- [AjaxController.php](file://backend/app/Http/Controllers/Admin/AjaxController.php)
 - [AppServiceProvider.php](file://backend/app/Providers/AppServiceProvider.php)
 - [providers.php](file://backend/bootstrap/providers.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for AdminBookingService with focus on the new applySearch() method
+- Updated service layer architecture to include AdminBookingService as a core component
+- Enhanced search functionality documentation with SQL wildcard escaping details
+- Added new section covering admin-specific booking operations and log management
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -25,28 +34,31 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the service layer architecture for the bus booking application. It focuses on how business logic is encapsulated in dedicated service classes, how controllers interact with services, and how concerns such as seat availability, payment integration, SMS notifications, pricing, and transaction safety are separated from HTTP handling.
+This document explains the service layer architecture for the bus booking application. It focuses on how business logic is encapsulated in dedicated service classes, how controllers interact with services, and how concerns such as seat availability, payment integration, SMS notifications, pricing, transaction safety, and administrative operations are separated from HTTP handling.
 
 The key service classes analyzed here are:
 - `BookingService`: orchestrates customer and admin booking flows.
 - `SeatMapService`: computes seat codes, seat map state, boarding/dropping points, pricing breakdowns, and temporary seat holds.
 - `ZinipayService`: integrates with an external payment gateway to create invoices and verify payments.
 - `SmsGatewayService`: sends booking confirmation SMS through multiple configured gateways.
+- `AdminBookingService`: handles administrative booking operations including intelligent search across multiple fields, cancellation workflows, and booking log management.
 
 ## Project Structure
-The service layer lives under `backend/app/Services`. Controllers under `backend/app/Http/Controllers` delegate business operations to these services. Configuration and dynamic runtime overrides are handled by `AppServiceProvider`, while Laravel’s container resolves dependencies automatically through constructor injection.
+The service layer lives under `backend/app/Services`. Controllers under `backend/app/Http/Controllers` delegate business operations to these services. Configuration and dynamic runtime overrides are handled by `AppServiceProvider`, while Laravel's container resolves dependencies automatically through constructor injection.
 
 ```mermaid
 graph TB
 subgraph "HTTP Layer"
 ApiCtrl["API BookingController"]
 AdminCtrl["Admin BookingController"]
+AjaxCtrl["Admin AjaxController"]
 end
 subgraph "Service Layer"
 BookingSvc["BookingService"]
 SeatMapSvc["SeatMapService"]
 ZiniSvc["ZinipayService"]
 SmsSvc["SmsGatewayService"]
+AdminBookingSvc["AdminBookingService"]
 end
 subgraph "Domain Models"
 BookingModel["Booking"]
@@ -66,6 +78,9 @@ Log["Laravel Log"]
 end
 ApiCtrl --> BookingSvc
 AdminCtrl --> BookingSvc
+AdminCtrl --> ZiniSvc
+AdminCtrl --> AdminBookingSvc
+AjaxCtrl --> AdminBookingSvc
 BookingSvc --> SeatMapSvc
 BookingSvc --> ZiniSvc
 BookingSvc --> SmsSvc
@@ -77,6 +92,7 @@ ZiniSvc --> Log
 SmsSvc --> SmsConfigModel
 SmsSvc --> Http
 SmsSvc --> Log
+AdminBookingSvc --> DB
 BookingSvc --> DB
 SeatMapSvc --> Cache
 ```
@@ -84,17 +100,19 @@ SeatMapSvc --> Cache
 **Diagram sources**
 - [API BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [Admin BookingController.php:1-137](file://backend/app/Http/Controllers/Admin/BookingController.php#L1-L137)
+- [AjaxController.php:1-150](file://backend/app/Http/Controllers/Admin/AjaxController.php#L1-L150)
 - [BookingService.php:1-335](file://backend/app/Services/BookingService.php#L1-L335)
 - [SeatMapService.php:1-593](file://backend/app/Services/SeatMapService.php#L1-L593)
 - [ZinipayService.php:1-141](file://backend/app/Services/ZinipayService.php#L1-L141)
 - [SmsGatewayService.php:1-255](file://backend/app/Services/SmsGatewayService.php#L1-L255)
+- [AdminBookingService.php:1-296](file://backend/app/Services/AdminBookingService.php#L1-L296)
 
 **Section sources**
 - [providers.php:1-7](file://backend/bootstrap/providers.php#L1-L7)
 - [AppServiceProvider.php:1-106](file://backend/app/Providers/AppServiceProvider.php#L1-L106)
 
 ## Core Components
-This section summarizes each service’s responsibility, main methods, input/output patterns, and interaction boundaries.
+This section summarizes each service's responsibility, main methods, input/output patterns, and interaction boundaries.
 
 ### BookingService
 Responsibilities:
@@ -240,17 +258,73 @@ Error handling:
 - [SmsGatewayService.php:152-202](file://backend/app/Services/SmsGatewayService.php#L152-L202)
 - [SmsGatewayService.php:204-253](file://backend/app/Services/SmsGatewayService.php#L204-L253)
 
+### AdminBookingService
+**Updated** New service added to handle administrative booking operations with intelligent search capabilities.
+
+Responsibilities:
+- Provide intelligent search across multiple booking fields including PNR codes, passenger names, phone numbers, and email addresses.
+- Implement proper SQL wildcard escaping to prevent injection attacks.
+- Manage booking cancellation workflows and approval processes.
+- Format booking log entries for administrative interfaces.
+- Handle date range filtering for booking logs and cancel requests.
+
+Key public methods:
+- `getBookingLogs(Request $request): array`
+  - Retrieves recent bookings with intelligent search filtering.
+  - Supports date range filtering with predefined periods or custom ranges.
+  - Applies search terms across passenger_name, passenger_phone, passenger_email, and booking ID.
+  - Returns formatted booking data with schedule and route information.
+- `getCancelRequestsLogs(Request $request): array`
+  - Retrieves cancellation requests with the same search capabilities.
+  - Filters by CANCEL_REQUESTED status and applies date range constraints.
+  - Returns formatted cancellation request data.
+- `requestCancellation(int $id): array`
+  - Sets a booking to CANCEL_REQUESTED status.
+  - Validates booking existence and current status.
+  - Prevents duplicate cancellation requests.
+- `cancelBooking(int $id): array`
+  - Directly cancels a booking (admin override).
+  - Updates booking status to CANCELLED.
+- `approveCancelRequest(int $id): array`
+  - Approves a pending cancellation request.
+  - Validates booking exists and has CANCEL_REQUESTED status.
+  - Updates booking status to CANCELLED.
+
+Intelligent Search Implementation:
+- **Multi-field search**: Searches across passenger_name, passenger_phone, passenger_email, and booking ID simultaneously.
+- **PNR code recognition**: Automatically detects PNR patterns like "SE00042", "se42", or "42" and converts them to booking IDs.
+- **SQL wildcard escaping**: Properly escapes "%" and "_" characters to prevent unintended pattern matching.
+- **Flexible term matching**: Supports partial matches for names, phone numbers, and email addresses.
+
+Date Range Filtering:
+- **Predefined periods**: today, yesterday, this_week, this_month, this_year.
+- **Custom date ranges**: from_date and to_date parameters.
+- **All data option**: period="all" disables date filtering.
+
+Return value patterns:
+- Log methods return arrays with 'bookings' or 'cancel_requests' collections and 'updated_at' timestamps.
+- Cancellation methods return arrays with 'success', 'status', and 'body' containing operation results.
+
+**Section sources**
+- [AdminBookingService.php:9-94](file://backend/app/Services/AdminBookingService.php#L9-L94)
+- [AdminBookingService.php:96-147](file://backend/app/Services/AdminBookingService.php#L96-L147)
+- [AdminBookingService.php:154-265](file://backend/app/Services/AdminBookingService.php#L154-L265)
+- [AdminBookingService.php:267-294](file://backend/app/Services/AdminBookingService.php#L267-L294)
+
 ## Architecture Overview
 The service layer separates business rules from HTTP concerns:
 - Controllers validate requests and delegate domain logic to services.
 - Services coordinate models, external integrations, caching, and database transactions.
 - External integrations (payment gateway, SMS gateway) are isolated in their own services.
+- Administrative operations are handled by specialized services like AdminBookingService.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant ApiCtrl as "API BookingController"
+participant AdminAjaxCtrl as "Admin AjaxController"
 participant BookingSvc as "BookingService"
+participant AdminBookingSvc as "AdminBookingService"
 participant SeatMapSvc as "SeatMapService"
 participant DB as "Database"
 participant Cache as "Cache"
@@ -274,11 +348,17 @@ BookingSvc->>SmsSvc : sendBookingVerification(booking)
 SmsSvc-->>BookingSvc : {success, message}
 BookingSvc-->>ApiCtrl : {status, body with booking and sms}
 end
+AdminAjaxCtrl->>AdminBookingSvc : getBookingLogs(request)
+AdminBookingSvc->>AdminBookingSvc : applySearch(query, request)
+AdminBookingSvc->>DB : query with multi-field search
+AdminBookingSvc-->>AdminAjaxCtrl : formatted booking logs
 ```
 
 **Diagram sources**
 - [API BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
+- [AjaxController.php:36-48](file://backend/app/Http/Controllers/Admin/AjaxController.php#L36-L48)
 - [BookingService.php:23-131](file://backend/app/Services/BookingService.php#L23-L131)
+- [AdminBookingService.php:96-147](file://backend/app/Services/AdminBookingService.php#L96-L147)
 - [SeatMapService.php:191-244](file://backend/app/Services/SeatMapService.php#L191-L244)
 - [ZinipayService.php:20-97](file://backend/app/Services/ZinipayService.php#L20-L97)
 - [SmsGatewayService.php:13-48](file://backend/app/Services/SmsGatewayService.php#L13-L48)
@@ -319,6 +399,16 @@ class SmsGatewayService {
 +configIssue(config) string|null
 +normalizePhone(phone) string|null
 }
+class AdminBookingService {
++getBookingLogs(request) array
++getCancelRequestsLogs(request) array
++requestCancellation(id) array
++cancelBooking(id) array
++approveCancelRequest(id) array
+-private applySearch(query, request) void
+-private resolveLogDateRange(request) array|null
+-private resolveCustomRange(request) array|null
+}
 BookingService --> SeatMapService : "uses"
 BookingService --> ZinipayService : "uses"
 BookingService --> SmsGatewayService : "uses"
@@ -329,6 +419,7 @@ BookingService --> SmsGatewayService : "uses"
 - [SeatMapService.php:191-382](file://backend/app/Services/SeatMapService.php#L191-L382)
 - [ZinipayService.php:20-139](file://backend/app/Services/ZinipayService.php#L20-L139)
 - [SmsGatewayService.php:13-202](file://backend/app/Services/SmsGatewayService.php#L13-L202)
+- [AdminBookingService.php:9-294](file://backend/app/Services/AdminBookingService.php#L9-L294)
 
 #### Transaction Management Flow
 ```mermaid
@@ -443,8 +534,63 @@ LogWarning --> ReturnFailure["Return failure"]
 - [SmsGatewayService.php:109-150](file://backend/app/Services/SmsGatewayService.php#L109-L150)
 - [SmsGatewayService.php:152-253](file://backend/app/Services/SmsGatewayService.php#L152-L253)
 
+### AdminBookingService Analysis
+**Updated** Enhanced with intelligent search capabilities for administrative booking operations.
+
+AdminBookingService provides specialized functionality for administrative tasks including sophisticated search across multiple booking fields, cancellation workflows, and log management. The service implements security measures like SQL wildcard escaping and provides flexible date range filtering.
+
+#### Intelligent Search Algorithm
+```mermaid
+flowchart TD
+Start(["applySearch"]) --> GetTerm["Extract search term"]
+GetTerm --> CheckEmpty{"Term empty?"}
+CheckEmpty --> |Yes| Exit["Return without filtering"]
+CheckEmpty --> |No| EscapeWildcards["Escape % and _ characters"]
+EscapeWildcards --> BuildLikePattern["Build LIKE pattern with wildcards"]
+BuildLikePattern --> CheckPNR{"Matches PNR pattern?"}
+CheckPNR --> |Yes| ExtractID["Extract booking ID from PNR"]
+CheckPNR --> |No| MultiFieldSearch["Apply multi-field search"]
+ExtractID --> MultiFieldSearch
+MultiFieldSearch --> WhereClause["Build WHERE clause with OR conditions"]
+WhereClause --> ApplyFilter["Apply to query builder"]
+ApplyFilter --> Exit
+```
+
+**Diagram sources**
+- [AdminBookingService.php:67-94](file://backend/app/Services/AdminBookingService.php#L67-L94)
+
+#### Date Range Resolution Flow
+```mermaid
+flowchart TD
+Start(["resolveLogDateRange"]) --> GetPeriod["Extract period parameter"]
+GetPeriod --> CheckAll{"period === 'all'?"}
+CheckAll --> |Yes| ReturnNull["Return null (no filtering)"]
+CheckAll --> |No| MatchPeriod["Match predefined period"]
+MatchPeriod --> Today["today -> start/end of day"]
+MatchPeriod --> Yesterday["yesterday -> previous day range"]
+MatchPeriod --> ThisWeek["this_week -> week range"]
+MatchPeriod --> ThisMonth["this_month -> month range"]
+MatchPeriod --> ThisYear["this_year -> year range"]
+MatchPeriod --> Custom["custom -> resolveCustomRange"]
+Today --> ReturnRange["Return Carbon date range"]
+Yesterday --> ReturnRange
+ThisWeek --> ReturnRange
+ThisMonth --> ReturnRange
+ThisYear --> ReturnRange
+Custom --> ReturnRange
+```
+
+**Diagram sources**
+- [AdminBookingService.php:17-56](file://backend/app/Services/AdminBookingService.php#L17-L56)
+
+**Section sources**
+- [AdminBookingService.php:9-94](file://backend/app/Services/AdminBookingService.php#L9-L94)
+- [AdminBookingService.php:96-147](file://backend/app/Services/AdminBookingService.php#L96-L147)
+- [AdminBookingService.php:154-265](file://backend/app/Services/AdminBookingService.php#L154-L265)
+- [AdminBookingService.php:267-294](file://backend/app/Services/AdminBookingService.php#L267-L294)
+
 ## Dependency Analysis
-The service layer uses constructor dependency injection. Controllers receive services directly from Laravel’s container. There is no manual binding in `AppServiceProvider`; services are resolved by convention.
+The service layer uses constructor dependency injection. Controllers receive services directly from Laravel's container. There is no manual binding in `AppServiceProvider`; services are resolved by convention.
 
 ```mermaid
 graph LR
@@ -454,6 +600,8 @@ ApiCtrl --> ZiniSvc["ZinipayService"]
 AdminCtrl["Admin BookingController"] --> BookingSvc
 AdminCtrl --> ZiniSvc
 AdminCtrl --> AdminBookingSvc["AdminBookingService"]
+AjaxCtrl["Admin AjaxController"] --> AdminBookingSvc
+AjaxCtrl --> SeatMapSvc
 BookingSvc --> SeatMapSvc
 BookingSvc --> ZiniSvc
 BookingSvc --> SmsSvc["SmsGatewayService"]
@@ -462,6 +610,7 @@ BookingSvc --> SmsSvc["SmsGatewayService"]
 **Diagram sources**
 - [API BookingController.php:12-17](file://backend/app/Http/Controllers/API/BookingController.php#L12-L17)
 - [Admin BookingController.php:13-18](file://backend/app/Http/Controllers/Admin/BookingController.php#L13-L18)
+- [AjaxController.php:17-23](file://backend/app/Http/Controllers/Admin/AjaxController.php#L17-L23)
 - [BookingService.php:16-21](file://backend/app/Services/BookingService.php#L16-L21)
 
 **Section sources**
@@ -469,6 +618,7 @@ BookingSvc --> SmsSvc["SmsGatewayService"]
 - [AppServiceProvider.php:15-18](file://backend/app/Providers/AppServiceProvider.php#L15-L18)
 - [API BookingController.php:12-17](file://backend/app/Http/Controllers/API/BookingController.php#L12-L17)
 - [Admin BookingController.php:13-18](file://backend/app/Http/Controllers/Admin/BookingController.php#L13-L18)
+- [AjaxController.php:17-23](file://backend/app/Http/Controllers/Admin/AjaxController.php#L17-L23)
 
 ## Performance Considerations
 - **Selective column loading**: `SeatMapService::paidBookingColumns()` reduces payload size when building seat maps.
@@ -477,6 +627,9 @@ BookingSvc --> SmsSvc["SmsGatewayService"]
 - **External call timeouts**: Both `ZinipayService` and `SmsGatewayService` use HTTP timeouts to prevent long-running requests.
 - **Pricing calculation efficiency**: Pricing breakdown is computed once per booking and reused for totals.
 - **Eager loading**: `formatForApi` loads missing relationships to reduce N+1 queries in API responses.
+- **Efficient search queries**: AdminBookingService uses optimized WHERE clauses with OR conditions for multi-field searches.
+- **Date range optimization**: Predefined period handling avoids unnecessary date parsing for common timeframes.
+- **Result limiting**: Log queries limit results to 100 records to prevent large dataset performance issues.
 
 [No sources needed since this section provides general guidance]
 
@@ -488,6 +641,9 @@ Common issues and strategies:
 - **ZiniPay API key missing**: `ZinipayService::createInvoice` logs an error and returns null; check environment configuration.
 - **Transaction failures**: `BookingService::createForCustomer` catches exceptions and returns a server error response; inspect logs for underlying causes.
 - **Seat conflicts**: Use `SeatMapService::holdSeat` and `releaseSeat` to manage temporary reservations; ensure frontend releases holds on user actions.
+- **Search query performance**: Ensure proper indexing on passenger_name, passenger_phone, passenger_email, and id columns for optimal search performance.
+- **Date parsing errors**: Validate date formats before passing to Carbon::parse() to avoid parsing exceptions.
+- **PNR code ambiguity**: The regex pattern `/^(?:SE)?0*(\d{1,6})$/i` ensures only numeric sequences up to 6 digits are treated as PNR codes.
 
 **Section sources**
 - [SmsGatewayService.php:75-107](file://backend/app/Services/SmsGatewayService.php#L75-L107)
@@ -495,9 +651,10 @@ Common issues and strategies:
 - [ZinipayService.php:20-32](file://backend/app/Services/ZinipayService.php#L20-L32)
 - [BookingService.php:128-130](file://backend/app/Services/BookingService.php#L128-L130)
 - [SeatMapService.php:502-582](file://backend/app/Services/SeatMapService.php#L502-L582)
+- [AdminBookingService.php:75-94](file://backend/app/Services/AdminBookingService.php#L75-L94)
 
 ## Conclusion
-The service layer cleanly separates business logic from HTTP concerns. `BookingService` orchestrates complex workflows, `SeatMapService` encapsulates seat-related algorithms, `ZinipayService` isolates payment gateway integration, and `SmsGatewayService` abstracts multi-provider SMS delivery. Controllers focus on validation and response formatting, while services manage transactions, caching, external calls, and domain rules. This design improves testability, maintainability, and scalability.
+The service layer cleanly separates business logic from HTTP concerns. `BookingService` orchestrates complex workflows, `SeatMapService` encapsulates seat-related algorithms, `ZinipayService` isolates payment gateway integration, `SmsGatewayService` abstracts multi-provider SMS delivery, and `AdminBookingService` provides specialized administrative functionality with intelligent search capabilities. Controllers focus on validation and response formatting, while services manage transactions, caching, external calls, domain rules, and administrative operations. This design improves testability, maintainability, and scalability while providing robust search and filtering capabilities for administrative interfaces.
 
 [No sources needed since this section summarizes without analyzing specific files]
 
@@ -521,6 +678,14 @@ The service layer cleanly separates business logic from HTTP concerns. `BookingS
 **Section sources**
 - [Admin BookingController.php:20-52](file://backend/app/Http/Controllers/Admin/BookingController.php#L20-L52)
 
+#### Admin AjaxController.bookingLogsApi
+- Validates search parameter.
+- Delegates to `AdminBookingService::getBookingLogs`.
+- Returns JSON with booking logs and metadata.
+
+**Section sources**
+- [AjaxController.php:36-41](file://backend/app/Http/Controllers/Admin/AjaxController.php#L36-L41)
+
 ### Service Method Signatures Summary
 
 | Service | Method | Parameters | Return Type | Notes |
@@ -540,9 +705,15 @@ The service layer cleanly separates business logic from HTTP concerns. `BookingS
 | SmsGatewayService | `resolveConfig` | none | `?SmsConfig` | Returns active SMS configuration. |
 | SmsGatewayService | `configIssue` | `SmsConfig $config` | `?string` | Returns configuration issue or null. |
 | SmsGatewayService | `normalizePhone` | `string $phone` | `?string` | Normalizes to international format. |
+| AdminBookingService | `getBookingLogs` | `Request $request` | `array{bookings: array, updated_at: string}` | Retrieves recent bookings with intelligent search. |
+| AdminBookingService | `getCancelRequestsLogs` | `Request $request` | `array{cancel_requests: array, updated_at: string}` | Retrieves cancellation requests with search. |
+| AdminBookingService | `requestCancellation` | `int $id` | `array{success: bool, status: int, body: array}` | Sets booking to CANCEL_REQUESTED status. |
+| AdminBookingService | `cancelBooking` | `int $id` | `array{success: bool, status: int, body: array}` | Directly cancels a booking. |
+| AdminBookingService | `approveCancelRequest` | `int $id` | `array{success: bool, status: int, body: array}` | Approves pending cancellation request. |
 
 **Section sources**
 - [BookingService.php:23-333](file://backend/app/Services/BookingService.php#L23-L333)
 - [SeatMapService.php:191-582](file://backend/app/Services/SeatMapService.php#L191-L582)
 - [ZinipayService.php:20-139](file://backend/app/Services/ZinipayService.php#L20-L139)
 - [SmsGatewayService.php:13-253](file://backend/app/Services/SmsGatewayService.php#L13-L253)
+- [AdminBookingService.php:96-265](file://backend/app/Services/AdminBookingService.php#L96-L265)

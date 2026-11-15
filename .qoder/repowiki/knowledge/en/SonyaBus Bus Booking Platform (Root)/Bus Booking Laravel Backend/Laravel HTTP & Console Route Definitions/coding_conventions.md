@@ -1,5 +1,0 @@
-- Route groups are annotated with PHPDoc-style section headers using the standard Laravel comment block pattern (`/*|--- ... ---|*/`) to separate logical areas such as Auth, Reports, or Bookings.
-- Admin resource CRUD routes follow a consistent verb/path/name triad per domain (e.g. `post('/admin/{resource}')` → store, `put('/admin/{resource}/{id}')` → update, `delete('/admin/{resource}/{id}')` → destroy) with snake_case named routes like `admin.{resource}.store/update/destroy`.
-- Authorization is applied via nested `Route::middleware(...)` blocks: outer `['auth', 'admin']` guards the entire admin area, while inner `menu_permission:<feature>` gates individual resource sections.
-- Guest-facing auth endpoints are wrapped in `throttle:10,1` to enforce a 10-attempts-per-minute brute-force protection policy.
-- Controller references use modern class-string syntax `[ControllerClass::class, 'method']` rather than string-based controller@method notation.

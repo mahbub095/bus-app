@@ -1,0 +1,13 @@
+schema_version: 1
+module_path: backend/installation_flow
+title: Installation Wizard & Bootstrap Commands
+scope:
+    - backend/app/Http/Controllers/Install/InstallController.php
+    - backend/app/Console/Commands/InstallDemoSeed.php
+    - backend/app/Console/Commands/InstallFinalize.php
+    - backend/app/Console/Commands/InstallReset.php
+    - backend/app/Services/EnvFileWriter.php
+source_files: []
+depends_on: []
+related_to:
+    - path: backend/site_settings_license_sms

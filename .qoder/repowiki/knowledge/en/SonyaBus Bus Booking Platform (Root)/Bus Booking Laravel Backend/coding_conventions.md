@@ -1,5 +1,0 @@
-- Controllers are thin: they validate input and delegate to a corresponding `*Service` class under `app/Services/`.
-- Domain state is persisted exclusively through Eloquent models under `app/Models/`, with schema changes expressed as numbered migrations under `database/migrations/`.
-- Admin-facing endpoints live in `App\Http\Controllers\Admin\` and are protected by `EnsureUserIsAdmin` / `EnsureUserHasMenuPermission` middleware; public endpoints live in `App\Http\Controllers\API\` and use Sanctum token auth.
-- Blade view files mirror controller names under `resources/views/admin/` (and subfolders like `reports/pages`, `reports/pdf`, `partials/gateway-settings`).
-- Cross-cutting concerns (license check, maintenance mode, SMS/mail gateway config) are implemented as reusable service classes rather than inline controller logic.

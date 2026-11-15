@@ -41,7 +41,7 @@ function initAdminTabSwitching() {
     /**
      * Determine which tab should be active on page load by inspecting:
      *   1. URL hash  (#bookings, #buses, …)
-     *   2. Query-string pagination params  (?bookings_page=2)
+     *   2. Query-string pagination / search params  (?bookings_page=2, ?buses_search=SE-4122)
      *   3. Falls back to 'dashboard'
      */
     function resolveActiveTab() {
@@ -61,7 +61,7 @@ function initAdminTabSwitching() {
             'license', 'site-settings', 'gateways', 'profile',
         ];
         for (const tab of knownTabs) {
-            if (query.has(`${tab}_page`)) return tab;
+            if (query.has(`${tab}_page`) || query.has(`${tab}_search`)) return tab;
         }
 
         if (path === '/admin' && !hashTab) return 'dashboard';
@@ -149,17 +149,18 @@ function initAdminTabSwitching() {
                 return;
             }
 
-            // If there are active pagination query params, strip them before navigating
+            // If there are active pagination / search query params, strip them
+            // before navigating so the newly opened tab starts unfiltered.
             const query = new URLSearchParams(window.location.search);
-            let hadPageParams = false;
+            let hadTransientParams = false;
             for (const key of [...query.keys()]) {
-                if (key === 'page' || key.endsWith('_page')) {
+                if (key === 'page' || key.endsWith('_page') || key.endsWith('_search')) {
                     query.delete(key);
-                    hadPageParams = true;
+                    hadTransientParams = true;
                 }
             }
 
-            if (hadPageParams) {
+            if (hadTransientParams) {
                 event.preventDefault();
                 const qs  = query.toString();
                 window.location.href = window.location.pathname + (qs ? `?${qs}` : '') + `#${tabName}`;
