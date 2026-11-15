@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: SonyaBus Bus Ticketing Platform (Monorepo Distribution)
+title: SonyaBus Bus Ticketing System Distribution
 scope:
     - README.md
     - CODECANYON_RELEASE_GUIDE.md

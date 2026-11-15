@@ -20,6 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // License guard runs on every web & API request except /install/*
         $middleware->append(\App\Http\Middleware\EnsureLicenseIsActivated::class);
 
+        // Session expiry configured in admin → must land in the framework
+        // config before the session store boots, hence a global middleware.
+        $middleware->append(\App\Http\Middleware\ApplyAdminSessionLifetime::class);
+
+        // Exact idle timeout for the admin panel (runs after StartSession).
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnforceAdminSessionTimeout::class);
+
         $middleware->alias([
             'admin'           => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'super_admin'     => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,

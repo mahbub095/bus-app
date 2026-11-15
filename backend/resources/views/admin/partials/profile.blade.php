@@ -4,6 +4,14 @@
         <div class="notice-info-box">
             You are signed in as <strong>{{ Auth::user()->email }}</strong>. Update your password below to secure your admin dashboard account.
         </div>
+
+        @isset($adminSessionMinutes)
+            <div class="notice-info-box" style="margin-top: 12px;">
+                Your dashboard session expires after
+                <strong>{{ $adminSessionMinutes }} minute{{ $adminSessionMinutes === 1 ? '' : 's' }}</strong>
+                without activity. Change this under <strong>Site Settings → Admin Session Security</strong>.
+            </div>
+        @endisset
     </div>
 
     <aside class="booking-form-sidebar">
