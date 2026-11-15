@@ -1,0 +1,5 @@
+- Backend calls use raw `fetch` with `Accept: application/json` headers and `authHeaders()` to attach the Bearer token when present, rather than an HTTP client library.
+- User-visible messages are surfaced through the shared `showToast(message, type)` helper instead of inline alerts or custom modals.
+- Persistent user data is stored under fixed `sonyabus_*` localStorage keys (`sonyabus_auth_token`, `sonyabus_auth_user`, `sonyabus_api_base`) and restored on mount.
+- Components are colocated as single-file JSX modules under `src/components/` and receive all state and callbacks as props, keeping `App.jsx` as the sole state owner.
+- Styling relies on CSS variables defined in `theme-variables.css` plus per-component `.css` files, with no CSS-in-JS or utility class libraries.

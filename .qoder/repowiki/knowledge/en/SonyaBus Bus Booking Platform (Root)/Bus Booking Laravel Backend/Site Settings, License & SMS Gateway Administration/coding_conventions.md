@@ -1,0 +1,6 @@
+- Controllers extend framework base classes (`BaseController`, `BaseAdminController`) and inject their service via constructor property promotion, delegating all business logic to the service.
+- Services validate incoming requests with `$request->validate([...])` before mutating persistence or calling external APIs.
+- Configuration writes go through `EnvFileWriter::set([...])` alongside database writes so runtime config stays in sync with persisted settings.
+- Read-heavy settings use static helpers on the model (`SiteSetting::getAllCached`, `SiteSetting::setValue`, `SiteSetting::clearCache`) that wrap Laravel `Cache::remember`/`forget` with a class-scoped cache key constant.
+- External API calls return a uniform `{success: bool, message: string}` array, with failures logged via `Log::warning`/`Log::error` rather than thrown exceptions.
+- Sensitive identifiers returned to clients are masked (e.g. license purchase code truncated to first 8 chars plus asterisks) instead of sent verbatim.

@@ -1,0 +1,1 @@
+Handles customer-facing API authentication (register, login, token management, password reset) and admin session-based authentication for the Laravel application.

@@ -1,0 +1,1 @@
+Laravel 12 + PHP 8.2+ for the backend, React 19 + Vite 6 for the customer SPA, MySQL 8.0+ shared by both, and Grafana k6 for performance testing against the same API surface.

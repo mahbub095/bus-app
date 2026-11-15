@@ -1,0 +1,1 @@
+End-to-end installer for the application: a three-step HTTP wizard (license → DB config → finalize) plus Artisan commands to seed demo data, reset to factory state, and persist .env configuration.

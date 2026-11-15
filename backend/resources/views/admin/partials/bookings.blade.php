@@ -9,8 +9,23 @@
             </span>
         </h3>
 
-        {{-- Date filter bar --}}
+        {{-- Filter bar: search by PNR / contact + date range --}}
         <div class="log-filter-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:16px; padding:12px 16px; background:rgba(99,102,241,0.05); border-radius:var(--border-radius-sm);">
+            <div class="input-group" style="flex:1 1 260px; min-width:240px;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Search (PNR / Contact)</label>
+                <div style="position:relative;">
+                    <input type="search" id="bookings-search" class="coupon-input"
+                           style="height:38px; padding-right:34px;"
+                           placeholder="SE00042 · 01712345678 · email · name"
+                           autocomplete="off" spellcheck="false">
+                    <button type="button" id="bookings-search-clear" title="Clear search"
+                            style="position:absolute; right:8px; top:50%; transform:translateY(-50%);
+                                   display:none; background:none; border:none; padding:2px 4px;
+                                   color:var(--text-muted); font-size:17px; line-height:1; cursor:pointer;">
+                        &times;
+                    </button>
+                </div>
+            </div>
             <div class="input-group" style="flex:0 0 auto; min-width:170px;">
                 <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Date Filter</label>
                 <select id="bookings-period" class="coupon-input" style="height:38px;">
@@ -34,6 +49,7 @@
                 </div>
             </div>
             <button type="button" id="bookings-apply-filter" class="btn btn-primary" style="height:38px; padding:0 18px;">Apply Filter</button>
+            <button type="button" id="bookings-reset-filter" class="btn btn-secondary" style="height:38px; padding:0 16px;">Reset</button>
         </div>
 
         <div class="table-wrapper">

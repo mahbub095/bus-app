@@ -1,0 +1,1 @@
+Laravel Eloquent models with `$casts` for arrays and decimals; Carbon for date math; Laravel Cache for transient seat holds; base64-encoded images stored directly in DB as data URLs.

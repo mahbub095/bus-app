@@ -1,0 +1,1 @@
+Interactive bootstrap via `php artisan install:reset [--force]` drops/recreates the MySQL database, resets `APP_INSTALLED`/`APP_LICENSED` flags in `.env`, removes lock/status files, and clears compiled caches/views/sessions. The wizard itself is accessed at `/install` and requires no manual setup beyond a writable `.env` and `storage/framework/` directory.

@@ -1,0 +1,6 @@
+Two parallel auth entry points share the same `App\Models\User` Eloquent model but diverge by channel:
+- `API/UserAuthController.php` extends `BaseController` and exposes JSON endpoints for the frontend SPA: register/login/logout/me/updatePassword/forgotPassword/resetPassword. It uses Laravel Sanctum (`HasApiTokens`, `createToken('frontend-api')`) for bearer tokens and stores reset codes in the `password_reset_tokens` table with hashed 6-digit codes sent via `ResetPasswordCodeMail`.
+- `Admin/AuthController.php` extends `BaseAdminController` and handles traditional session-based admin login/logout/password update, redirecting to Blade views (`admin.login`, `admin.dashboard`).
+- Both controllers gate access through role checks on the `role` column (`user` vs `admin`/`super_admin`) using `User::isAdmin()`, `isSuperAdmin()`, `isUser()`.
+- Dependency direction is one-way: controllers depend on `User` model; the model has no controller knowledge and provides role predicates plus a `hasMenuPermission()` ACL helper that grants super admins implicit access and otherwise checks the `menu_permissions` array cast.
+- The `formatUser` helper in the API controller centralizes the public user payload shape (id, name, email, role).

@@ -5,6 +5,10 @@
  * Polls the API every 5 seconds while the "bookings" tab is open,
  * then pauses when the tab is hidden.
  *
+ * Search box: filters server-side by PNR code, phone, e-mail or passenger
+ * name. Typing is debounced (350 ms) and Enter fires immediately; the term
+ * is re-sent with every poll request so the filter survives auto-refresh.
+ *
  * Data contract (set in bookings.blade.php before this file loads):
  *   window.BookingsLogs.logsUrl                    — API endpoint returning { bookings: [...] }
  *   window.BookingsLogs.updateRouteTemplate         — URL template with '__ID__' placeholder
@@ -25,15 +29,28 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
 
     const bodyEl     = document.getElementById('bookings-log-body');
     const liveTextEl = document.getElementById('bookings-live-text');
+    const searchEl   = document.getElementById('bookings-search');
+    const searchClearEl = document.getElementById('bookings-search-clear');
     const csrfToken  = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     let pollTimer   = null;
     let isFetching  = false;
+    let searchTimer = null;
     // Keyed by booking ID so edit buttons can look up the full record without re-fetching
     let bookingsMap = {};
     let allBookings = [];
     let currentPage = 1;
     let perPage = 10;
+
+    /** Current search term (trimmed). */
+    function getSearchTerm() {
+        return (searchEl?.value || '').trim();
+    }
+
+    /** Show the small × button only while the search box has content. */
+    function syncSearchClear() {
+        if (searchClearEl) searchClearEl.style.display = getSearchTerm() !== '' ? 'block' : 'none';
+    }
 
     /** Update the "live" indicator text next to the panel title. */
     function setLiveText(text) {
@@ -48,10 +65,15 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         bookingsMap = {};
 
         if (!Array.isArray(bookings) || bookings.length === 0) {
+            const term = getSearchTerm();
+            const emptyMessage = term
+                ? `No bookings match <strong>${escapeHtml(term)}</strong>. Try another PNR code, phone number, e-mail or name.`
+                : 'No reservation records found.';
+
             bodyEl.innerHTML = `
                 <tr>
                     <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted)">
-                        No reservation records found.
+                        ${emptyMessage}
                     </td>
                 </tr>`;
             return;
@@ -233,7 +255,7 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
 
     // ─── Data fetching ────────────────────────────────────────────────────────
 
-    /** Build query params from the date filter inputs. */
+    /** Build query params from the search box and the date filter inputs. */
     function getFilters() {
         const params = new URLSearchParams();
         const period = document.getElementById('bookings-period')?.value || 'all';
@@ -242,6 +264,10 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
             params.set('from_date', document.getElementById('bookings-from-date')?.value || '');
             params.set('to_date', document.getElementById('bookings-to-date')?.value || '');
         }
+
+        const search = getSearchTerm();
+        if (search !== '') params.set('search', search);
+
         return params;
     }
 
@@ -308,6 +334,55 @@ import { escapeHtml, formatDateTime, buildUrl, statusBadgeClass } from './utils.
         }
         fetchLogs();
     });
+
+    // ─── Search box wiring ───────────────────────────────────────────────────
+    searchEl?.addEventListener('input', () => {
+        syncSearchClear();
+        clearTimeout(searchTimer);
+        // Debounce so a full PNR / phone number is typed before querying
+        searchTimer = setTimeout(() => fetchLogs(), 350);
+    });
+
+    searchEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimer);
+            fetchLogs();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            searchEl.value = '';
+            syncSearchClear();
+            fetchLogs();
+        }
+    });
+
+    searchClearEl?.addEventListener('click', () => {
+        if (searchEl) searchEl.value = '';
+        syncSearchClear();
+        searchEl?.focus();
+        fetchLogs();
+    });
+
+    // ─── Reset button: clears search + date range ────────────────────────────
+    document.getElementById('bookings-reset-filter')?.addEventListener('click', () => {
+        if (searchEl) searchEl.value = '';
+        syncSearchClear();
+
+        const periodEl = document.getElementById('bookings-period');
+        if (periodEl) periodEl.value = 'all';
+
+        const customEl = document.getElementById('bookings-custom-dates');
+        if (customEl) customEl.style.display = 'none';
+
+        const fromEl = document.getElementById('bookings-from-date');
+        const toEl   = document.getElementById('bookings-to-date');
+        if (fromEl) fromEl.value = '';
+        if (toEl) toEl.value = '';
+
+        fetchLogs();
+    });
+
+    syncSearchClear();
 
     // ─── Pagination wiring ────────────────────────────────────────────────────
     document.getElementById('bookings-per-page')?.addEventListener('change', (e) => {

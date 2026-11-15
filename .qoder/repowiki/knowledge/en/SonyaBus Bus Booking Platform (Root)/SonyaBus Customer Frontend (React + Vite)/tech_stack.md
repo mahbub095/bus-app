@@ -1,0 +1,1 @@
+React 19 + ReactDOM, Vite 8 with `@vitejs/plugin-react`, ESLint 10 with `eslint-plugin-react-hooks` and `eslint-plugin-react-refresh`, plain CSS (no CSS-in-JS or UI framework).

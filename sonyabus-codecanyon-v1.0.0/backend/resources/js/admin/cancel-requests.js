@@ -5,6 +5,10 @@
  * Polls the API every 5 seconds while the "cancel-requests" tab is open,
  * then pauses when the tab is hidden.
  *
+ * Search box: filters server-side by PNR code, phone, e-mail or passenger
+ * name. Typing is debounced (350 ms) and Enter fires immediately; the term
+ * is re-sent with every poll request so the filter survives auto-refresh.
+ *
  * Data contract (set in cancel-requests.blade.php before this file loads):
  *   window.CancelRequests.logsUrl                  — API endpoint returning { cancel_requests: [...] }
  *   window.CancelRequests.approveCancelRouteTemplate — URL template with '__ID__' placeholder
@@ -21,10 +25,23 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
 
     const bodyEl     = document.getElementById('cancel-requests-log-body');
     const liveTextEl = document.getElementById('cancel-requests-live-text');
+    const searchEl   = document.getElementById('cancel-search');
+    const searchClearEl = document.getElementById('cancel-search-clear');
     const csrfToken  = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-    let pollTimer  = null;
-    let isFetching = false;
+    let pollTimer   = null;
+    let isFetching  = false;
+    let searchTimer = null;
+
+    /** Current search term (trimmed). */
+    function getSearchTerm() {
+        return (searchEl?.value || '').trim();
+    }
+
+    /** Show the small × button only while the search box has content. */
+    function syncSearchClear() {
+        if (searchClearEl) searchClearEl.style.display = getSearchTerm() !== '' ? 'block' : 'none';
+    }
 
     /** Update the "live" indicator text next to the panel title. */
     function setLiveText(text) {
@@ -37,10 +54,15 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
     /** Render all cancellation request rows into the table body. */
     function renderRows(cancelRequests) {
         if (!Array.isArray(cancelRequests) || cancelRequests.length === 0) {
+            const term = getSearchTerm();
+            const emptyMessage = term
+                ? `No cancellation requests match <strong>${escapeHtml(term)}</strong>. Try another PNR code, phone number, e-mail or name.`
+                : 'No pending cancellation requests.';
+
             bodyEl.innerHTML = `
                 <tr>
                     <td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted)">
-                        No pending cancellation requests.
+                        ${emptyMessage}
                     </td>
                 </tr>`;
             return;
@@ -83,7 +105,7 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
 
     // ─── Data fetching ────────────────────────────────────────────────────────
 
-    /** Build query params from the date filter inputs. */
+    /** Build query params from the search box and the date filter inputs. */
     function getFilters() {
         const params = new URLSearchParams();
         const period = document.getElementById('cancel-period')?.value || 'all';
@@ -92,6 +114,10 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
             params.set('from_date', document.getElementById('cancel-from-date')?.value || '');
             params.set('to_date', document.getElementById('cancel-to-date')?.value || '');
         }
+
+        const search = getSearchTerm();
+        if (search !== '') params.set('search', search);
+
         return params;
     }
 
@@ -156,6 +182,55 @@ import { escapeHtml, formatDateTime, buildUrl } from './utils.js';
         }
         fetchLogs();
     });
+
+    // ─── Search box wiring ───────────────────────────────────────────────────
+    searchEl?.addEventListener('input', () => {
+        syncSearchClear();
+        clearTimeout(searchTimer);
+        // Debounce so a full PNR / phone number is typed before querying
+        searchTimer = setTimeout(() => fetchLogs(), 350);
+    });
+
+    searchEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimer);
+            fetchLogs();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            searchEl.value = '';
+            syncSearchClear();
+            fetchLogs();
+        }
+    });
+
+    searchClearEl?.addEventListener('click', () => {
+        if (searchEl) searchEl.value = '';
+        syncSearchClear();
+        searchEl?.focus();
+        fetchLogs();
+    });
+
+    // ─── Reset button: clears search + date range ────────────────────────────
+    document.getElementById('cancel-reset-filter')?.addEventListener('click', () => {
+        if (searchEl) searchEl.value = '';
+        syncSearchClear();
+
+        const periodEl = document.getElementById('cancel-period');
+        if (periodEl) periodEl.value = 'all';
+
+        const customEl = document.getElementById('cancel-custom-dates');
+        if (customEl) customEl.style.display = 'none';
+
+        const fromEl = document.getElementById('cancel-from-date');
+        const toEl   = document.getElementById('cancel-to-date');
+        if (fromEl) fromEl.value = '';
+        if (toEl) toEl.value = '';
+
+        fetchLogs();
+    });
+
+    syncSearchClear();
 
     window.cancelRequestsLogsModule = { startPolling, stopPolling };
 

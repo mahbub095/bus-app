@@ -1,0 +1,1 @@
+Laravel routing with Sanctum for API authentication, custom `CheckMaintenanceMode` and `menu_permission:` middleware for access control, and Blade views served through the admin session-based auth flow.

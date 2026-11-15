@@ -608,6 +608,14 @@
             border-color: var(--border-active);
         }
 
+        /* Search inputs render their own "×" clear button, so hide the
+           browser-native one to avoid a doubled icon. */
+        input[type="search"].coupon-input::-webkit-search-cancel-button,
+        input[type="search"].coupon-input::-webkit-search-decoration {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
         /* Select option styling with theme colors */
         .coupon-input option {
             background-color: var(--bg-card);

@@ -1,0 +1,7 @@
+Four-layer layout inside `k6/`:
+- `scenarios/` — k6 entry points exporting `options` (VU stages, thresholds) plus a default function that calls one flow; each file targets one test shape (smoke, load, stress, soak, spike, combined, seat-race, etc.).
+- `flows/` — pure business-journey functions (`customerLoadJourney`, `bookingJourney`, `seatRaceJourney`, `authJourney`, `searchOnlyJourney`, `admin*`) that orchestrate steps with random branching and `sleepRandom` pauses.
+- `lib/` — HTTP transport (`http.js`) plus domain clients: `CustomerApi` (public `/api/*` bearer-token REST), `AdminApi` (`/admin/*` session + CSRF), and a facade `ApiClient` exposing shortcuts so flows call `api.searchRoutes(...)` rather than raw HTTP.
+- `config/index.js` — shared constants (`baseUrl()`, `ADMIN` credentials, `PROMO_CODES`, `DEFAULT_ROUTE`) and pre-baked threshold presets (`strict`/`normal`/`relaxed`/`stress`).
+
+Dependency direction is strictly scenarios → flows → lib → config/helpers. Flows never import scenarios; scenarios never touch `lib/` directly. The README documents the intended workflow: add a flow in `flows/`, wire it from a new scenario, run via `k6 run --env BASE_URL=... k6/scenarios/<file>.js`.

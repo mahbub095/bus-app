@@ -1,0 +1,1 @@
+Exposes the customer-facing booking API and encapsulates seat selection, pricing, payment integration, and cancellation workflows for bus schedules.

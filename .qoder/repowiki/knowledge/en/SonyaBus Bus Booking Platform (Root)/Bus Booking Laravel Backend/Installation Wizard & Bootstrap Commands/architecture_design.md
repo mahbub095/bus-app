@@ -1,0 +1,10 @@
+The module splits into two cooperating layers:
+
+- HTTP entry point (`InstallController`): exposes `/install`, `/install/database`, `/install/finalize`, `/install/complete` and two JSON polling endpoints (`runFinalize`, `finalizeStatus`, `startDemoSeed`, `demoSeedStatus`). It orchestrates a 3-step flow — license verification via `LicenseService`, raw PDO connection test + `.env` write via `EnvFileWriter`, then delegates long-running work to background processes.
+- Background Artisan commands (`InstallFinalize`, `InstallDemoSeed`, `InstallReset`): launched by the controller through a direct `php artisan` subprocess (`exec` on Unix, `start /B` on Windows). Each command validates a one-time token stored in cache before executing its steps.
+
+Cross-process coordination uses two channels:
+1. File-based status files under `storage/framework/` (`install-finalize-status.json`, `demo-seed-status.json`) written as `{status, log[, error]}` JSON and polled by the controller's JSON endpoints.
+2. Cache keys with short TTLs (`install_admin_*`, `install_pending_license`, `install_sql_imported`, `install_finalize_token`, `install_demo_seed_token`) passed between the web process and the detached child process.
+
+Dependency direction is one-way: `InstallController` depends on `EnvFileWriter` and `LicenseService`; the commands depend on `EnvFileWriter` and `LicenseService` but never on the controller. The controller also contains an inline SQL importer that strips comments/BOM and executes statements directly against a raw PDO handle, bypassing Eloquent during install so it works before migrations exist. `InstallFinalize` reimplements migration execution manually (require each migration file, call `up()`, record in a hand-crafted `migrations` table) rather than invoking `artisan migrate`, keeping the background process self-contained.

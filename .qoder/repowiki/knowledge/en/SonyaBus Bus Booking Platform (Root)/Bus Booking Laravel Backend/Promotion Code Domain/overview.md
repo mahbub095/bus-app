@@ -1,0 +1,1 @@
+Laravel domain for managing discount promotion codes, exposing a public API endpoint to validate codes and an admin panel for CRUD operations backed by the Promotion Eloquent model.

@@ -1,0 +1,1 @@
+Laravel Eloquent ORM with database transactions (`DB::transaction`) and row-level locking (`lockForUpdate`) for concurrent seat reservation; integrates with an external ZiniPay gateway for payment invoices and an SMS gateway for booking verification.

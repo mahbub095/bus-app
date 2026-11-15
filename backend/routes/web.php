@@ -85,7 +85,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     */
     Route::get('/admin', [DashboardController::class, 'dashboardView'])->name('admin.dashboard');
     Route::get('/admin/api/dashboard/analytics', [AjaxController::class, 'dashboardAnalytics'])->name('admin.dashboard.analytics');
-    Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
+    Route::middleware('menu_permission:profile')->group(function () {
+        Route::post('/admin/profile/password', [AuthController::class, 'updatePassword'])->name('admin.profile.password');
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -253,25 +255,32 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | License Management (Super Admin)
+    | License Management (permission: license)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('super_admin')->group(function () {
+    Route::middleware('menu_permission:license')->group(function () {
         Route::get('/admin/license', [LicenseController::class, 'info'])->name('admin.license.info');
         Route::post('/admin/license/re-verify', [LicenseController::class, 'reVerify'])->name('admin.license.re-verify');
     });
 
     /*
     |--------------------------------------------------------------------------
-    | System Settings & Configuration (Super Admin)
+    | Site Settings (permission: site-settings)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('super_admin')->group(function () {
+    Route::middleware('menu_permission:site-settings')->group(function () {
         Route::post('/admin/site-settings', [SiteSettingsController::class, 'update'])->name('admin.site-settings.update');
         Route::post('/admin/site-settings/favicon', [SiteSettingsController::class, 'uploadFavicon'])->name('admin.site-settings.favicon');
         Route::post('/admin/site-settings/logo', [SiteSettingsController::class, 'uploadLogo'])->name('admin.site-settings.logo');
         Route::delete('/admin/site-settings/logo', [SiteSettingsController::class, 'deleteLogo'])->name('admin.site-settings.logo.delete');
-        
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Integrations & Gateways (permission: gateways)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('menu_permission:gateways')->group(function () {
         // Gateways & Integrations separate configuration update routes
         Route::post('/admin/gateway-settings/sms', [GatewaySettingsController::class, 'updateSms'])->name('admin.gateway-settings.update-sms');
         Route::post('/admin/gateway-settings/mail', [GatewaySettingsController::class, 'updateMail'])->name('admin.gateway-settings.update-mail');
@@ -286,6 +295,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('menu_permission:users')->group(function () {
+        // Creating accounts is reserved for the Super Admin.
+        Route::middleware('super_admin')->group(function () {
+            Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+        });
+
         Route::put('/admin/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });

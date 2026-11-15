@@ -1,0 +1,1 @@
+Run `npm run dev` (Vite on port 5173); configure the backend via `VITE_API_BASE_URL` in `.env` (or leave unset so the app auto-probes `/api`, `localhost:8000/api`, and Laragon subdirectory layouts). Build with `npm run build`, preview with `npm run preview`, lint with `npm run lint`.

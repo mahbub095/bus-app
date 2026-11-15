@@ -55,6 +55,44 @@ class AdminBookingService
         ];
     }
 
+    /**
+     * Apply the log search box: PNR code or passenger contact details.
+     *
+     * Accepted terms:
+     *   - PNR code           "SE00042", "se42", "42"  (PNR is derived from the booking id)
+     *   - phone number       partial or full, e.g. "01712345678"
+     *   - e-mail address     partial or full
+     *   - passenger name     partial or full
+     */
+    private function applySearch($query, Request $request): void
+    {
+        $term = trim((string) $request->input('search', ''));
+
+        if ($term === '') {
+            return;
+        }
+
+        // Escape LIKE wildcards so "%" / "_" are matched literally.
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
+
+        // "SE00042" / "se42" / "42" → booking id 42. Capped at 6 digits so a
+        // phone number is never mistaken for an id.
+        $bookingId = null;
+        if (preg_match('/^(?:SE)?0*(\d{1,6})$/i', $term, $m)) {
+            $bookingId = (int) $m[1];
+        }
+
+        $query->where(function ($q) use ($like, $bookingId) {
+            $q->where('passenger_name', 'like', $like)
+                ->orWhere('passenger_phone', 'like', $like)
+                ->orWhere('passenger_email', 'like', $like);
+
+            if ($bookingId !== null) {
+                $q->orWhere('id', $bookingId);
+            }
+        });
+    }
+
     public function getBookingLogs(Request $request): array
     {
         $query = Booking::with([
@@ -67,6 +105,8 @@ class AdminBookingService
         if ($range) {
             $query->whereBetween('created_at', $range);
         }
+
+        $this->applySearch($query, $request);
 
         $recentBookings = $query
             ->orderBy('created_at', 'desc')
@@ -92,6 +132,8 @@ class AdminBookingService
         if ($range) {
             $query->whereBetween('updated_at', $range);
         }
+
+        $this->applySearch($query, $request);
 
         $cancelRequests = $query
             ->orderBy('updated_at', 'desc')
