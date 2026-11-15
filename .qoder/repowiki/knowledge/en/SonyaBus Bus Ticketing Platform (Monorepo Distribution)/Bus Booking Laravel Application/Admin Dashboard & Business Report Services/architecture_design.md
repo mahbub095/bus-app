@@ -1,0 +1,7 @@
+Five sibling service classes under `App\Services` with a clear dependency direction:
+- `ReportFilterService` is the leaf — it validates request filters via Laravel's validator (`validateFilters`) and resolves date ranges / labels via `Carbon::now()` match expressions.
+- `ReportDataService` depends on `ReportFilterService` (injected via constructor) and owns every report's query builder, row formatter, summary aggregator, header list, and array converter. Each report type (selling, cancel, booking, revenue, passenger, seatOccupancy, refund, payment, routeSales, agentSales) follows the same four-method contract: `<type>Query`, `format<Type>Row`, `build<Type>Summary`/`aggregate<Type>Sales`, `<type>Headers`, `<type>RowToArray`.
+- `AdminDashboardService` composes `AdminDashboardAnalyticsService` to assemble the top-level dashboard payload (metrics + paginated resources for routes/schedules/promotions/buses/stations/users).
+- `AdminDashboardAnalyticsService` is self-contained: period resolution, metric aggregation, and chart data generation (booking status, payment methods, daily trends, coach types, top routes).
+- `AdminBookingService` handles read-only log queries plus state transitions (`requestCancellation`, `cancelBooking`, `approveCancelRequest`) returning a uniform `{success, status, body}` envelope.
+All services are plain PHP classes with no framework coupling beyond Eloquent models, `Illuminate\Support\Collection`, `Carbon`, and `Illuminate\Http\Request`; they are consumed by controllers but expose no HTTP concerns.

@@ -1,7 +1,32 @@
 <div class="admin-sections-layout" style="grid-column: 1 / -1;">
 
+    @php($scheduleSearch = trim((string) request()->query('schedules_search', '')))
+
     <div class="admin-panel">
         <h3 class="admin-panel-title">Timetables</h3>
+
+        {{-- Filter bar: search timetables by operator company or coach number --}}
+        <form method="GET" action="{{ url('/admin') }}"
+              style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:16px; padding:12px 16px; background:rgba(99,102,241,0.05); border-radius:var(--border-radius-sm);">
+            <div class="input-group" style="flex:1 1 260px; min-width:240px;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Search (Operator / Coach No.)</label>
+                <input type="search" name="schedules_search" id="schedules-search" class="coupon-input"
+                       style="height:38px;"
+                       value="{{ $scheduleSearch }}"
+                       placeholder="Operator name or coach registration no."
+                       autocomplete="off" spellcheck="false">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height:38px; padding:0 18px;">Search</button>
+            <a href="{{ url('/admin') }}#schedules" class="btn btn-secondary"
+               style="height:38px; padding:0 16px; display:inline-flex; align-items:center;">Reset</a>
+        </form>
+
+        @if($scheduleSearch !== '')
+            <p style="font-size:12px; color:var(--text-secondary); margin:-4px 0 12px;">
+                {{ $schedules->total() }} schedule{{ $schedules->total() === 1 ? '' : 's' }} matching
+                <strong>&ldquo;{{ $scheduleSearch }}&rdquo;</strong>
+            </p>
+        @endif
         <div class="table-wrapper">
             <table class="admin-table">
                 <thead>
@@ -60,8 +85,13 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted)">No schedules
-                                found.</td>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                                @if($scheduleSearch !== '')
+                                    No schedule matches &ldquo;{{ $scheduleSearch }}&rdquo;.
+                                @else
+                                    No schedules found.
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

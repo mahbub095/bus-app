@@ -1,7 +1,32 @@
 <div class="admin-sections-layout" style="grid-column: 1 / -1;">
 
+    @php($busSearch = trim((string) request()->query('buses_search', '')))
+
     <div class="admin-panel">
         <h3 class="admin-panel-title">Fleet Coaches</h3>
+
+        {{-- Filter bar: search the fleet by coach registration number --}}
+        <form method="GET" action="{{ url('/admin') }}"
+              style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:16px; padding:12px 16px; background:rgba(99,102,241,0.05); border-radius:var(--border-radius-sm);">
+            <div class="input-group" style="flex:1 1 260px; min-width:240px;">
+                <label style="font-size:12px; font-weight:600; margin-bottom:4px;">Search by Coach Registration No.</label>
+                <input type="search" name="buses_search" id="buses-search" class="coupon-input"
+                       style="height:38px;"
+                       value="{{ $busSearch }}"
+                       placeholder="e.g. SE-4122"
+                       autocomplete="off" spellcheck="false">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height:38px; padding:0 18px;">Search</button>
+            <a href="{{ url('/admin') }}#buses" class="btn btn-secondary"
+               style="height:38px; padding:0 16px; display:inline-flex; align-items:center;">Reset</a>
+        </form>
+
+        @if($busSearch !== '')
+            <p style="font-size:12px; color:var(--text-secondary); margin:-4px 0 12px;">
+                {{ $buses->total() }} coach{{ $buses->total() === 1 ? '' : 'es' }} matching
+                <strong>&ldquo;{{ $busSearch }}&rdquo;</strong>
+            </p>
+        @endif
         <div class="table-wrapper">
             <table class="admin-table">
                 <thead>
@@ -66,8 +91,13 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted)">No coaches
-                                found.</td>
+                            <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted)">
+                                @if($busSearch !== '')
+                                    No coach matches &ldquo;{{ $busSearch }}&rdquo;.
+                                @else
+                                    No coaches found.
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

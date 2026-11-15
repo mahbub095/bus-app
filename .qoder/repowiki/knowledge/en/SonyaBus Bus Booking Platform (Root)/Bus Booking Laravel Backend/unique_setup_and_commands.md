@@ -1,1 +1,0 @@
-Application bootstrap goes through the HTTP wizard in `InstallController` plus Artisan commands `InstallDemoSeed`, `InstallFinalize`, and `InstallReset`; after install, `artisan serve` runs the app and `npm run build` compiles admin assets via Vite.

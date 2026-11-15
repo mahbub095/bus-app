@@ -1,0 +1,1 @@
+Defines all HTTP and console endpoints for the bus booking application, partitioning public JSON API, admin Blade dashboard, installation wizard, payment callbacks, and Artisan commands.

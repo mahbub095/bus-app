@@ -7,6 +7,7 @@
 - [User.php](file://backend/app/Models/User.php)
 - [EnsureUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php)
 - [EnsureUserIsSuperAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php)
+- [EnsureUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php)
 - [CheckMaintenanceMode.php](file://backend/app/Http/Middleware/CheckMaintenanceMode.php)
 - [api.php](file://backend/routes/api.php)
 - [web.php](file://backend/routes/web.php)
@@ -16,7 +17,17 @@
 - [database.php](file://backend/config/database.php)
 - [UserAuthController.php](file://backend/app/Http/Controllers/API/UserAuthController.php)
 - [AuthController.php](file://backend/app/Http/Controllers/Admin/AuthController.php)
+- [app.php](file://backend/bootstrap/app.php)
+- [UserRolePermissionTest.php](file://backend/tests/Feature/UserRolePermissionTest.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Role-Based Access Control (RBAC) section to reflect granular permission-based access control
+- Added new EnsureUserHasMenuPermission middleware documentation
+- Updated route protection examples to show specific permissions instead of broad super_admin middleware
+- Enhanced nested middleware structure documentation for user creation requiring both menu_permission:users and super_admin
+- Added comprehensive permission system architecture diagram
 
 ## Table of Contents
 1. Introduction
@@ -30,13 +41,13 @@
 9. Conclusion
 
 ## Introduction
-This document describes the multi-layered security architecture for the application, covering authentication, authorization, input validation, CSRF protection, XSS prevention, SQL injection safeguards, security headers, rate limiting, maintenance mode, sensitive data handling, encryption strategies, and audit logging. The system uses Laravel Sanctum for API tokens and session-based authentication for the admin panel, with role-based access control enforced via middleware.
+This document describes the multi-layered security architecture for the application, covering authentication, authorization, input validation, CSRF protection, XSS prevention, SQL injection safeguards, security headers, rate limiting, maintenance mode, sensitive data handling, encryption strategies, and audit logging. The system uses Laravel Sanctum for API tokens and session-based authentication for the admin panel, with granular permission-based role-based access control enforced via middleware.
 
 ## Project Structure
 Security-related components are organized across configuration files, routes, controllers, models, and middleware:
 - Authentication configuration and token handling live under config (Sanctum, Auth, Session).
-- Authorization is implemented through middleware that checks roles and permissions.
-- Routes define public, authenticated, and admin endpoints with appropriate guards and rate limits.
+- Authorization is implemented through middleware that checks roles, permissions, and menu-level access controls.
+- Routes define public, authenticated, and admin endpoints with appropriate guards, rate limits, and granular permissions.
 - Controllers implement validated input flows and secure credential handling.
 - Logging and database configurations provide foundations for secure operations and auditing.
 
@@ -57,7 +68,8 @@ end
 subgraph "Authorization"
 M1["Middleware EnsureUserIsAdmin"]
 M2["Middleware EnsureUserIsSuperAdmin"]
-M3["Middleware CheckMaintenanceMode"]
+M3["Middleware EnsureUserHasMenuPermission"]
+M4["Middleware CheckMaintenanceMode"]
 end
 subgraph "Controllers"
 A1["API UserAuthController"]
@@ -68,9 +80,10 @@ U1["Model User"]
 end
 R1 --> A1
 R2 --> A2
-R1 --> M3
+R1 --> M4
 R2 --> M1
 R2 --> M2
+R2 --> M3
 A1 --> U1
 A2 --> U1
 C1 --> A2
@@ -91,9 +104,10 @@ C6 --> A2
 - [logging.php:1-133](file://backend/config/logging.php#L1-L133)
 - [database.php:1-185](file://backend/config/database.php#L1-L185)
 - [api.php:1-77](file://backend/routes/api.php#L1-L77)
-- [web.php:1-293](file://backend/routes/web.php#L1-L293)
+- [web.php:1-307](file://backend/routes/web.php#L1-L307)
 - [EnsureUserIsAdmin.php:1-41](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L1-L41)
 - [EnsureUserIsSuperAdmin.php:1-38](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L1-L38)
+- [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
 - [CheckMaintenanceMode.php:1-49](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L1-L49)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
@@ -107,9 +121,10 @@ C6 --> A2
 - [logging.php:1-133](file://backend/config/logging.php#L1-L133)
 - [database.php:1-185](file://backend/config/database.php#L1-L185)
 - [api.php:1-77](file://backend/routes/api.php#L1-L77)
-- [web.php:1-293](file://backend/routes/web.php#L1-L293)
+- [web.php:1-307](file://backend/routes/web.php#L1-L307)
 - [EnsureUserIsAdmin.php:1-41](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L1-L41)
 - [EnsureUserIsSuperAdmin.php:1-38](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L1-L38)
+- [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
 - [CheckMaintenanceMode.php:1-49](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L1-L49)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
@@ -119,9 +134,10 @@ C6 --> A2
 - Authentication
   - API tokens via Laravel Sanctum for customer-facing APIs.
   - Session-based authentication for the admin panel using the web guard.
-- Authorization (RBAC)
+- Authorization (Granular RBAC)
   - Role checks via User model methods and middleware enforcing admin and super-admin roles.
-  - Menu-level permissions enforced by a menu permission middleware used on admin routes.
+  - Menu-level permissions enforced by EnsureUserHasMenuPermission middleware used on admin routes.
+  - Nested middleware structure allowing combination of menu_permission and super_admin for sensitive operations.
 - Input Validation
   - Request validation in controllers to enforce schema and constraints.
 - CSRF Protection
@@ -149,9 +165,10 @@ C6 --> A2
 - [User.php:17-74](file://backend/app/Models/User.php#L17-L74)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 - [CheckMaintenanceMode.php:22-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L22-L47)
 - [api.php:41-75](file://backend/routes/api.php#L41-L75)
-- [web.php:68-90](file://backend/routes/web.php#L68-L90)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 - [sanctum.php:81-85](file://backend/config/sanctum.php#L81-L85)
 - [session.php:162-202](file://backend/config/session.php#L162-L202)
 - [logging.php:53-124](file://backend/config/logging.php#L53-L124)
@@ -160,7 +177,7 @@ C6 --> A2
 ## Architecture Overview
 The security architecture layers protect requests at multiple points:
 - Routing layer applies rate limiting and maintenance checks.
-- Middleware enforces authentication and authorization.
+- Middleware enforces authentication, authorization, and granular permissions.
 - Controllers validate inputs and handle sensitive operations securely.
 - Configuration centralizes security posture (CORS, sessions, logging, DB).
 
@@ -171,6 +188,7 @@ participant Router as "Routes"
 participant MM as "CheckMaintenanceMode"
 participant Auth as "Auth/Sanctum"
 participant RBAC as "Role Middleware"
+participant Perm as "Menu Permission"
 participant Ctrl as "Controller"
 participant DB as "Database"
 Client->>Router : HTTP request
@@ -182,6 +200,8 @@ Router->>Auth : Authenticate (session or sanctum)
 Auth-->>Router : User context or 401
 Router->>RBAC : Enforce role/permission
 RBAC-->>Router : Allow or 403
+Router->>Perm : Check menu permission
+Perm-->>Router : Allow or 403
 Router->>Ctrl : Invoke controller
 Ctrl->>DB : Execute query (Eloquent)
 DB-->>Ctrl : Result
@@ -191,10 +211,11 @@ end
 
 **Diagram sources**
 - [api.php:26-75](file://backend/routes/api.php#L26-L75)
-- [web.php:80-90](file://backend/routes/web.php#L80-L90)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 - [CheckMaintenanceMode.php:22-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L22-L47)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 - [UserAuthController.php:17-208](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L208)
 - [AuthController.php:24-81](file://backend/app/Http/Controllers/Admin/AuthController.php#L24-L81)
 
@@ -255,14 +276,21 @@ SessionConfig <.. AdminAuthController : "uses"
 - [UserAuthController.php:17-208](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L208)
 - [AuthController.php:11-81](file://backend/app/Http/Controllers/Admin/AuthController.php#L11-L81)
 
-### Role-Based Access Control (RBAC)
+### Granular Permission-Based Access Control (RBAC)
+**Updated** Implemented granular permission-based access control using menu_permission middleware directives. Routes are now protected by specific permissions instead of broad super_admin middleware.
+
 - Roles and Permissions
-  - User model provides isAdmin(), isSuperAdmin(), and hasMenuPermission() to determine access.
-- Middleware Enforcement
-  - EnsureUserIsAdmin blocks non-admin users and handles JSON vs HTML responses appropriately.
-  - EnsureUserIsSuperAdmin restricts sensitive admin features to super-admins.
+  - User model provides isAdmin(), isSuperAdmin(), and hasMenuPermission() to determine access levels.
+  - Super admins have full access to all menus automatically.
+  - Regular admins require explicit menu_permissions array for each menu they can access.
+- Menu Permission Middleware
+  - EnsureUserHasMenuPermission middleware checks if authenticated users have the required menu permission.
+  - Returns appropriate JSON responses for API requests and redirects for web requests.
+  - Supports dynamic permission checking based on route parameters.
 - Route-Level Guards
-  - Admin routes grouped under auth and admin middleware; menu_permission middleware gates specific sections.
+  - Admin routes grouped under auth and admin middleware.
+  - Specific sections protected by menu_permission middleware with granular permissions (license, site-settings, gateways, profile, bookings, stations, buses, routes, schedules, promotions, reports, coach-services, cancel-requests, users).
+  - Nested middleware structure allows combining menu_permission with super_admin for sensitive operations like user creation.
 
 ```mermaid
 flowchart TD
@@ -270,24 +298,28 @@ Start(["Request"]) --> CheckAuth{"Authenticated?"}
 CheckAuth --> |No| Return401["Return 401 / Redirect to Login"]
 CheckAuth --> |Yes| CheckRole{"Has required role?"}
 CheckRole --> |No| Return403["Return 403 / Redirect with error"]
-CheckRole --> |Yes| Next["Proceed to Controller"]
+CheckRole --> |Yes| CheckPerm{"Has menu permission?"}
+CheckPerm --> |No| Return403Perm["Return 403 / Permission denied"]
+CheckPerm --> |Yes| Next["Proceed to Controller"]
 ```
 
 **Diagram sources**
 - [User.php:44-74](file://backend/app/Models/User.php#L44-L74)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
-- [web.php:80-90](file://backend/routes/web.php#L80-L90)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 
 **Section sources**
 - [User.php:44-74](file://backend/app/Models/User.php#L44-L74)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
-- [web.php:80-90](file://backend/routes/web.php#L80-L90)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 
 ### Input Validation and CSRF/XSS/SQL Injection Safeguards
 - Input Validation
-  - Controllers validate incoming payloads using Laravel’s validator rules to ensure type, length, uniqueness, and format constraints.
+  - Controllers validate incoming payloads using Laravel's validator rules to ensure type, length, uniqueness, and format constraints.
 - CSRF Protection
   - Sanctum middleware includes ValidateCsrfToken for stateful SPAs; session cookies configured with SameSite and HTTPS flags.
 - XSS Prevention
@@ -433,7 +465,7 @@ Level --> Output["Write to Logs"]
 
 ## Dependency Analysis
 Key dependencies between security components:
-- Routes depend on middleware for maintenance checks and role enforcement.
+- Routes depend on middleware for maintenance checks, role enforcement, and granular permissions.
 - Controllers depend on models for user roles and permissions.
 - Configuration files influence behavior of authentication, sessions, CORS, logging, and database security.
 
@@ -442,6 +474,7 @@ graph LR
 API["routes/api.php"] --> MM["CheckMaintenanceMode"]
 WEB["routes/web.php"] --> ADM["EnsureUserIsAdmin"]
 WEB --> SUPER["EnsureUserIsSuperAdmin"]
+WEB --> MENU["EnsureUserHasMenuPermission"]
 API --> UC["UserAuthController"]
 WEB --> AC["Admin AuthController"]
 UC --> UM["User Model"]
@@ -458,10 +491,11 @@ CFG6 --> AC
 
 **Diagram sources**
 - [api.php:26-75](file://backend/routes/api.php#L26-L75)
-- [web.php:80-90](file://backend/routes/web.php#L80-L90)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 - [CheckMaintenanceMode.php:22-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L22-L47)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 - [UserAuthController.php:17-208](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L208)
 - [AuthController.php:24-81](file://backend/app/Http/Controllers/Admin/AuthController.php#L24-L81)
 - [User.php:17-74](file://backend/app/Models/User.php#L17-L74)
@@ -474,10 +508,11 @@ CFG6 --> AC
 
 **Section sources**
 - [api.php:26-75](file://backend/routes/api.php#L26-L75)
-- [web.php:80-90](file://backend/routes/web.php#L80-L90)
+- [web.php:80-306](file://backend/routes/web.php#L80-L306)
 - [CheckMaintenanceMode.php:22-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L22-L47)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 - [UserAuthController.php:17-208](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L208)
 - [AuthController.php:24-81](file://backend/app/Http/Controllers/Admin/AuthController.php#L24-L81)
 - [User.php:17-74](file://backend/app/Models/User.php#L17-L74)
@@ -493,8 +528,7 @@ CFG6 --> AC
 - Keep rate limits reasonable to balance security and usability.
 - Avoid excessive logging in hot paths; use appropriate log levels.
 - Enable session encryption only if necessary due to overhead.
-
-[No sources needed since this section provides general guidance]
+- Menu permission checks are lightweight array lookups for optimal performance.
 
 ## Troubleshooting Guide
 - Authentication Failures
@@ -502,6 +536,10 @@ CFG6 --> AC
   - Confirm session driver and cookie settings (secure, httpOnly, sameSite).
 - Authorization Denials
   - Check role methods and middleware assignments on routes.
+  - Verify menu_permissions array contains required permissions for specific routes.
+- Menu Permission Issues
+  - Ensure users have proper menu_permissions assigned in database.
+  - Check that super_admin users bypass menu permission checks automatically.
 - Maintenance Mode Blocking
   - Ensure site-settings endpoints are excluded and maintenance flag is correctly read.
 - Rate Limiting Blocks
@@ -514,11 +552,10 @@ CFG6 --> AC
 - [cors.php:18-32](file://backend/config/cors.php#L18-L32)
 - [session.php:162-202](file://backend/config/session.php#L162-L202)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
+- [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 - [CheckMaintenanceMode.php:22-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L22-L47)
 - [api.php:41-46](file://backend/routes/api.php#L41-L46)
 - [logging.php:53-124](file://backend/config/logging.php#L53-L124)
 
 ## Conclusion
-The application implements a comprehensive, multi-layered security architecture leveraging Laravel Sanctum for API tokens, session-based authentication for the admin panel, and robust middleware for authorization. Input validation, CSRF protection, XSS prevention, and SQL injection safeguards are integrated throughout. Security headers, rate limiting, maintenance mode, sensitive data handling, encryption strategies, and audit logging further strengthen the system’s resilience against common threats.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The application implements a comprehensive, multi-layered security architecture leveraging Laravel Sanctum for API tokens, session-based authentication for the admin panel, and robust granular permission-based middleware for authorization. The new menu_permission system provides fine-grained control over administrative features while maintaining backward compatibility with existing role-based access patterns. Input validation, CSRF protection, XSS prevention, and SQL injection safeguards are integrated throughout. Security headers, rate limiting, maintenance mode, sensitive data handling, encryption strategies, and audit logging further strengthen the system's resilience against common threats.

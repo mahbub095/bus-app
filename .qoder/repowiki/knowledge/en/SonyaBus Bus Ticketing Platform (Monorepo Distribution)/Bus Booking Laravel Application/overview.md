@@ -1,0 +1,1 @@
+Monolithic Laravel 11 application wiring customer-facing booking API, admin dashboard, and installation wizard around shared domain services and Eloquent models.
