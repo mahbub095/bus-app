@@ -1,0 +1,4 @@
+- Business methods in `BookingService` return a typed array `{status: int, body: array}` so the controller can forward both HTTP code and payload uniformly.
+- Seat-related operations are delegated to `SeatMapService` (build map, check selectability, derive boarding/dropping points, compute pricing) rather than queried directly in the service or controller.
+- Concurrent seat reservation is protected by wrapping the entire create flow in `DB::transaction` and querying active bookings with `lockForUpdate()` before building the seat map.
+- Public API responses go through `formatForApi`, which eagerly loads schedule/bus/route relations and serializes dates as ISO-8601 strings instead of returning Eloquent models directly.

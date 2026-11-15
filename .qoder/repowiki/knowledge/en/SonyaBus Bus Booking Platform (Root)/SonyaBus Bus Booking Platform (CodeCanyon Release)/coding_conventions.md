@@ -1,0 +1,5 @@
+- Controllers stay thin — they validate input and delegate domain logic to classes under `App\Services\*` rather than embedding business rules.
+- Customer-facing endpoints live in `App\Http\Controllers\API\*` and are registered in `routes/api.php` with Sanctum token authentication, while admin endpoints live in `App\Http\Controllers\Admin\*` and use session cookies.
+- Domain entities are modeled as Eloquent classes under `app/Models/` with matching timestamped migration files under `database/migrations/` and optional seeders under `database/seeders/`.
+- Access control is centralized through named middleware (`EnsureUserIsAdmin`, `EnsureUserIsSuperAdmin`, `EnsureUserHasMenuPermission`) applied at the route level instead of inline checks.
+- Blade views for the admin panel are split into reusable partials under `resources/views/admin/partials/` (e.g. `bookings.blade.php`, `buses.blade.php`, `reports.blade.php`) and composed from a shared `layout.blade.php`.

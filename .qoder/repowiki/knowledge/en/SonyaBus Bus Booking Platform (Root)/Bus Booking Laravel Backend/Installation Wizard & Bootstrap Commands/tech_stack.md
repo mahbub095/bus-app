@@ -1,0 +1,1 @@
+Laravel Console Commands extending `Illuminate\Console\Command`; raw PDO for DB connectivity (no Laravel DB facade during initial connection); PHP's `exec`/`popen` for spawning detached child processes; file-based status sharing under `storage/framework/` instead of a queue worker.

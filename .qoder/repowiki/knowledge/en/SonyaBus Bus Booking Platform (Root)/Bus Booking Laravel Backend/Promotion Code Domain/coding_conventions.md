@@ -1,0 +1,3 @@
+- Promo codes are normalized to uppercase via `strtoupper` before storage and lookup, ensuring case-insensitive matching.
+- Admin write actions validate input with Laravel's `$request->validate([...])` and then persist through Eloquent's `create`/`update`, keeping validation and persistence in the controller rather than in a service layer.
+- Admin responses use `adminTabRedirect($request)->with('success', ...)` flash-message redirects instead of JSON, while the API controller returns `response()->json(...)` payloads.

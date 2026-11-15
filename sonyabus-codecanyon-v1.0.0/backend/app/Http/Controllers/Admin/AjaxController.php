@@ -35,11 +35,15 @@ class AjaxController extends Controller
 
     public function bookingLogsApi(Request $request)
     {
+        $request->validate(['search' => 'nullable|string|max:100']);
+
         return response()->json($this->adminBookingService->getBookingLogs($request));
     }
 
     public function cancelRequestsLogsApi(Request $request)
     {
+        $request->validate(['search' => 'nullable|string|max:100']);
+
         return response()->json($this->adminBookingService->getCancelRequestsLogs($request));
     }
 

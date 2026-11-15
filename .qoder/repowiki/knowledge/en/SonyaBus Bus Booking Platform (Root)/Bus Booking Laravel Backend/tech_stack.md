@@ -1,0 +1,1 @@
+Laravel 11 (PHP) with Sanctum for API tokens, Blade + Vite for the admin SPA-like UI, Eloquent ORM, queued jobs (`SendBookingSmsNotification`), and PHPUnit for feature/unit tests.

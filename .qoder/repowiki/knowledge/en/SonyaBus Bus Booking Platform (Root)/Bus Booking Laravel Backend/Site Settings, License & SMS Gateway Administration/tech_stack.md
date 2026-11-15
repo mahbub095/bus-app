@@ -1,0 +1,1 @@
+Laravel Eloquent models with typed casts, Laravel HTTP client with retry/timeout for Envato and SMS provider APIs, Laravel Cache for setting/license lookups, and an external `EnvFileWriter` abstraction for safely writing `.env` keys such as `APP_LICENSED`, `SMS_GATEWAY_*`, `MAIL_*`, `ZINIPAY_*`.

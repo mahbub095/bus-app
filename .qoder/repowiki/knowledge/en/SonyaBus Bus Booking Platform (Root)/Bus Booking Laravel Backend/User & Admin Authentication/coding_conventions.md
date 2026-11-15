@@ -1,0 +1,5 @@
+- Role checks are delegated to `User` model predicates (`isAdmin`, `isSuperAdmin`, `isUser`) rather than comparing the `role` string directly in controllers.
+- API responses are wrapped in a consistent `{ message, token?, user? }` JSON shape returned via `response()->json(...)` from the API controller.
+- Validation failures raise `ValidationException::withMessages([...])` so the API layer surfaces field-level errors uniformly.
+- Passwords are never assigned raw — they go through Laravel's `hashed` cast or `Hash::make` before persistence.
+- Sensitive reset codes are never logged; mail-sending failures are caught and only surfaced as validation errors in non-local environments.

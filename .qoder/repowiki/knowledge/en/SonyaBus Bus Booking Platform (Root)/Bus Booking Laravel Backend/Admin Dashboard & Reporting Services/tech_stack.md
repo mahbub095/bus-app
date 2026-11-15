@@ -1,0 +1,1 @@
+Laravel Eloquent models (`Booking`, `Schedule`, `Bus`, `Route`, `Station`, `User`, `Promotion`) with `Illuminate\Support\Carbon` for date arithmetic; report rows use Laravel Collections (`groupBy`, `map`, `sum`, `filter`) rather than raw SQL aggregations.

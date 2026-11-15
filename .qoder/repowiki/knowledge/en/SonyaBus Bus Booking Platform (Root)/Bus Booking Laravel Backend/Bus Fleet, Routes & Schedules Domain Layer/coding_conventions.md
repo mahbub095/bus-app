@@ -1,0 +1,5 @@
+- Eloquent models declare only `$fillable` fields and use `$casts` for complex columns (`seat_layout_grid`, `boarding_points`, `dropping_points` as arrays; `fare` as decimal).
+- Controllers delegate business rules to dedicated services (`CoachServicesService`, `RouteService`, `SeatMapService`) rather than querying models directly from controller methods.
+- Request payloads that carry structured data (boarding/dropping points, seat layout grid) are sent as JSON strings and decoded via `json_decode(..., true)` before persistence.
+- Seat codes are generated deterministically from `seat_layout` / `seat_layout_grid` and validated through `SeatMapService::isValidSeatCode` instead of ad-hoc string checks.
+- Active booking visibility is uniformly defined by the PAID/SOLD/BOOKED statuses plus PENDING within the last 10 minutes, reused across `CoachServicesService`, `SeatMapService`, and query scopes.

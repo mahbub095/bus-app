@@ -1,0 +1,1 @@
+A complete Laravel + React bus booking system with a Sanctum-authenticated customer API, a Blade-based admin dashboard, ZiniPay payment integration, and seat-map scheduling.

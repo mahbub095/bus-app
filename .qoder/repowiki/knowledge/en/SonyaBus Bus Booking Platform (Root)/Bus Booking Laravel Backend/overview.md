@@ -1,0 +1,1 @@
+Laravel application that wires domain services (bookings, routes/schedules, promotions), admin dashboard/reporting, site settings/license/SMS, user auth, and installation into a dual API + admin web app.

@@ -1,0 +1,5 @@
+- Each scenario file exports an `options` object defining `stages` (VU ramp profile) and a `thresholds` preset from `config/index.js`, plus a default function that instantiates `ApiClient(baseUrl())` and delegates to a single flow.
+- Flows are stateless functions taking `(baseUrl)` or `(api, ...context)` and composing smaller step functions (`browseHome`, `searchRoutes`, `registerAndMaybeBook`, `tryBookSeat`) rather than monolithic request chains.
+- Randomized user behavior is expressed with `Math.random()` guards (e.g. 50% register, 10% cancel, 60% promo check) and `sleepRandom(min, max)` between requests to simulate realistic pacing.
+- Test data is generated through helpers in `helpers/index.js` (`newPassenger`, `pickRoute`, `futureDate`, `availableSeats`, `bookingPayload`) instead of inline literals in flows.
+- Fail-fast smoke paths use `k6.fail(message)` on assertion failures, while load/stress flows return early on missing data without failing the VU.

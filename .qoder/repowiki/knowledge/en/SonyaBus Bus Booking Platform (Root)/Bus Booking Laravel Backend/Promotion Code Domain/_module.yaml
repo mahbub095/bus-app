@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: backend/promotions_domain
+title: Promotion Code Domain
+scope:
+    - backend/app/Http/Controllers/API/PromotionController.php
+    - backend/app/Http/Controllers/Admin/PromotionController.php
+    - backend/app/Models/Promotion.php
+source_files: []
+depends_on: []
+related_to:
+    - path: load_testing

@@ -1,0 +1,5 @@
+Three-file leaf module split by consumer boundary:
+- `app/Models/Promotion.php` is the sole Eloquent model defining the `promotions` table schema (`code`, `discount_amount`, `description`) with `$fillable` mass-assignment and a `decimal:2` cast on `discount_amount`.
+- `app/Http/Controllers/API/PromotionController.php` extends `BaseController` and exposes two public endpoints: `check(code)` validates a promo code (case-insensitive via `strtoupper`) returning 404 when missing, and `index()` lists all promotions as JSON.
+- `app/Http/Controllers/Admin/PromotionController.php` extends `BaseAdminController` and provides `store/update/destroy` actions for the admin UI, using Laravel form validation with `unique:promotions,code` rules and redirecting via `adminTabRedirect($request)->with('success', ...)` flash messages.
+Dependency direction is one-way: controllers depend on the model; there are no services, repositories, or DTOs inside this scope. The shared base classes (`BaseController`, `BaseAdminController`) provide cross-cutting behavior such as tab-based admin redirects.

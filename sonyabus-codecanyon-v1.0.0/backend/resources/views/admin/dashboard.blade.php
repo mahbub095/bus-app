@@ -73,25 +73,31 @@
     </section>
     @endif
 
-    @if(Auth::user()->isSuperAdmin())
+    @if(Auth::user()->hasMenuPermission('license'))
     <!-- License Management -->
     <section class="admin-tab-content" id="tab-content-license">
         @include('admin.partials.license')
     </section>
+    @endif
 
+    @if(Auth::user()->hasMenuPermission('site-settings'))
     <!-- Sub-tab 12: Site Settings (Footer, Title, Favicon, Maintenance, SEO) -->
     <section class="admin-tab-content" id="tab-content-site-settings">
         @include('admin.partials.site-settings')
     </section>
+    @endif
 
+    @if(Auth::user()->hasMenuPermission('gateways'))
     <!-- Sub-tab 13: Integrations & Gateways (SMS, Mail, ZiniPay) -->
     <section class="admin-tab-content" id="tab-content-gateways">
         @include('admin.partials.gateway-settings')
     </section>
     @endif
 
+    @if(Auth::user()->hasMenuPermission('profile'))
     <!-- Sub-tab 11: Admin profile -->
     <section class="admin-tab-content" id="tab-content-profile">
         @include('admin.partials.profile')
     </section>
+    @endif
 @endsection

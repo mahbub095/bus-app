@@ -1,0 +1,1 @@
+Domain layer for bus fleet management, route definitions, schedule queries, and seat-map/booking state used by both admin and API controllers.

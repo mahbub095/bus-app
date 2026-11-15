@@ -1,0 +1,1 @@
+Laravel Eloquent ORM with `$fillable` whitelisting and attribute casting; Laravel request validation rules (`required`, `string`, `numeric`, `min`, `max`, `unique`).
