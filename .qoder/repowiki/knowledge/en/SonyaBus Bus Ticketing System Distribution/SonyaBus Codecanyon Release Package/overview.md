@@ -1,0 +1,1 @@
+Commercial Laravel + React bus booking system packaged for CodeCanyon sale, providing a Sanctum-authenticated customer API, Blade admin dashboard, ZiniPay payment integration, and seat-map scheduling.

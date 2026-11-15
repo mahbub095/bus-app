@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: dev
 nodes_managed: true
-exported_at: "2026-11-15T09:13:00Z"
+exported_at: "2026-11-15T09:41:53Z"
 modules:
     "":
-        dir_name: SonyaBus Bus Ticketing Platform (Monorepo Distribution)
-        title: SonyaBus Bus Ticketing Platform (Monorepo Distribution)
+        dir_name: SonyaBus Bus Ticketing System Distribution
+        title: SonyaBus Bus Ticketing System Distribution
         scope:
             - README.md
             - CODECANYON_RELEASE_GUIDE.md
@@ -42,8 +42,8 @@ modules:
         depends_on: []
         related_to: []
     backend:
-        dir_name: Bus Booking Laravel Application
-        title: Bus Booking Laravel Application
+        dir_name: Bus Booking Platform Backend (Laravel Monolith)
+        title: Bus Booking Platform Backend (Laravel Monolith)
         scope:
             - backend/
         source_files: []
@@ -175,8 +175,8 @@ modules:
         depends_on: []
         related_to: []
     codecanyon_release:
-        dir_name: SonyaBus Bus Booking Platform (CodeCanyon Release)
-        title: SonyaBus Bus Booking Platform (CodeCanyon Release)
+        dir_name: SonyaBus Codecanyon Release Package
+        title: SonyaBus Codecanyon Release Package
         scope:
             - sonyabus-codecanyon-v1.0.0/
         source_files: []

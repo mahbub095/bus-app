@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
  */
 class SiteSettingsService
 {
+    public function __construct(protected AdminSessionService $adminSessionService)
+    {
+    }
+
     /** @return array<string, mixed> */
     public function toPublicApiArray(): array
     {
@@ -64,7 +68,13 @@ class SiteSettingsService
             'seo_og_description' => 'nullable|string|max:500',
             'seo_og_image' => 'nullable|string|max:500',
             'seo_google_analytics_id' => 'nullable|string|max:100',
+            'admin_session_lifetime' => 'nullable|integer|min:'.AdminSessionService::MIN_MINUTES.'|max:'.AdminSessionService::MAX_MINUTES,
         ]);
+
+        // Keep the previous value when the field is absent from the request.
+        $adminSessionLifetime = $request->filled('admin_session_lifetime')
+            ? (int) $request->input('admin_session_lifetime')
+            : $this->adminSessionService->minutes();
 
         SiteSetting::setMany([
             'site_title' => $request->input('site_title'),
@@ -80,6 +90,7 @@ class SiteSettingsService
             'seo_og_description' => $request->input('seo_og_description', ''),
             'seo_og_image' => $request->input('seo_og_image', ''),
             'seo_google_analytics_id' => $request->input('seo_google_analytics_id', ''),
+            'admin_session_lifetime' => (string) $adminSessionLifetime,
         ]);
     }
 

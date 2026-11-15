@@ -18,7 +18,22 @@
 - [reports.blade.php](file://backend/resources/views/admin/partials/reports.blade.php)
 - [ReportController.php](file://backend/app/Http/Controllers/Admin/ReportController.php)
 - [ExcelExportService.php](file://backend/app/Services/ExcelExportService.php)
+- [buses.blade.php](file://backend/resources/views/admin/partials/buses.blade.php)
+- [schedules.blade.php](file://backend/resources/views/admin/partials/schedules.blade.php)
+- [BusController.php](file://backend/app/Http/Controllers/Admin/BusController.php)
+- [ScheduleController.php](file://backend/app/Http/Controllers/Admin/ScheduleController.php)
+- [buses.js](file://backend/resources/js/admin/buses.js)
+- [layout.js](file://backend/resources/js/admin/layout.js)
+- [session.php](file://backend/config/session.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Fleet Coaches management section to document enhanced search functionality by coach registration number
+- Updated Timetables management section to document enhanced search functionality by operator name or coach number
+- Added documentation for JavaScript tab navigation improvements that handle search parameters alongside pagination
+- Updated session configuration documentation to reflect hardcoded values (lifetime: 120 minutes, expire_on_close: false)
+- Enhanced fleet coach and schedule management workflows with search capabilities
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,14 +47,14 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the administrative dashboard built with Laravel Blade templates and JavaScript components. It covers the dashboard overview, analytics charts, filter controls, key metrics display, management modules for buses, routes, schedules, bookings, users, and site settings. It also documents role-based access control, menu permissions, theme customization, reporting capabilities, export functionality, and administrative workflows.
+This document explains the administrative dashboard built with Laravel Blade templates and JavaScript components. It covers the dashboard overview, analytics charts, filter controls, key metrics display, management modules for buses, routes, schedules, bookings, users, and site settings. It also documents role-based access control, menu permissions, theme customization, reporting capabilities, export functionality, and administrative workflows. Recent enhancements include improved search functionality for fleet coaches and schedules sections, updated session configuration with hardcoded values, and enhanced JavaScript tab navigation that handles search parameters alongside pagination.
 
 ## Project Structure
 The admin panel is a server-rendered Blade application with client-side interactivity:
 - Controllers under `app/Http/Controllers/Admin` render views and delegate data loading to services.
 - Services encapsulate analytics, filtering, and export logic.
 - Blade templates compose the layout, sidebar, dashboard tabs, and report pages.
-- JavaScript files enhance the dashboard with Chart.js analytics and theme switching.
+- JavaScript files enhance the dashboard with Chart.js analytics, theme switching, and enhanced navigation.
 
 ```mermaid
 graph TB
@@ -76,6 +91,8 @@ Service --> Analytics["AdminDashboardAnalyticsService"]
 - Dashboard overview partial renders metric cards and Chart.js canvases; JavaScript handles filters and re-renders.
 - Reports index and controller support multiple report types with preview, Excel, and PDF exports.
 - Site settings partial manages identity, footer, maintenance mode, SEO, and integrations.
+- **Enhanced**: Fleet coaches and schedules sections now include advanced search functionality.
+- **Enhanced**: JavaScript tab navigation intelligently handles search parameters alongside pagination.
 
 **Section sources**
 - [BaseAdminController.php:1-15](file://backend/app/Http/Controllers/Admin/BaseAdminController.php#L1-L15)
@@ -165,54 +182,57 @@ ApplyAnalytics --> Idle
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
 
 ### Management Modules
-The dashboard includes tabbed sections for:
-- Coach services (live availability)
-- Bookings logs
-- Cancel requests
-- Stations terminal management
-- Bus fleet registration
-- Transport route connections
-- Departure schedules timetables
-- Coupon vouchers generation
-- Users & roles management
-- Reports
-- License management (super admin only)
-- Site settings (super admin only)
-- Integrations & gateways (SMS, mail, ZiniPay) (super admin only)
-- Admin profile
 
-Visibility is controlled by menu permissions and super-admin checks.
+#### Fleet Coaches Management
+The fleet coaches section provides comprehensive bus management with enhanced search capabilities:
+- **Enhanced Search**: Users can search coaches by registration number using the dedicated search form
+- **CRUD Operations**: Full create, read, update, and delete functionality for bus records
+- **Seat Layout Designer**: Advanced drag-and-drop interface for customizing seat arrangements
+- **Logo Management**: Support for operator logos with preview and upload capabilities
+- **Pagination Integration**: Seamless integration with search results and pagination controls
 
 ```mermaid
-classDiagram
-class DashboardController {
-+dashboardView()
-}
-class BaseAdminController {
-<<abstract>>
-}
-class AdminDashboardService {
-+getDashboardData() array
-}
-class AdminDashboardAnalyticsService {
-+getAnalytics(period) array
-+resolvePeriod(period) list
-+periodLabel(period) string
-}
-DashboardController --> BaseAdminController : "extends"
-DashboardController --> AdminDashboardService : "uses"
-AdminDashboardService --> AdminDashboardAnalyticsService : "delegates analytics"
+flowchart TD
+SearchInput["Search by Coach Registration No."] --> FormSubmit["Form submission to /admin"]
+FormSubmit --> QueryProcessing["Process buses_search parameter"]
+QueryProcessing --> FilterResults["Filter buses by registration number"]
+FilterResults --> DisplayResults["Display matching coaches with count"]
+DisplayResults --> Pagination["Apply pagination to filtered results"]
 ```
 
 **Diagram sources**
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
-- [BaseAdminController.php:1-15](file://backend/app/Http/Controllers/Admin/BaseAdminController.php#L1-L15)
-- [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
-- [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
+- [buses.blade.php:3-29](file://backend/resources/views/admin/partials/buses.blade.php#L3-L29)
+- [BusController.php:27-95](file://backend/app/Http/Controllers/Admin/BusController.php#L27-L95)
 
 **Section sources**
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
-- [sidebar.blade.php:1-120](file://backend/resources/views/admin/partials/sidebar.blade.php#L1-L120)
+- [buses.blade.php:1-467](file://backend/resources/views/admin/partials/buses.blade.php#L1-L467)
+- [BusController.php:1-97](file://backend/app/Http/Controllers/Admin/BusController.php#L1-L97)
+- [buses.js:1-596](file://backend/resources/js/admin/buses.js#L1-L596)
+
+#### Timetables Management
+The timetables section manages departure schedules with enhanced search functionality:
+- **Enhanced Search**: Users can search schedules by operator name or coach registration number
+- **Schedule Management**: Create, edit, and delete scheduled coach runs
+- **Route Integration**: Link schedules to specific routes and buses
+- **Fare Management**: Configure pricing for each scheduled run
+- **Search-Aware Pagination**: Pagination works seamlessly with search results
+
+```mermaid
+flowchart TD
+ScheduleSearch["Search by Operator/Coach No."] --> ScheduleForm["Form submission to /admin"]
+ScheduleForm --> ScheduleQuery["Process schedules_search parameter"]
+ScheduleQuery --> ScheduleFilter["Filter schedules by operator/coach"]
+ScheduleFilter --> ScheduleResults["Display matching schedules with count"]
+ScheduleResults --> SchedulePagination["Apply pagination to filtered results"]
+```
+
+**Diagram sources**
+- [schedules.blade.php:3-29](file://backend/resources/views/admin/partials/schedules.blade.php#L3-L29)
+- [ScheduleController.php:10-47](file://backend/app/Http/Controllers/Admin/ScheduleController.php#L10-L47)
+
+**Section sources**
+- [schedules.blade.php:1-152](file://backend/resources/views/admin/partials/schedules.blade.php#L1-L152)
+- [ScheduleController.php:1-49](file://backend/app/Http/Controllers/Admin/ScheduleController.php#L1-L49)
 
 ### Role-Based Access Control and Menu Permissions
 Access control combines middleware and model-level checks:
@@ -295,34 +315,57 @@ Response --> |None| JsonResponse["Return JSON preview"]
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 - [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
 
-### Administrative Workflows
-Typical workflows:
-- Dashboard load: controller calls service, service aggregates analytics and lists, view renders metrics and charts, JavaScript enables interactive filters.
-- Report generation: user selects report type, filters apply, preview loads via AJAX, export triggers file download.
-- Settings management: super admin uploads logo/favicon, toggles maintenance mode, edits SEO metadata, saves configuration.
+### Session Configuration
+Session management has been updated with hardcoded configuration values:
+- **Session Lifetime**: Set to 120 minutes (2 hours) for optimal user experience
+- **Session Expiration**: Disabled (`expire_on_close: false`) to maintain sessions across browser closures
+- **Storage Driver**: Database driver configured via environment variables
+- **Security Settings**: HTTP-only cookies enabled, SameSite policy set to 'lax'
 
 ```mermaid
-sequenceDiagram
-participant Admin as "Admin"
-participant Reports as "ReportController"
-participant Data as "ReportDataService"
-participant Export as "ExcelExportService"
-participant PDF as "DomPDF"
-Admin->>Reports : POST preview/export request
-Reports->>Data : Validate filters and build query
-Data-->>Reports : Formatted rows and summary
-Reports-->>Admin : JSON preview or file download
-Reports->>Export : download(headers, rows, filename)
-Reports->>PDF : loadView(...)->download(...)
+flowchart TD
+SessionConfig["Session Configuration"] --> Lifetime["Lifetime: 120 minutes"]
+SessionConfig --> Expiration["Expire on Close: false"]
+SessionConfig --> Driver["Driver: database (env)"]
+SessionConfig --> Security["HTTP Only: true"]
+SessionConfig --> SameSite["SameSite: lax"]
 ```
 
 **Diagram sources**
-- [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
-- [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
+- [session.php:39-40](file://backend/config/session.php#L39-L40)
+- [session.php:21](file://backend/config/session.php#L21)
+- [session.php:188](file://backend/config/session.php#L188)
+- [session.php:205](file://backend/config/session.php#L205)
 
 **Section sources**
-- [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
-- [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
+- [session.php:1-221](file://backend/config/session.php#L1-L221)
+
+### Enhanced JavaScript Tab Navigation
+The JavaScript tab navigation system has been enhanced to intelligently handle search parameters alongside pagination:
+- **Search Parameter Detection**: Automatically detects `_search` and `_page` query parameters for all known tabs
+- **Tab Resolution Logic**: Prioritizes hash-based navigation, then falls back to query parameter detection
+- **Known Tab Recognition**: Supports all administrative tabs including stations, buses, routes, schedules, promotions, users, coach-services, bookings, cancel-requests, reports, license, site-settings, gateways, and profile
+- **Seamless Integration**: Works transparently with existing pagination and search functionality
+
+```mermaid
+flowchart TD
+URLLoad["URL Loaded"] --> HashCheck{"Hash tab exists?"}
+HashCheck --> |Yes| HashTab["Use hash tab"]
+HashCheck --> |No| QueryCheck{"Query params exist?"}
+QueryCheck --> |Yes| ParamCheck{"Contains _search or _page?"}
+ParamCheck --> |Yes| QueryTab["Extract tab from query param"]
+ParamCheck --> |No| DefaultTab["Use default dashboard"]
+QueryCheck --> |No| DefaultTab
+QueryTab --> ActiveTab["Set active tab"]
+HashTab --> ActiveTab
+DefaultTab --> ActiveTab
+```
+
+**Diagram sources**
+- [layout.js:54-68](file://backend/resources/js/admin/layout.js#L54-L68)
+
+**Section sources**
+- [layout.js:54-78](file://backend/resources/js/admin/layout.js#L54-L78)
 
 ## Dependency Analysis
 Key dependencies:
@@ -330,6 +373,7 @@ Key dependencies:
 - AdminDashboardService depends on AdminDashboardAnalyticsService and Eloquent models.
 - ReportController depends on ReportFilterService, ReportDataService, and ExcelExportService.
 - Views depend on Blade partials and Vite-loaded JavaScript modules.
+- **Enhanced**: Fleet coaches and schedules sections depend on enhanced search functionality in their respective Blade templates.
 
 ```mermaid
 graph LR
@@ -340,6 +384,8 @@ ReportController --> ReportFilterService
 ReportController --> ReportDataService
 ReportController --> ExcelExportService
 Views["Blade Views"] --> JSModules["Vite JS Modules"]
+BusesView["buses.blade.php"] --> BusesJS["buses.js"]
+SchedulesView["schedules.blade.php"] --> LayoutJS["layout.js"]
 ```
 
 **Diagram sources**
@@ -348,6 +394,8 @@ Views["Blade Views"] --> JSModules["Vite JS Modules"]
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 - [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
+- [buses.blade.php:459-467](file://backend/resources/views/admin/partials/buses.blade.php#L459-L467)
+- [schedules.blade.php:152](file://backend/resources/views/admin/partials/schedules.blade.php#L152)
 
 **Section sources**
 - [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
@@ -361,22 +409,31 @@ Views["Blade Views"] --> JSModules["Vite JS Modules"]
 - Reuse computed analytics data across charts instead of recomputing per chart.
 - Cache frequently accessed settings and lookup tables where appropriate.
 - Avoid unnecessary eager loading; load only required relationships for each view.
+- **Enhanced**: Search functionality leverages server-side filtering to optimize performance with large datasets.
+- **Enhanced**: Session lifetime of 120 minutes balances security with user convenience.
 
 [No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Unauthorized access: Ensure the user is authenticated and has the required menu permission. Check middleware behavior for JSON vs web requests.
-- Missing menu items: Verify the user’s role and menu_permissions array; super admins bypass menu checks.
+- Missing menu items: Verify the user's role and menu_permissions array; super admins bypass menu checks.
 - Charts not updating: Confirm that the analytics endpoint returns valid JSON and that JavaScript initializes correctly with initialData.
 - Theme mismatch: Ensure CSS variables are defined and that the theme toggle dispatches the expected event for chart re-rendering.
 - Export failures: Validate that headers and rows conform to the expected structure for Excel export and that PDF templates have required data.
+- **Enhanced**: Search not working: Verify that the search parameters (`buses_search`, `schedules_search`) are properly passed in the URL and that the Blade templates are processing them correctly.
+- **Enhanced**: Tab navigation issues: Check that the JavaScript tab resolution logic correctly identifies tabs from both hash and query parameters.
+- **Enhanced**: Session timeout problems: Review the hardcoded session configuration values and ensure they align with deployment requirements.
 
 **Section sources**
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 - [dashboard-overview.js:1-276](file://backend/resources/js/admin/dashboard-overview.js#L1-L276)
 - [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
+- [buses.blade.php:3-29](file://backend/resources/views/admin/partials/buses.blade.php#L3-L29)
+- [schedules.blade.php:3-29](file://backend/resources/views/admin/partials/schedules.blade.php#L3-L29)
+- [layout.js:54-68](file://backend/resources/js/admin/layout.js#L54-L68)
+- [session.php:39-40](file://backend/config/session.php#L39-L40)
 
 ## Conclusion
-The administrative dashboard provides a comprehensive, permission-controlled interface for managing bus operations, analyzing performance, and exporting reports. Its layered architecture separates concerns between presentation, controllers, services, and data models. Role-based access control and menu permissions ensure secure navigation, while theme customization enhances usability. Reporting capabilities offer flexible previews and exports, supporting operational decision-making and compliance needs.
+The administrative dashboard provides a comprehensive, permission-controlled interface for managing bus operations, analyzing performance, and exporting reports. Its layered architecture separates concerns between presentation, controllers, services, and data models. Role-based access control and menu permissions ensure secure navigation, while theme customization enhances usability. Reporting capabilities offer flexible previews and exports, supporting operational decision-making and compliance needs. Recent enhancements include improved search functionality for fleet coaches and schedules, optimized session configuration, and intelligent JavaScript tab navigation that seamlessly handles search parameters alongside pagination, significantly improving the administrative user experience.

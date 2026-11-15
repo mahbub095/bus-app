@@ -295,6 +295,36 @@
             </div>
         </div>
 
+        {{-- Section 5: Admin Session Security --}}
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <span class="settings-section-icon">🔐</span>
+                <div>
+                    <h3 class="settings-section-title">Admin Session Security</h3>
+                    <p class="settings-section-desc">
+                        How long an admin stays signed in without any activity. When the time runs out the dashboard signs out
+                        and asks for the password again. Customer logins on the booking website are not affected.
+                    </p>
+                </div>
+            </div>
+            <div class="settings-fields-grid">
+                <div class="input-group">
+                    <label for="admin_session_lifetime">Session Expiry — Idle Timeout (minutes)</label>
+                    <input type="number" name="admin_session_lifetime" id="admin_session_lifetime" class="coupon-input"
+                           value="{{ (int) ($adminSessionMinutes ?? \App\Services\AdminSessionService::DEFAULT_MINUTES) }}"
+                           min="{{ \App\Services\AdminSessionService::MIN_MINUTES }}"
+                           max="{{ \App\Services\AdminSessionService::MAX_MINUTES }}"
+                           step="1"
+                           required>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Allowed range: {{ \App\Services\AdminSessionService::MIN_MINUTES }}–{{ \App\Services\AdminSessionService::MAX_MINUTES }} minutes (up to 7 days).
+                        Recommended: 30–120 minutes. This value also caps the “Remember my credentials” cookie, and it is
+                        applied to sessions that are already open.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         {{-- Submit Button --}}
         <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
             <button type="submit" class="btn btn-primary" style="padding: 12px 32px; font-size: 14px;">

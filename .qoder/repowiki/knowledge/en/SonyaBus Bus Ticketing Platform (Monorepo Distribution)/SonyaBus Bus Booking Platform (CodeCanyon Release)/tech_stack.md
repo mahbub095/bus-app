@@ -1,1 +1,0 @@
-Laravel 12 + PHP 8.2 (Sanctum for API auth, DomPDF for report PDFs), React 19 + Vite 8 for the customer portal, PHPUnit 11 for feature/unit tests, ZiniPay payment gateway, Tailwind-style Blade views for the admin dashboard.
