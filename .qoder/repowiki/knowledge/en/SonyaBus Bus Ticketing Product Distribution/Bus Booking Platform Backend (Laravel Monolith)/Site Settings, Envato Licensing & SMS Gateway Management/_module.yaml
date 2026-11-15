@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: backend/site_settings_license_sms
-title: Site Settings, License & SMS Gateway Administration
+title: Site Settings, Envato Licensing & SMS Gateway Management
 scope:
     - backend/app/Http/Controllers/API/SiteSettingsApiController.php
     - backend/app/Http/Controllers/Admin/GatewaySettingsController.php

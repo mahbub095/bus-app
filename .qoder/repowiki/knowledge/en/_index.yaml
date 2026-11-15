@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: dev
 nodes_managed: true
-exported_at: "2026-11-15T09:41:53Z"
+exported_at: "2026-11-15T11:39:25Z"
 modules:
     "":
-        dir_name: SonyaBus Bus Ticketing System Distribution
-        title: SonyaBus Bus Ticketing System Distribution
+        dir_name: SonyaBus Bus Ticketing Product Distribution
+        title: SonyaBus Bus Ticketing Product Distribution
         scope:
             - README.md
             - CODECANYON_RELEASE_GUIDE.md
@@ -143,8 +143,8 @@ modules:
         depends_on: []
         related_to: []
     backend/site_settings_license_sms:
-        dir_name: Site Settings, License & SMS Gateway Administration
-        title: Site Settings, License & SMS Gateway Administration
+        dir_name: Site Settings, Envato Licensing & SMS Gateway Management
+        title: Site Settings, Envato Licensing & SMS Gateway Management
         scope:
             - backend/app/Http/Controllers/API/SiteSettingsApiController.php
             - backend/app/Http/Controllers/Admin/GatewaySettingsController.php

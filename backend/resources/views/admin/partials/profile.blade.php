@@ -9,7 +9,7 @@
             <div class="notice-info-box" style="margin-top: 12px;">
                 Your dashboard session expires after
                 <strong>{{ $adminSessionMinutes }} minute{{ $adminSessionMinutes === 1 ? '' : 's' }}</strong>
-                without activity. Change this under <strong>Site Settings → Admin Session Security</strong>.
+                without activity. Change this under <strong>Site Settings → Session Security</strong>.
             </div>
         @endisset
     </div>

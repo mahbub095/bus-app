@@ -3,3 +3,4 @@
 - Authorization is applied via nested `Route::middleware(...)` blocks: outer `['auth', 'admin']` guards the entire admin area, while inner `menu_permission:<feature>` gates individual resource sections.
 - Guest-facing auth endpoints are wrapped in `throttle:10,1` to enforce a 10-attempts-per-minute brute-force protection policy.
 - Controller references use modern class-string syntax `[ControllerClass::class, 'method']` rather than string-based controller@method notation.
+- Every route is given an explicit `->name(...)` label following the `<area>.<resource>.<action>` naming scheme (e.g. `api.admin.stations.store`, `admin.bookings.cancel.api`).

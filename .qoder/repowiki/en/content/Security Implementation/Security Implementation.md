@@ -17,7 +17,23 @@
 - [LicenseService.php](file://backend/app\Services\LicenseService.php)
 - [License.php](file://backend/app\Models\License.php)
 - [EnsureLicenseIsActivated.php](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php)
+- [AdminSessionService.php](file://backend/app\Services\AdminSessionService.php)
+- [ApplySessionLifetime.php](file://backend/app/Http/Middleware/ApplySessionLifetime.php)
+- [EnforceAdminSessionTimeout.php](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php)
+- [SiteSettingsService.php](file://backend/app/Services/SiteSettingsService.php)
+- [2026_11_15_000000_add_admin_session_lifetime_site_setting.php](file://backend/database/migrations/2026_11_15_000000_add_admin_session_lifetime_site_setting.php)
+- [2026_11_15_000010_add_customer_session_lifetime_site_setting.php](file://backend/database/migrations/2026_11_15_000010_add_customer_session_lifetime_site_setting.php)
+- [site-settings.blade.php](file://backend/resources/views/admin/partials/site-settings.blade.php)
+- [AdminSessionTimeoutTest.php](file://backend/tests/Feature/AdminSessionTimeoutTest.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive admin session security system documentation including configurable session expiration and idle timeout enforcement
+- Documented separation between admin session behavior and customer API token behavior
+- Added validation constraints for session lifetime values (1-10080 minutes for admin, 0-43200 minutes for customers)
+- Updated Session Management section with new middleware and service architecture
+- Added new diagrams showing the admin session timeout enforcement flow
 
 ## Table of Contents
 1. Introduction
@@ -33,6 +49,8 @@
 ## Introduction
 This document explains the security implementation for SonyaBus, focusing on authentication and authorization with Laravel Sanctum, role-based access control, permission management, input validation, CSRF protection, XSS prevention, SQL injection mitigation, rate limiting, file upload security, path traversal prevention, secure environment variable handling, license verification security, session management, and hardening best practices. It maps these controls to concrete files in the backend so you can trace behavior directly in the codebase.
 
+**Updated** Added comprehensive documentation for the new admin session security system that provides configurable session expiration, idle timeout enforcement, and separation between admin session behavior and customer API token behavior.
+
 ## Project Structure
 The security-relevant parts of the backend are organized around:
 - Configuration for authentication, sessions, CORS, and Sanctum
@@ -40,7 +58,8 @@ The security-relevant parts of the backend are organized around:
 - Admin web routes protected by session-based auth and middleware
 - Middleware enforcing admin, super-admin, menu permissions, and license activation
 - Models for users and licenses
-- Services for license verification
+- Services for license verification and session management
+- New admin session security components for configurable timeouts
 
 ```mermaid
 graph TB
@@ -63,11 +82,15 @@ M1["EnsureUserIsAdmin.php"]
 M2["EnsureUserIsSuperAdmin.php"]
 M3["EnsureUserHasMenuPermission.php"]
 M4["EnsureLicenseIsActivated.php"]
+M5["ApplySessionLifetime.php"]
+M6["EnforceAdminSessionTimeout.php"]
 end
 subgraph "Models & Services"
 U1["Models/User.php"]
 L1["Models/License.php"]
 S1["Services/LicenseService.php"]
+S2["Services/AdminSessionService.php"]
+S3["Services/SiteSettingsService.php"]
 end
 R1 --> K1
 R2 --> K2
@@ -83,6 +106,9 @@ C1 --> R1
 C2 --> K2
 C3 --> K2
 C4 --> R1
+M5 --> S2
+M6 --> S2
+S3 --> S2
 ```
 
 **Diagram sources**
@@ -94,13 +120,16 @@ C4 --> R1
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
-- [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 - [EnsureUserIsAdmin.php:1-41](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L1-L41)
 - [EnsureUserIsSuperAdmin.php:1-38](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L1-L38)
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
+- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
+- [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
+- [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
 
 **Section sources**
 - [sanctum.php:1-88](file://backend/config/sanctum.php#L1-L88)
@@ -119,16 +148,22 @@ C4 --> R1
   - Menu-level permissions enforced through EnsureUserHasMenuPermission middleware.
 - License gating
   - Two-stage gate: installation lock and license activation check via EnsureLicenseIsActivated middleware and LicenseService.
+- **New** Admin Session Security
+  - Configurable session expiration through Site Settings interface.
+  - Idle timeout enforcement for admin sessions only.
+  - Separation between admin session behavior and customer API token behavior.
+  - Validation ensuring values stay within safe bounds (1-10080 minutes for admin, 0-43200 minutes for customers).
 
 Key responsibilities:
 - Sanctum configuration for stateful domains, token prefix, and middleware integration.
 - Session configuration for lifetime, encryption, cookie flags, and SameSite policy.
 - CORS configuration for cross-origin requests between frontend and API.
 - Route-level rate limiting for authentication endpoints.
-- Input validation in controllers using Laravel’s validator rules.
+- Input validation in controllers using Laravel's validator rules.
 - CSRF protection for session-based admin routes.
 - Secure password hashing and reset flows.
 - Domain-limited license verification against Envato APIs.
+- **New** Admin session lifetime configuration and enforcement through dedicated services and middleware.
 
 **Section sources**
 - [sanctum.php:1-88](file://backend/config/sanctum.php#L1-L88)
@@ -146,6 +181,9 @@ Key responsibilities:
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
+- [AdminSessionService.php:1-121](file://backend/app\Services/AdminSessionService.php#L1-L121)
+- [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
+- [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
 
 ## Architecture Overview
 The system enforces security at multiple layers:
@@ -153,14 +191,17 @@ The system enforces security at multiple layers:
 - Controllers validate inputs and perform business logic securely.
 - Models encapsulate domain rules (roles, permissions, license domain limits).
 - Services handle external integrations (Envato license verification) with retries, timeouts, and safe caching.
+- **New** Admin session security middleware enforces exact idle timeouts and configures session lifetimes dynamically.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant Routes as "Routes"
 participant LicenseGate as "EnsureLicenseIsActivated"
+participant SessionConfig as "ApplySessionLifetime"
 participant Auth as "Sanctum / Session"
 participant RBAC as "Role/Permission Middleware"
+participant TimeoutCheck as "EnforceAdminSessionTimeout"
 participant Controller as "Controller"
 participant Service as "LicenseService"
 participant DB as "Database"
@@ -172,10 +213,16 @@ DB-->>Service : Activation flag
 Service-->>LicenseGate : Activated?
 LicenseGate-->>Routes : Allow or block
 alt Allowed
+Routes->>SessionConfig : Configure session lifetimes
+SessionConfig-->>Routes : Apply admin/customer settings
 Routes->>Auth : Authenticate (Sanctum or Session)
 Auth-->>Routes : User context
 Routes->>RBAC : Enforce roles/permissions
 RBAC-->>Routes : Access granted/denied
+alt Admin Session
+Routes->>TimeoutCheck : Check idle timeout
+TimeoutCheck-->>Routes : Valid or expire session
+end
 Routes->>Controller : Handle request
 Controller-->>Client : Response
 else Blocked
@@ -187,6 +234,8 @@ end
 - [api.php:1-77](file://backend/routes/api.php#L1-L77)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
+- [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
+- [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
@@ -306,13 +355,90 @@ EnsureUserHasMenuPermission --> User : "checks hasMenuPermission()"
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
 - [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
 
+### Admin Session Security System
+
+#### Configurable Session Expiration
+The new admin session security system provides site administrators with granular control over session lifetimes through the Site Settings interface. The system separates admin session behavior from customer API token behavior.
+
+**Key Features:**
+- Admin panel idle timeout: 1-10080 minutes (default: 120 minutes)
+- Customer API token lifetime: 0-43200 minutes (default: 1440 minutes, 0 = never expire)
+- Real-time configuration through admin interface
+- Automatic validation and clamping of values within safe bounds
+
+```mermaid
+flowchart TD
+AdminUI["Admin Site Settings UI"] --> Validation["Server-side Validation"]
+Validation --> Storage["Store in site_settings table"]
+Storage --> Service["AdminSessionService"]
+Service --> Middleware["ApplySessionLifetime Middleware"]
+Middleware --> Config["Framework Configuration"]
+Config --> Session["Session Store"]
+Config --> Sanctum["Sanctum Guard"]
+```
+
+**Diagram sources**
+- [site-settings.blade.php:318-339](file://backend/resources/views/admin/partials/site-settings.blade.php#L318-L339)
+- [SiteSettingsService.php:61-107](file://backend/app/Services/SiteSettingsService.php#L61-L107)
+- [AdminSessionService.php:16-121](file://backend/app\Services\AdminSessionService.php#L16-L121)
+- [ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
+
+#### Idle Timeout Enforcement
+The `EnforceAdminSessionTimeout` middleware ensures exact idle timeout enforcement for admin sessions, addressing the non-deterministic nature of Laravel's session garbage collection on low-traffic admin panels.
+
+**Security Mechanisms:**
+- Tracks last activity timestamp in session storage
+- Compares elapsed time against configured lifetime
+- Forces logout and session invalidation when timeout exceeded
+- Provides clear "session expired" messages to users
+- Only applies to admin sessions (not customer API tokens)
+
+```mermaid
+sequenceDiagram
+participant Admin as "Admin User"
+participant Middleware as "EnforceAdminSessionTimeout"
+participant Session as "Session Store"
+participant Auth as "Auth Guard"
+Admin->>Middleware : Request to admin page
+Middleware->>Auth : Check if admin user
+Auth-->>Middleware : Admin user confirmed
+Middleware->>Session : Get last_activity timestamp
+Session-->>Middleware : Last activity time
+Middleware->>Middleware : Calculate elapsed time
+alt Within timeout
+Middleware->>Session : Update last_activity
+Middleware-->>Admin : Continue request
+else Timeout exceeded
+Middleware->>Auth : Logout admin
+Middleware->>Session : Invalidate session
+Middleware-->>Admin : Redirect to login with error
+end
+```
+
+**Diagram sources**
+- [EnforceAdminSessionTimeout.php:27-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L76)
+
+#### Admin vs Customer Session Separation
+The system maintains strict separation between admin session behavior and customer API token behavior:
+
+- **Admin Sessions**: Subject to configurable idle timeout enforcement
+- **Customer API Tokens**: Follow separate lifetime configuration (can be set to never expire)
+- **Admin API Tokens**: Use admin panel policy instead of customer policy
+- **Global Configuration**: Applied before session store and Sanctum guard initialization
+
+**Section sources**
+- [AdminSessionService.php:16-121](file://backend/app\Services\AdminSessionService.php#L16-L121)
+- [ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
+- [EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
+- [SiteSettingsService.php:61-107](file://backend/app/Services/SiteSettingsService.php#L61-L107)
+
 ### Input Validation, CSRF, XSS, and SQL Injection Mitigation
 
 - Input validation
-  - Controllers use Laravel’s request validation rules for all sensitive endpoints (register, login, password updates, forgot/reset password).
+  - Controllers use Laravel's request validation rules for all sensitive endpoints (register, login, password updates, forgot/reset password).
   - Passwords are hashed automatically via model casts.
 - CSRF protection
-  - Admin routes are session-based and protected by Laravel’s default CSRF middleware.
+  - Admin routes are session-based and protected by Laravel's default CSRF middleware.
   - Sanctum config includes ValidateCsrfToken middleware for stateful SPA flows.
 - XSS prevention
   - Blade templates render content safely by default.
@@ -421,13 +547,21 @@ DomainCheck --> Result["buildResult() -> save/cache/env"]
 - Session driver defaults to database.
 - Lifetime, expiration on close, encryption, httpOnly, SameSite, and partitioned cookies are configurable.
 - Admin login/logout performs session regeneration and invalidation for security.
+- **New** Admin session security system provides:
+  - Configurable idle timeout enforcement through `EnforceAdminSessionTimeout` middleware
+  - Dynamic session lifetime configuration via `ApplySessionLifetime` middleware
+  - Separation between admin session behavior and customer API token behavior
+  - Validation ensuring values stay within safe bounds (1-10080 minutes for admin, 0-43200 minutes for customers)
 
 ```mermaid
 stateDiagram-v2
 [*] --> Unauthenticated
 Unauthenticated --> Authenticated : "Login successful"
 Authenticated --> Idle : "Session active"
-Idle --> Authenticated : "Renewal"
+Idle --> Active : "Activity detected"
+Active --> Idle : "Inactivity"
+Idle --> Expired : "Idle timeout exceeded"
+Expired --> Unauthenticated : "Force logout"
 Authenticated --> Unauthenticated : "Logout + invalidate"
 ```
 
@@ -435,11 +569,15 @@ Authenticated --> Unauthenticated : "Logout + invalidate"
 - [session.php:21-50](file://backend/config/session.php#L21-L50)
 - [session.php:172-202](file://backend/config/session.php#L172-L202)
 - [AuthController.php:54-61](file://backend/app/Http/Controllers/Admin/AuthController.php#L54-L61)
+- [EnforceAdminSessionTimeout.php:53-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L53-L76)
 
 **Section sources**
 - [session.php:21-50](file://backend/config/session.php#L21-L50)
 - [session.php:172-202](file://backend/config/session.php#L172-L202)
 - [AuthController.php:54-61](file://backend/app/Http/Controllers/Admin/AuthController.php#L54-L61)
+- [AdminSessionService.php:16-121](file://backend/app\Services\AdminSessionService.php#L16-L121)
+- [ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
+- [EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
 
 ### Security Hardening Best Practices
 - CORS
@@ -467,6 +605,7 @@ Security components interact as follows:
 - Controllers depend on models for user and license operations.
 - LicenseService depends on License model and external Envato APIs.
 - Session and Sanctum configurations influence how authentication state is maintained.
+- **New** Admin session security components depend on SiteSettingsService for configuration and AdminSessionService for lifetime calculations.
 
 ```mermaid
 graph LR
@@ -478,6 +617,9 @@ MW_LIC --> SVC_LIC["LicenseService"]
 SVC_LIC --> MOD_LIC["License"]
 CTRL_AUTH["UserAuthController"] --> MOD_USER["User"]
 CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
+MW_SESSION["ApplySessionLifetime"] --> SVC_SESSION["AdminSessionService"]
+MW_TIMEOUT["EnforceAdminSessionTimeout"] --> SVC_SESSION
+SVC_SETTINGS["SiteSettingsService"] --> SVC_SESSION
 ```
 
 **Diagram sources**
@@ -488,6 +630,10 @@ CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
+- [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
+- [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
+- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
 
 **Section sources**
 - [api.php:1-77](file://backend/routes/api.php#L1-L77)
@@ -497,12 +643,17 @@ CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
+- [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
+- [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
+- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
 
 ## Performance Considerations
 - Rate limiting protects authentication endpoints from brute-force attacks while maintaining responsiveness.
 - LicenseService caches activation status to reduce repeated DB lookups.
 - External API calls in LicenseService use timeouts and retries to avoid hanging requests.
 - Session driver choice impacts performance; database driver is default but Redis may improve throughput.
+- **New** Admin session security system adds minimal overhead through lightweight middleware checks and session storage operations.
 
 [No sources needed since this section provides general guidance]
 
@@ -517,6 +668,11 @@ CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
   - Inspect LicenseService logs for API errors.
   - Verify product ID and domain limits.
   - Check EnsureLicenseIsActivated middleware allowlists.
+- **New** Admin session timeout issues
+  - Verify AdminSessionService configuration values are within valid ranges.
+  - Check that ApplySessionLifetime middleware is registered globally.
+  - Ensure EnforceAdminSessionTimeout middleware is applied to web group.
+  - Validate site settings contain proper session lifetime values.
 
 **Section sources**
 - [sanctum.php:21-26](file://backend/config/sanctum.php#L21-L26)
@@ -526,6 +682,11 @@ CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
 - [LicenseService.php:106-157](file://backend/app\Services\LicenseService.php#L106-L157)
 - [EnsureLicenseIsActivated.php:98-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L98-L169)
+- [AdminSessionService.php:41-81](file://backend/app\Services\AdminSessionService.php#L41-L81)
+- [ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
+- [EnforceAdminSessionTimeout.php:27-47](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L47)
 
 ## Conclusion
-SonyaBus implements a layered security model combining Sanctum-based API authentication, session-based admin authentication, role and permission middleware, robust input validation, CSRF protection, and comprehensive license gating. Configuration files centralize security-critical settings such as CORS, Sanctum, and sessions. The license verification service adds strict validation, domain limits, and safe external API interactions. Following the recommended hardening steps—restrictive CORS, token expiration, security headers, strong password policies, and careful environment management—will further strengthen the application’s security posture.
+SonyaBus implements a layered security model combining Sanctum-based API authentication, session-based admin authentication, role and permission middleware, robust input validation, CSRF protection, and comprehensive license gating. Configuration files centralize security-critical settings such as CORS, Sanctum, and sessions. The license verification service adds strict validation, domain limits, and safe external API interactions. 
+
+**Updated** The new admin session security system provides site administrators with precise control over session lifetimes through an intuitive interface, while maintaining strict separation between admin session behavior and customer API token behavior. The system includes comprehensive validation, exact idle timeout enforcement, and secure configuration management. Following the recommended hardening steps—restrictive CORS, token expiration, security headers, strong password policies, careful environment management, and appropriate admin session timeout configuration—will further strengthen the application's security posture.

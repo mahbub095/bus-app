@@ -47,8 +47,32 @@ class AdminSessionTimeoutTest extends TestCase
 
     private function setTimeout(int $minutes): void
     {
-        SiteSetting::setValue(AdminSessionService::SETTING_KEY, (string) $minutes);
+        $this->setSetting(AdminSessionService::SETTING_KEY, $minutes);
+    }
+
+    private function setSetting(string $key, int $value): void
+    {
+        SiteSetting::setValue($key, (string) $value);
         SiteSetting::clearCache();
+    }
+
+    /**
+     * Laravel resolves auth guards once per app instance; a fresh request in
+     * production rebuilds them, so the tests must do it too.
+     */
+    private function reloadGuards(): void
+    {
+        $this->app['auth']->forgetGuards();
+    }
+
+    private function createCustomer(): User
+    {
+        return User::create([
+            'name' => 'Session Customer',
+            'email' => 'sessioncustomer@test.com',
+            'password' => bcrypt('password123'),
+            'role' => 'user',
+        ]);
     }
 
     /** @return array<string, mixed> */
@@ -92,12 +116,15 @@ class AdminSessionTimeoutTest extends TestCase
     public function test_configured_expiry_reaches_session_and_remember_config(): void
     {
         $this->setTimeout(45);
+        $this->setSetting(AdminSessionService::CUSTOMER_SETTING_KEY, 600);
 
         $this->actingAs($this->superAdmin)->get('/admin')->assertOk();
 
         $this->assertSame(45, config('session.lifetime'));
         // "Remember me" must never outlive the configured policy.
         $this->assertSame(45, config('auth.guards.web.remember'));
+        // The customer API token lifetime follows the other field.
+        $this->assertSame(600, config('sanctum.expiration'));
     }
 
     public function test_admin_is_signed_out_after_idle_timeout(): void
@@ -141,23 +168,79 @@ class AdminSessionTimeoutTest extends TestCase
         $this->get('/admin')->assertOk();
     }
 
-    public function test_customer_api_tokens_are_not_affected(): void
+    public function test_customer_api_tokens_expire_after_the_configured_lifetime(): void
     {
-        $customer = User::create([
-            'name' => 'Session Customer',
+        $this->setSetting(AdminSessionService::CUSTOMER_SETTING_KEY, 30);
+        $this->createCustomer();
+
+        $login = $this->postJson('/api/auth/login', [
             'email' => 'sessioncustomer@test.com',
-            'password' => bcrypt('password123'),
-            'role' => 'user',
+            'password' => 'password123',
         ]);
 
-        $token = $customer->createToken('frontend-api')->plainTextToken;
+        $login->assertOk();
+        $this->assertNotNull($login->json('expires_at'));
+        $this->assertSame(1800, $login->json('expires_in'));
 
-        $this->setTimeout(1);
-        $this->travel(10)->minutes();
+        $token = $login->json('token');
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/auth/me')
-            ->assertOk()
-            ->assertJsonPath('user.email', 'sessioncustomer@test.com');
+            ->assertOk();
+
+        $this->travel(31)->minutes();
+        $this->reloadGuards();
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_customer_tokens_never_expire_when_setting_is_zero(): void
+    {
+        $this->setSetting(AdminSessionService::CUSTOMER_SETTING_KEY, 0);
+        $this->createCustomer();
+
+        $login = $this->postJson('/api/auth/login', [
+            'email' => 'sessioncustomer@test.com',
+            'password' => 'password123',
+        ]);
+
+        $login->assertOk();
+        $this->assertNull($login->json('expires_at'));
+
+        $token = $login->json('token');
+
+        $this->travel(400)->days();
+        $this->reloadGuards();
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/me')
+            ->assertOk();
+    }
+
+    public function test_shortening_the_lifetime_applies_to_existing_tokens(): void
+    {
+        $this->setSetting(AdminSessionService::CUSTOMER_SETTING_KEY, 600);
+        $this->createCustomer();
+
+        $token = $this->postJson('/api/auth/login', [
+            'email' => 'sessioncustomer@test.com',
+            'password' => 'password123',
+        ])->json('token');
+
+        $this->reloadGuards();
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/me')
+            ->assertOk();
+
+        // Admin shortens the lifetime; the already issued token must follow.
+        $this->setSetting(AdminSessionService::CUSTOMER_SETTING_KEY, 1);
+        $this->travel(2)->minutes();
+        $this->reloadGuards();
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/me')
+            ->assertUnauthorized();
     }
 }

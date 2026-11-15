@@ -18,6 +18,7 @@ import BackendOffline from './components/BackendOffline';
 
 const AUTH_TOKEN_KEY = 'sonyabus_auth_token';
 const AUTH_USER_KEY = 'sonyabus_auth_user';
+const AUTH_EXPIRES_KEY = 'sonyabus_auth_expires_at';
 const API_BASE_CACHE_KEY = 'sonyabus_api_base';
 
 /**
@@ -107,6 +108,8 @@ function App() {
   // Auth States
   const [authUser, setAuthUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
+  // ISO timestamp when the admin-configured login lifetime ends (null = never)
+  const [authExpiresAt, setAuthExpiresAt] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState({
@@ -158,18 +161,26 @@ function App() {
     return headers;
   };
 
-  const persistAuth = (user, token) => {
+  const persistAuth = (user, token, expiresAt = null) => {
     setAuthUser(user);
     setAuthToken(token);
+    setAuthExpiresAt(expiresAt);
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
     localStorage.setItem(AUTH_TOKEN_KEY, token);
+    if (expiresAt) {
+      localStorage.setItem(AUTH_EXPIRES_KEY, expiresAt);
+    } else {
+      localStorage.removeItem(AUTH_EXPIRES_KEY);
+    }
   };
 
   const clearAuth = () => {
     setAuthUser(null);
     setAuthToken(null);
+    setAuthExpiresAt(null);
     localStorage.removeItem(AUTH_USER_KEY);
     localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_EXPIRES_KEY);
   };
 
   const openAuthModal = (mode = 'login', returnAction = null) => {
@@ -259,7 +270,7 @@ function App() {
       const data = await res.json();
 
       if (res.ok) {
-        persistAuth(data.user, data.token);
+        persistAuth(data.user, data.token, data.expires_at ?? null);
         showToast(data.message || 'Welcome!', 'success');
         const returnAction = authReturnAction;
         closeAuthModal();
@@ -390,12 +401,21 @@ function App() {
     // Auth restore only happens after apiBase is resolved
     const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
     const savedUser = localStorage.getItem(AUTH_USER_KEY);
+    const savedExpiresAt = localStorage.getItem(AUTH_EXPIRES_KEY);
+    const savedExpiry = savedExpiresAt ? new Date(savedExpiresAt).getTime() : NaN;
+
     if (savedToken && savedUser) {
-      setAuthToken(savedToken);
-      try {
-        setAuthUser(JSON.parse(savedUser));
-      } catch (err) {
+      if (!Number.isNaN(savedExpiry) && savedExpiry <= Date.now()) {
+        // Login lifetime set by the admin has already passed.
         clearAuth();
+      } else {
+        setAuthToken(savedToken);
+        setAuthExpiresAt(savedExpiresAt || null);
+        try {
+          setAuthUser(JSON.parse(savedUser));
+        } catch (err) {
+          clearAuth();
+        }
       }
     }
 
@@ -422,9 +442,47 @@ function App() {
       .then(data => {
         setAuthUser(data.user);
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+
+        // The backend is the source of truth for the login lifetime.
+        const expiresAt = data.expires_at ?? null;
+        setAuthExpiresAt(expiresAt);
+        if (expiresAt) {
+          localStorage.setItem(AUTH_EXPIRES_KEY, expiresAt);
+        } else {
+          localStorage.removeItem(AUTH_EXPIRES_KEY);
+        }
       })
       .catch(() => clearAuth());
   }, [authToken, apiBase]);
+
+  // Sign the customer out when the admin-configured login lifetime ends
+  useEffect(() => {
+    if (!authToken || !authExpiresAt) return undefined;
+
+    const expiresAt = new Date(authExpiresAt).getTime();
+    if (Number.isNaN(expiresAt)) return undefined;
+
+    let timerId = null;
+
+    const scheduleCheck = () => {
+      const remaining = expiresAt - Date.now();
+
+      if (remaining <= 0) {
+        clearAuth();
+        showToast('Your session expired. Please log in again.', 'error');
+        return;
+      }
+
+      // setTimeout caps out near 24.8 days — re-arm for longer lifetimes.
+      timerId = setTimeout(scheduleCheck, Math.min(remaining, 2_147_483_000));
+    };
+
+    scheduleCheck();
+
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [authToken, authExpiresAt]);
 
   // Dynamic document title, favicon, and SEO meta tags
   useEffect(() => {

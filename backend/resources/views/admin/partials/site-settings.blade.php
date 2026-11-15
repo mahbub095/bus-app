@@ -295,21 +295,21 @@
             </div>
         </div>
 
-        {{-- Section 5: Admin Session Security --}}
+        {{-- Section 5: Session Security --}}
         <div class="settings-section">
             <div class="settings-section-header">
                 <span class="settings-section-icon">🔐</span>
                 <div>
-                    <h3 class="settings-section-title">Admin Session Security</h3>
+                    <h3 class="settings-section-title">Session Security</h3>
                     <p class="settings-section-desc">
-                        How long an admin stays signed in without any activity. When the time runs out the dashboard signs out
-                        and asks for the password again. Customer logins on the booking website are not affected.
+                        Control how long the admin dashboard stays signed in, and how long a customer login on the
+                        booking website remains valid. Changing a value affects existing sessions and tokens too.
                     </p>
                 </div>
             </div>
             <div class="settings-fields-grid">
                 <div class="input-group">
-                    <label for="admin_session_lifetime">Session Expiry — Idle Timeout (minutes)</label>
+                    <label for="admin_session_lifetime">Admin Panel — Idle Timeout (minutes)</label>
                     <input type="number" name="admin_session_lifetime" id="admin_session_lifetime" class="coupon-input"
                            value="{{ (int) ($adminSessionMinutes ?? \App\Services\AdminSessionService::DEFAULT_MINUTES) }}"
                            min="{{ \App\Services\AdminSessionService::MIN_MINUTES }}"
@@ -318,8 +318,21 @@
                            required>
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
                         Allowed range: {{ \App\Services\AdminSessionService::MIN_MINUTES }}–{{ \App\Services\AdminSessionService::MAX_MINUTES }} minutes (up to 7 days).
-                        Recommended: 30–120 minutes. This value also caps the “Remember my credentials” cookie, and it is
-                        applied to sessions that are already open.
+                        Recommended: 30–120 minutes. This value also caps the “Remember my credentials” cookie.
+                    </p>
+                </div>
+                <div class="input-group">
+                    <label for="customer_session_lifetime">Customer Login Lifetime (minutes)</label>
+                    <input type="number" name="customer_session_lifetime" id="customer_session_lifetime" class="coupon-input"
+                           value="{{ (int) ($customerSessionMinutes ?? \App\Services\AdminSessionService::DEFAULT_CUSTOMER_MINUTES) }}"
+                           min="{{ \App\Services\AdminSessionService::MIN_CUSTOMER_MINUTES }}"
+                           max="{{ \App\Services\AdminSessionService::MAX_CUSTOMER_MINUTES }}"
+                           step="1"
+                           required>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Allowed range: {{ \App\Services\AdminSessionService::MIN_CUSTOMER_MINUTES }}–{{ \App\Services\AdminSessionService::MAX_CUSTOMER_MINUTES }} minutes (up to 30 days).
+                        Enter <strong>0</strong> to let customer logins never expire. Recommended: 1440 (24 hours).
+                        Customers are signed out on the booking website when the lifetime ends.
                     </p>
                 </div>
             </div>

@@ -1,1 +1,0 @@
-Admin and public-facing controllers plus services for site-wide settings, Envato purchase-code licensing, and SMS/mail/payment gateway configuration.

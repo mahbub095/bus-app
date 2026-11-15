@@ -9,12 +9,16 @@
 - [BaseAdminController.php](file://backend/app/Http/Controllers/Admin/BaseAdminController.php)
 - [AdminDashboardService.php](file://backend/app/Services/AdminDashboardService.php)
 - [AdminDashboardAnalyticsService.php](file://backend/app/Services/AdminDashboardAnalyticsService.php)
+- [AdminSessionService.php](file://backend/app/Services/AdminSessionService.php)
 - [EnsureUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php)
+- [EnforceAdminSessionTimeout.php](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php)
+- [ApplySessionLifetime.php](file://backend/app/Http/Middleware/ApplySessionLifetime.php)
 - [User.php](file://backend/app/Models/User.php)
 - [dashboard-overview.blade.php](file://backend/resources/views/admin/partials/dashboard-overview.blade.php)
 - [dashboard-overview.js](file://backend/resources/js/admin/dashboard-overview.js)
 - [theme-toggle.blade.php](file://backend/resources/views/admin/partials/theme-toggle.blade.php)
 - [site-settings.blade.php](file://backend/resources/views/admin/partials/site-settings.blade.php)
+- [profile.blade.php](file://backend/resources/views/admin/partials/profile.blade.php)
 - [reports.blade.php](file://backend/resources/views/admin/partials/reports.blade.php)
 - [ReportController.php](file://backend/app/Http/Controllers/Admin/ReportController.php)
 - [ExcelExportService.php](file://backend/app/Services/ExcelExportService.php)
@@ -29,11 +33,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated Fleet Coaches management section to document enhanced search functionality by coach registration number
-- Updated Timetables management section to document enhanced search functionality by operator name or coach number
-- Added documentation for JavaScript tab navigation improvements that handle search parameters alongside pagination
-- Updated session configuration documentation to reflect hardcoded values (lifetime: 120 minutes, expire_on_close: false)
-- Enhanced fleet coach and schedule management workflows with search capabilities
+- Enhanced profile page to display current session expiration time with notice directing administrators to relevant settings page
+- Updated DashboardController to inject AdminSessionService and pass session minutes to views
+- Added comprehensive documentation for AdminSessionService functionality and session management
+- Updated Session Configuration section to document dynamic session lifetime management through site settings
+- Enhanced troubleshooting guide with session-related issues and resolutions
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,12 +51,12 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the administrative dashboard built with Laravel Blade templates and JavaScript components. It covers the dashboard overview, analytics charts, filter controls, key metrics display, management modules for buses, routes, schedules, bookings, users, and site settings. It also documents role-based access control, menu permissions, theme customization, reporting capabilities, export functionality, and administrative workflows. Recent enhancements include improved search functionality for fleet coaches and schedules sections, updated session configuration with hardcoded values, and enhanced JavaScript tab navigation that handles search parameters alongside pagination.
+This document explains the administrative dashboard built with Laravel Blade templates and JavaScript components. It covers the dashboard overview, analytics charts, filter controls, key metrics display, management modules for buses, routes, schedules, bookings, users, and site settings. It also documents role-based access control, menu permissions, theme customization, reporting capabilities, export functionality, and administrative workflows. Recent enhancements include improved search functionality for fleet coaches and schedules sections, updated session configuration with dynamic lifetime management through site settings, intelligent JavaScript tab navigation that handles search parameters alongside pagination, and an enhanced profile page that displays current session expiration time with guidance to adjust settings.
 
 ## Project Structure
 The admin panel is a server-rendered Blade application with client-side interactivity:
 - Controllers under `app/Http/Controllers/Admin` render views and delegate data loading to services.
-- Services encapsulate analytics, filtering, and export logic.
+- Services encapsulate analytics, filtering, export logic, and session management.
 - Blade templates compose the layout, sidebar, dashboard tabs, and report pages.
 - JavaScript files enhance the dashboard with Chart.js analytics, theme switching, and enhanced navigation.
 
@@ -64,54 +68,62 @@ Layout --> DashboardView["admin.dashboard.blade.php"]
 DashboardView --> OverviewPartial["partials/dashboard-overview.blade.php"]
 OverviewPartial --> JS["dashboard-overview.js"]
 Controller["DashboardController"] --> Service["AdminDashboardService"]
+Controller --> SessionService["AdminSessionService"]
 Service --> Analytics["AdminDashboardAnalyticsService"]
 ```
 
 **Diagram sources**
 - [layout.blade.php:1-800](file://backend/resources/views/admin/layout.blade.php#L1-L800)
 - [sidebar.blade.php:1-120](file://backend/resources/views/admin/partials/sidebar.blade.php#L1-L120)
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
+- [dashboard.blade.php:1-104](file://backend/resources/views/admin/dashboard.blade.php#L1-L104)
 - [dashboard-overview.blade.php:1-125](file://backend/resources/views/admin/partials/dashboard-overview.blade.php#L1-L125)
 - [dashboard-overview.js:1-276](file://backend/resources/js/admin/dashboard-overview.js#L1-L276)
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
 
 **Section sources**
 - [layout.blade.php:1-800](file://backend/resources/views/admin/layout.blade.php#L1-L800)
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
+- [dashboard.blade.php:1-104](file://backend/resources/views/admin/dashboard.blade.php#L1-L104)
 
 ## Core Components
 - Admin layout and sidebar provide navigation, branding, and permission-gated menu items.
-- Dashboard controller delegates data preparation to services.
+- Dashboard controller delegates data preparation to services and integrates session management.
 - Dashboard service aggregates metrics, paginated lists, and site settings.
 - Analytics service computes period-based metrics and chart datasets.
-- Middleware enforces authentication and menu permissions.
+- **New**: AdminSessionService manages configurable session lifetimes for both admin panel and customer tokens.
+- Middleware enforces authentication, menu permissions, and session timeout policies.
 - User model implements role checks and menu permission evaluation.
 - Dashboard overview partial renders metric cards and Chart.js canvases; JavaScript handles filters and re-renders.
 - Reports index and controller support multiple report types with preview, Excel, and PDF exports.
-- Site settings partial manages identity, footer, maintenance mode, SEO, and integrations.
-- **Enhanced**: Fleet coaches and schedules sections now include advanced search functionality.
-- **Enhanced**: JavaScript tab navigation intelligently handles search parameters alongside pagination.
+- Site settings partial manages identity, footer, maintenance mode, SEO, integrations, and session security.
+- **Enhanced**: Profile page now displays current session expiration time with guidance to adjust settings.
+- Fleet coaches and schedules sections include advanced search functionality.
+- JavaScript tab navigation intelligently handles search parameters alongside pagination.
 
 **Section sources**
 - [BaseAdminController.php:1-15](file://backend/app/Http/Controllers/Admin/BaseAdminController.php#L1-L15)
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
+- [EnforceAdminSessionTimeout.php:1-43](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L43)
+- [ApplySessionLifetime.php:1-40](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L40)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 - [dashboard-overview.blade.php:1-125](file://backend/resources/views/admin/partials/dashboard-overview.blade.php#L1-L125)
 - [dashboard-overview.js:1-276](file://backend/resources/js/admin/dashboard-overview.js#L1-L276)
 - [reports.blade.php:1-127](file://backend/resources/views/admin/partials/reports.blade.php#L1-L127)
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 - [site-settings.blade.php:1-430](file://backend/resources/views/admin/partials/site-settings.blade.php#L1-L430)
+- [profile.blade.php:1-66](file://backend/resources/views/admin/partials/profile.blade.php#L1-L66)
 
 ## Architecture Overview
-The admin dashboard follows a layered architecture:
-- Presentation layer: Blade templates (layout, sidebar, dashboard, reports, site settings).
+The admin dashboard follows a layered architecture with enhanced session management:
+- Presentation layer: Blade templates (layout, sidebar, dashboard, reports, site settings, profile).
 - Controller layer: Admin controllers handle requests and return views or JSON responses.
-- Service layer: Business logic for dashboard analytics, report queries, and exports.
+- Service layer: Business logic for dashboard analytics, report queries, exports, and session management.
 - Data layer: Eloquent models for bookings, buses, routes, schedules, stations, promotions, users, and site settings.
 
 ```mermaid
@@ -119,17 +131,20 @@ sequenceDiagram
 participant Browser as "Browser"
 participant Routes as "Web Routes"
 participant Controller as "DashboardController"
+participant SessionService as "AdminSessionService"
 participant Service as "AdminDashboardService"
 participant Analytics as "AdminDashboardAnalyticsService"
 participant View as "admin.dashboard.blade.php"
 participant JS as "dashboard-overview.js"
 Browser->>Routes : GET /admin
 Routes->>Controller : dashboardView()
+Controller->>SessionService : minutes(), customerSettingMinutes()
+SessionService-->>Controller : {adminSessionMinutes, customerSessionMinutes}
 Controller->>Service : getDashboardData()
 Service->>Analytics : getAnalytics("this_month")
 Analytics-->>Service : {period, metrics, charts}
 Service-->>Controller : {metrics, analytics, ...}
-Controller-->>View : render view with data
+Controller-->>View : render view with session data
 View-->>Browser : HTML + Chart.js setup
 Browser->>JS : initialize charts from initialData
 Browser->>JS : select time period
@@ -139,10 +154,11 @@ JS-->>Browser : update metrics and charts
 ```
 
 **Diagram sources**
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
+- [dashboard.blade.php:1-104](file://backend/resources/views/admin/dashboard.blade.php#L1-L104)
 - [dashboard-overview.blade.php:1-125](file://backend/resources/views/admin/partials/dashboard-overview.blade.php#L1-L125)
 - [dashboard-overview.js:1-276](file://backend/resources/js/admin/dashboard-overview.js#L1-L276)
 
@@ -175,11 +191,69 @@ ApplyAnalytics --> Idle
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
 
 **Section sources**
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
+- [dashboard.blade.php:1-104](file://backend/resources/views/admin/dashboard.blade.php#L1-L104)
 - [dashboard-overview.blade.php:1-125](file://backend/resources/views/admin/partials/dashboard-overview.blade.php#L1-L125)
 - [dashboard-overview.js:1-276](file://backend/resources/js/admin/dashboard-overview.js#L1-L276)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
+
+### Enhanced Profile Page with Session Expiration Display
+The admin profile page has been enhanced to provide transparency about session security:
+- **Session Expiration Notice**: Displays the current session lifetime configured in site settings
+- **Direct Guidance**: Provides clear instructions to navigate to Site Settings → Session Security to modify timeout values
+- **Dynamic Values**: Shows actual configured minutes rather than hardcoded defaults
+- **Contextual Information**: Helps administrators understand why their sessions expire when they do
+
+```mermaid
+flowchart TD
+ProfileLoad["Admin Profile Page Loads"] --> CheckSessionMinutes{"adminSessionMinutes available?"}
+CheckSessionMinutes --> |Yes| DisplayNotice["Display session expiration notice"]
+CheckSessionMinutes --> |No| SkipNotice["Skip notice display"]
+DisplayNotice --> ShowGuidance["Show 'Change under Site Settings → Session Security'"]
+SkipNotice --> FormDisplay["Display password form"]
+ShowGuidance --> FormDisplay
+FormDisplay --> PasswordUpdate["Password update functionality"]
+```
+
+**Diagram sources**
+- [profile.blade.php:8-14](file://backend/resources/views/admin/partials/profile.blade.php#L8-L14)
+- [DashboardController.php:25-32](file://backend/app/Http/Controllers/Admin/DashboardController.php#L25-L32)
+
+**Section sources**
+- [profile.blade.php:1-66](file://backend/resources/views/admin/partials/profile.blade.php#L1-L66)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
+
+### AdminSessionService and Session Management
+The AdminSessionService provides centralized management of session lifetimes:
+- **Configurable Lifetimes**: Reads session settings from database via SiteSetting model
+- **Validation and Clamping**: Ensures values stay within safe bounds (1 minute to 7 days for admin, 0 to 30 days for customers)
+- **Default Fallbacks**: Uses sensible defaults when settings are missing or invalid
+- **Dual Purpose**: Manages both admin panel idle timeouts and customer API token lifetimes
+- **Integration Points**: Used by middleware, controllers, and views throughout the application
+
+```mermaid
+flowchart TD
+Settings["Site Settings Database"] --> ReadValue["Read raw setting value"]
+ReadValue --> Validate["Validate numeric value"]
+Validate --> Clamp["Clamp to allowed range"]
+Clamp --> ReturnMinutes["Return validated minutes"]
+ReturnMinutes --> Middleware["ApplySessionLifetime middleware"]
+ReturnMinutes --> Controller["DashboardController"]
+ReturnMinutes --> Views["Profile & Site Settings views"]
+Middleware --> Config["Update framework config"]
+Controller --> SessionData["Pass to views"]
+Views --> UI["Display session info"]
+```
+
+**Diagram sources**
+- [AdminSessionService.php:41-81](file://backend/app/Services/AdminSessionService.php#L41-L81)
+- [ApplySessionLifetime.php:27-40](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L40)
+- [DashboardController.php:25-32](file://backend/app/Http/Controllers/Admin/DashboardController.php#L25-L32)
+
+**Section sources**
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
+- [ApplySessionLifetime.php:1-40](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L40)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
 
 ### Management Modules
 
@@ -257,7 +331,7 @@ PermissionCheck --> |Yes| AllowAccess["Proceed to controller/view"]
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 - [sidebar.blade.php:1-120](file://backend/resources/views/admin/partials/sidebar.blade.php#L1-L120)
-- [dashboard.blade.php:1-98](file://backend/resources/views/admin/dashboard.blade.php#L1-L98)
+- [dashboard.blade.php:1-104](file://backend/resources/views/admin/dashboard.blade.php#L1-L104)
 
 ### Theme Customization
 Theme customization uses CSS custom properties and a toggle button:
@@ -315,30 +389,36 @@ Response --> |None| JsonResponse["Return JSON preview"]
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 - [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
 
-### Session Configuration
-Session management has been updated with hardcoded configuration values:
-- **Session Lifetime**: Set to 120 minutes (2 hours) for optimal user experience
-- **Session Expiration**: Disabled (`expire_on_close: false`) to maintain sessions across browser closures
-- **Storage Driver**: Database driver configured via environment variables
-- **Security Settings**: HTTP-only cookies enabled, SameSite policy set to 'lax'
+### Dynamic Session Configuration
+Session management has evolved from hardcoded configuration to dynamic, user-configurable settings:
+- **Dynamic Lifetime**: Admin panel session lifetime is now configurable through Site Settings → Session Security
+- **Customer Token Management**: Separate configuration for customer API token lifetimes (0 = never expires)
+- **Validation and Safety**: Built-in validation prevents unsafe values (instant lockout or infinite sessions)
+- **Framework Integration**: Middleware automatically applies configured values to Laravel's session and Sanctum configuration
+- **Real-time Updates**: Changes take effect immediately without requiring application restart
 
 ```mermaid
 flowchart TD
-SessionConfig["Session Configuration"] --> Lifetime["Lifetime: 120 minutes"]
-SessionConfig --> Expiration["Expire on Close: false"]
-SessionConfig --> Driver["Driver: database (env)"]
-SessionConfig --> Security["HTTP Only: true"]
-SessionConfig --> SameSite["SameSite: lax"]
+UserConfig["Admin Configures Session Settings"] --> SaveSettings["Save to SiteSettings table"]
+SaveSettings --> ApplyMiddleware["ApplySessionLifetime middleware"]
+ApplyMiddleware --> UpdateConfig["Update session.lifetime & auth.guards.web.remember"]
+UpdateConfig --> EnforceMiddleware["EnforceAdminSessionTimeout middleware"]
+EnforceMiddleware --> CheckActivity["Check last activity timestamp"]
+CheckActivity --> ExpireIfNeeded{"Exceeded timeout?"}
+ExpireIfNeeded --> |Yes| Logout["Sign out admin user"]
+ExpireIfNeeded --> |No| Continue["Continue normal operation"]
 ```
 
 **Diagram sources**
-- [session.php:39-40](file://backend/config/session.php#L39-L40)
-- [session.php:21](file://backend/config/session.php#L21)
-- [session.php:188](file://backend/config/session.php#L188)
-- [session.php:205](file://backend/config/session.php#L205)
+- [AdminSessionService.php:41-81](file://backend/app/Services/AdminSessionService.php#L41-L81)
+- [ApplySessionLifetime.php:27-40](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L40)
+- [EnforceAdminSessionTimeout.php:27-43](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L43)
 
 **Section sources**
-- [session.php:1-221](file://backend/config/session.php#L1-L221)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
+- [ApplySessionLifetime.php:1-40](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L40)
+- [EnforceAdminSessionTimeout.php:1-43](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L43)
+- [site-settings.blade.php:298-339](file://backend/resources/views/admin/partials/site-settings.blade.php#L298-L339)
 
 ### Enhanced JavaScript Tab Navigation
 The JavaScript tab navigation system has been enhanced to intelligently handle search parameters alongside pagination:
@@ -369,15 +449,17 @@ DefaultTab --> ActiveTab
 
 ## Dependency Analysis
 Key dependencies:
-- DashboardController depends on AdminDashboardService.
+- DashboardController depends on AdminDashboardService and AdminSessionService.
 - AdminDashboardService depends on AdminDashboardAnalyticsService and Eloquent models.
 - ReportController depends on ReportFilterService, ReportDataService, and ExcelExportService.
 - Views depend on Blade partials and Vite-loaded JavaScript modules.
-- **Enhanced**: Fleet coaches and schedules sections depend on enhanced search functionality in their respective Blade templates.
+- **Enhanced**: Profile page depends on AdminSessionService for displaying session expiration information.
+- **Enhanced**: Session management involves multiple middleware components working together.
 
 ```mermaid
 graph LR
 DashboardController --> AdminDashboardService
+DashboardController --> AdminSessionService
 AdminDashboardService --> AdminDashboardAnalyticsService
 AdminDashboardService --> Models["Eloquent Models"]
 ReportController --> ReportFilterService
@@ -386,19 +468,22 @@ ReportController --> ExcelExportService
 Views["Blade Views"] --> JSModules["Vite JS Modules"]
 BusesView["buses.blade.php"] --> BusesJS["buses.js"]
 SchedulesView["schedules.blade.php"] --> LayoutJS["layout.js"]
+ProfileView["profile.blade.php"] --> AdminSessionService
 ```
 
 **Diagram sources**
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [AdminDashboardAnalyticsService.php:1-228](file://backend/app/Services/AdminDashboardAnalyticsService.php#L1-L228)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 - [ExcelExportService.php:1-67](file://backend/app/Services/ExcelExportService.php#L1-L67)
 - [buses.blade.php:459-467](file://backend/resources/views/admin/partials/buses.blade.php#L459-L467)
 - [schedules.blade.php:152](file://backend/resources/views/admin/partials/schedules.blade.php#L152)
+- [profile.blade.php:1-66](file://backend/resources/views/admin/partials/profile.blade.php#L1-L66)
 
 **Section sources**
-- [DashboardController.php:1-18](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L18)
+- [DashboardController.php:1-35](file://backend/app/Http/Controllers/Admin/DashboardController.php#L1-L35)
 - [AdminDashboardService.php:1-82](file://backend/app/Services/AdminDashboardService.php#L1-L82)
 - [ReportController.php:1-648](file://backend/app/Http/Controllers/Admin/ReportController.php#L1-L648)
 
@@ -410,7 +495,8 @@ SchedulesView["schedules.blade.php"] --> LayoutJS["layout.js"]
 - Cache frequently accessed settings and lookup tables where appropriate.
 - Avoid unnecessary eager loading; load only required relationships for each view.
 - **Enhanced**: Search functionality leverages server-side filtering to optimize performance with large datasets.
-- **Enhanced**: Session lifetime of 120 minutes balances security with user convenience.
+- **Enhanced**: Dynamic session configuration eliminates need for application restarts when changing session settings.
+- **Enhanced**: AdminSessionService uses efficient database queries with fallback mechanisms for optimal performance.
 
 [No sources needed since this section provides general guidance]
 
@@ -423,7 +509,10 @@ Common issues and resolutions:
 - Export failures: Validate that headers and rows conform to the expected structure for Excel export and that PDF templates have required data.
 - **Enhanced**: Search not working: Verify that the search parameters (`buses_search`, `schedules_search`) are properly passed in the URL and that the Blade templates are processing them correctly.
 - **Enhanced**: Tab navigation issues: Check that the JavaScript tab resolution logic correctly identifies tabs from both hash and query parameters.
-- **Enhanced**: Session timeout problems: Review the hardcoded session configuration values and ensure they align with deployment requirements.
+- **Enhanced**: Session expiration problems: Review AdminSessionService configuration and ensure site settings are properly saved and retrieved.
+- **Enhanced**: Profile page not showing session info: Verify that DashboardController is passing `adminSessionMinutes` to the view and that the profile partial is included.
+- **Enhanced**: Session timeout too short/long: Check Site Settings → Session Security configuration and verify AdminSessionService validation ranges.
+- **Enhanced**: Customer tokens expiring unexpectedly: Verify customer_session_lifetime setting and check if it's set to 0 for non-expiring tokens.
 
 **Section sources**
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
@@ -433,7 +522,10 @@ Common issues and resolutions:
 - [buses.blade.php:3-29](file://backend/resources/views/admin/partials/buses.blade.php#L3-L29)
 - [schedules.blade.php:3-29](file://backend/resources/views/admin/partials/schedules.blade.php#L3-L29)
 - [layout.js:54-68](file://backend/resources/js/admin/layout.js#L54-L68)
-- [session.php:39-40](file://backend/config/session.php#L39-L40)
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
+- [profile.blade.php:8-14](file://backend/resources/views/admin/partials/profile.blade.php#L8-L14)
+- [DashboardController.php:25-32](file://backend/app/Http/Controllers/Admin/DashboardController.php#L25-L32)
+- [site-settings.blade.php:298-339](file://backend/resources/views/admin/partials/site-settings.blade.php#L298-L339)
 
 ## Conclusion
-The administrative dashboard provides a comprehensive, permission-controlled interface for managing bus operations, analyzing performance, and exporting reports. Its layered architecture separates concerns between presentation, controllers, services, and data models. Role-based access control and menu permissions ensure secure navigation, while theme customization enhances usability. Reporting capabilities offer flexible previews and exports, supporting operational decision-making and compliance needs. Recent enhancements include improved search functionality for fleet coaches and schedules, optimized session configuration, and intelligent JavaScript tab navigation that seamlessly handles search parameters alongside pagination, significantly improving the administrative user experience.
+The administrative dashboard provides a comprehensive, permission-controlled interface for managing bus operations, analyzing performance, and exporting reports. Its layered architecture separates concerns between presentation, controllers, services, and data models. Role-based access control and menu permissions ensure secure navigation, while theme customization enhances usability. Reporting capabilities offer flexible previews and exports, supporting operational decision-making and compliance needs. Recent enhancements include improved search functionality for fleet coaches and schedules, dynamic session configuration through site settings, intelligent JavaScript tab navigation that seamlessly handles search parameters alongside pagination, and an enhanced profile page that displays current session expiration time with guidance to adjust settings. The integration of AdminSessionService provides robust, configurable session management that adapts to organizational security requirements while maintaining optimal user experience. These improvements significantly enhance the administrative user experience by providing greater transparency, flexibility, and control over the dashboard environment.

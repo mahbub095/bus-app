@@ -41,6 +41,12 @@ class SiteSettingsService
                 'enabled' => ($settings['maintenance_mode'] ?? 'false') === 'true',
                 'message' => $settings['maintenance_message'] ?? '',
             ],
+            'session' => [
+                // Minutes until a customer API token expires, null = never.
+                'token_lifetime_minutes' => ($settings['customer_session_lifetime'] ?? null) !== null && (int) $settings['customer_session_lifetime'] === 0
+                    ? null
+                    : (int) ($settings['customer_session_lifetime'] ?? AdminSessionService::DEFAULT_CUSTOMER_MINUTES),
+            ],
             'seo' => [
                 'meta_description' => $settings['seo_meta_description'] ?? '',
                 'meta_keywords' => $settings['seo_meta_keywords'] ?? '',
@@ -69,12 +75,17 @@ class SiteSettingsService
             'seo_og_image' => 'nullable|string|max:500',
             'seo_google_analytics_id' => 'nullable|string|max:100',
             'admin_session_lifetime' => 'nullable|integer|min:'.AdminSessionService::MIN_MINUTES.'|max:'.AdminSessionService::MAX_MINUTES,
+            'customer_session_lifetime' => 'nullable|integer|min:'.AdminSessionService::MIN_CUSTOMER_MINUTES.'|max:'.AdminSessionService::MAX_CUSTOMER_MINUTES,
         ]);
 
         // Keep the previous value when the field is absent from the request.
         $adminSessionLifetime = $request->filled('admin_session_lifetime')
             ? (int) $request->input('admin_session_lifetime')
             : $this->adminSessionService->minutes();
+
+        $customerSessionLifetime = $request->filled('customer_session_lifetime')
+            ? (int) $request->input('customer_session_lifetime')
+            : $this->adminSessionService->customerSettingMinutes();
 
         SiteSetting::setMany([
             'site_title' => $request->input('site_title'),
@@ -91,6 +102,7 @@ class SiteSettingsService
             'seo_og_image' => $request->input('seo_og_image', ''),
             'seo_google_analytics_id' => $request->input('seo_google_analytics_id', ''),
             'admin_session_lifetime' => (string) $adminSessionLifetime,
+            'customer_session_lifetime' => (string) $customerSessionLifetime,
         ]);
     }
 
