@@ -14,6 +14,17 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Menu keys that may be assigned to an Admin account.
+     *
+     * @var list<string>
+     */
+    public const MENU_KEYS = [
+        'coach-services', 'bookings', 'cancel-requests', 'stations',
+        'buses', 'routes', 'schedules', 'promotions', 'users', 'reports',
+        'license', 'site-settings', 'gateways', 'profile',
+    ];
+
     protected $fillable = [
         'name',
         'email',

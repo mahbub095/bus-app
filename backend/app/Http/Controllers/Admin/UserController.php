@@ -15,11 +15,7 @@ class UserController extends BaseAdminController
      */
     private function validMenus(): array
     {
-        return [
-            'coach-services', 'bookings', 'cancel-requests', 'stations',
-            'buses', 'routes', 'schedules', 'promotions', 'users', 'reports',
-            'license', 'site-settings', 'gateways', 'profile',
-        ];
+        return User::MENU_KEYS;
     }
 
     /**

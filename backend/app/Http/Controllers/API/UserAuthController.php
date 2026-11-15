@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\User;
+use App\Services\AdminSessionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -14,6 +15,10 @@ use App\Mail\ResetPasswordCodeMail;
 
 class UserAuthController extends BaseController
 {
+    public function __construct(protected AdminSessionService $adminSessionService)
+    {
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -29,11 +34,13 @@ class UserAuthController extends BaseController
             'role' => 'user',
         ]);
 
-        $token = $user->createToken('frontend-api')->plainTextToken;
+        $token = $this->issueToken($user);
 
         return response()->json([
             'message' => 'Account created successfully.',
-            'token' => $token,
+            'token' => $token['token'],
+            'expires_at' => $token['expires_at'],
+            'expires_in' => $token['expires_in'],
             'user' => $this->formatUser($user),
         ], 201);
     }
@@ -60,11 +67,13 @@ class UserAuthController extends BaseController
         }
 
         $user->tokens()->delete();
-        $token = $user->createToken('frontend-api')->plainTextToken;
+        $token = $this->issueToken($user);
 
         return response()->json([
             'message' => 'Logged in successfully.',
-            'token' => $token,
+            'token' => $token['token'],
+            'expires_at' => $token['expires_at'],
+            'expires_in' => $token['expires_in'],
             'user' => $this->formatUser($user),
         ]);
     }
@@ -82,6 +91,7 @@ class UserAuthController extends BaseController
     {
         return response()->json([
             'user' => $this->formatUser($request->user()),
+            'expires_at' => $this->effectiveTokenExpiry($request->user()),
         ]);
     }
 
@@ -215,5 +225,48 @@ class UserAuthController extends BaseController
             'email' => $user->email,
             'role' => $user->role,
         ];
+    }
+
+    /**
+     * Issue an API token whose lifetime follows the admin-configured
+     * "customer_session_lifetime" setting (0 minutes = never expires).
+     *
+     * @return array{token: string, expires_at: string|null, expires_in: int|null}
+     */
+    protected function issueToken(User $user): array
+    {
+        $expiresAt = $this->adminSessionService->customerTokenExpiresAt();
+
+        $token = $user->createToken('frontend-api', ['*'], $expiresAt);
+
+        return [
+            'token' => $token->plainTextToken,
+            'expires_at' => $expiresAt?->toIso8601String(),
+            'expires_in' => $expiresAt ? $expiresAt->getTimestamp() - now()->getTimestamp() : null,
+        ];
+    }
+
+    /**
+     * The cut-off that actually applies to the current token: the earlier of
+     * its own expires_at and (created_at + the currently configured lifetime),
+     * so shortening the setting also shortens already issued tokens.
+     */
+    protected function effectiveTokenExpiry(User $user): ?string
+    {
+        $token = $user->currentAccessToken();
+
+        if (! $token) {
+            return null;
+        }
+
+        $expiresAt = $token->expires_at;
+        $configuredMinutes = $this->adminSessionService->customerMinutes();
+
+        if ($configuredMinutes !== null && $token->created_at) {
+            $fromSetting = $token->created_at->copy()->addMinutes($configuredMinutes);
+            $expiresAt = $expiresAt ? $expiresAt->min($fromSetting) : $fromSetting;
+        }
+
+        return $expiresAt?->toIso8601String();
     }
 }

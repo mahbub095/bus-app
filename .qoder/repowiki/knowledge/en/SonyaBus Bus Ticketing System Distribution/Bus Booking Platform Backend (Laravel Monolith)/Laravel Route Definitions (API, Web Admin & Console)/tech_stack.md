@@ -1,1 +1,0 @@
-Laravel routing with Sanctum for API authentication, custom `CheckMaintenanceMode` and `menu_permission:` middleware for access control, Blade views served through session-based admin auth, and Laravel's built-in `Inspiring` facade for the default console command.

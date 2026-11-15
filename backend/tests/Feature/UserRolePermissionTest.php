@@ -18,6 +18,9 @@ class UserRolePermissionTest extends TestCase
     {
         parent::setUp();
 
+        // Every admin route in this test sits behind the license gate.
+        $this->activateLicense('user-role-test-license');
+
         $this->superAdmin = User::create([
             'name' => 'Test Super Admin',
             'email' => 'superadmin@test.com',
@@ -175,30 +178,32 @@ class UserRolePermissionTest extends TestCase
     }
 
     /**
-     * Test admin can assign menu permissions to users.
+     * Test a Super Admin can assign menu permissions to an admin account.
+     * Menu permissions only apply to the Admin role, so only a Super Admin
+     * (who may edit admin accounts) can change them.
      */
     public function test_admin_can_assign_menu_permissions(): void
     {
-        $this->admin->menu_permissions = ['users'];
-        $this->admin->save();
-
-        $response = $this->actingAs($this->admin)
-            ->put('/admin/users/' . $this->user->id, [
-                'name' => 'Test Customer',
-                'email' => 'customer@test.com',
-                'menu_permissions' => ['bookings', 'stations']
+        $response = $this->actingAs($this->superAdmin)
+            ->put('/admin/users/' . $this->admin->id, [
+                'name' => 'Test Admin',
+                'email' => 'admin@test.com',
+                'role' => 'admin',
+                'menu_permissions' => ['bookings', 'stations'],
             ]);
 
         $response->assertRedirect();
-        $this->assertEquals(['bookings', 'stations'], $this->user->fresh()->menu_permissions);
+        $response->assertSessionHasNoErrors();
+        $this->assertEquals(['bookings', 'stations'], $this->admin->fresh()->menu_permissions);
     }
 
     /**
-     * Test existing admins/super_admins roles cannot be modified even by super admin.
+     * A Super Admin may re-assign another account's role, but never their own —
+     * demoting yourself is the one way to lock the install out of every menu.
      */
-    public function test_admin_and_super_admin_roles_are_locked(): void
+    public function test_super_admin_can_reassign_roles_but_not_their_own(): void
     {
-        // Super Admin tries to demote another admin
+        // Super Admin demotes another admin to a plain customer.
         $response = $this->actingAs($this->superAdmin)
             ->put('/admin/users/' . $this->admin->id, [
                 'name' => 'Test Admin',
@@ -207,7 +212,20 @@ class UserRolePermissionTest extends TestCase
             ]);
 
         $response->assertRedirect();
-        $this->assertEquals('admin', $this->admin->fresh()->role); // remains admin
+        $response->assertSessionHasNoErrors();
+        $this->assertEquals('user', $this->admin->fresh()->role);
+        $this->assertNull($this->admin->fresh()->menu_permissions); // list no longer applies
+
+        // The Super Admin cannot demote themselves.
+        $response = $this->actingAs($this->superAdmin)
+            ->put('/admin/users/' . $this->superAdmin->id, [
+                'name' => 'Test Super Admin',
+                'email' => 'superadmin@test.com',
+                'role' => 'user',
+            ]);
+
+        $response->assertRedirect();
+        $this->assertEquals('super_admin', $this->superAdmin->fresh()->role);
     }
 
     /**

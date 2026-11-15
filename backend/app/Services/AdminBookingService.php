@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class AdminBookingService
@@ -93,7 +94,11 @@ class AdminBookingService
         });
     }
 
-    public function getBookingLogs(Request $request): array
+    /**
+     * Booking log query with the dashboard filters applied: period / custom
+     * date range plus the PNR & passenger search box.
+     */
+    public function bookingQuery(Request $request): Builder
     {
         $query = Booking::with([
             'schedule.bus',
@@ -108,18 +113,13 @@ class AdminBookingService
 
         $this->applySearch($query, $request);
 
-        $recentBookings = $query
-            ->orderBy('created_at', 'desc')
-            ->limit(100)
-            ->get();
-
-        return [
-            'bookings' => $recentBookings->map(fn ($booking) => $this->formatLogEntry($booking))->values(),
-            'updated_at' => now()->toIso8601String(),
-        ];
+        return $query;
     }
 
-    public function getCancelRequestsLogs(Request $request): array
+    /**
+     * Pending cancellation queue, filtered the same way (by updated_at).
+     */
+    public function cancelRequestsQuery(Request $request): Builder
     {
         $query = Booking::where('status', 'CANCEL_REQUESTED')
             ->with([
@@ -135,7 +135,25 @@ class AdminBookingService
 
         $this->applySearch($query, $request);
 
-        $cancelRequests = $query
+        return $query;
+    }
+
+    public function getBookingLogs(Request $request): array
+    {
+        $recentBookings = $this->bookingQuery($request)
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
+
+        return [
+            'bookings' => $recentBookings->map(fn ($booking) => $this->formatLogEntry($booking))->values(),
+            'updated_at' => now()->toIso8601String(),
+        ];
+    }
+
+    public function getCancelRequestsLogs(Request $request): array
+    {
+        $cancelRequests = $this->cancelRequestsQuery($request)
             ->orderBy('updated_at', 'desc')
             ->limit(100)
             ->get();

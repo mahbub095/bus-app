@@ -24,6 +24,9 @@ class AdminApiControllerTest extends TestCase
     {
         parent::setUp();
 
+        // The admin AJAX endpoints sit behind the license gate.
+        $this->activateLicense('admin-ajax-test-license');
+
         $this->seed();
 
         $this->superAdmin = User::create([

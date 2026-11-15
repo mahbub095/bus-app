@@ -24,8 +24,11 @@ class DashboardController extends BaseAdminController
 
         return view('admin.dashboard', array_merge(
             $this->adminDashboardService->getDashboardData(),
-            // Session & Security panel needs the active value, not a guess.
-            ['adminSessionMinutes' => $this->adminSessionService->minutes()]
+            // Session Security panel needs the active values, not a guess.
+            [
+                'adminSessionMinutes' => $this->adminSessionService->minutes(),
+                'customerSessionMinutes' => $this->adminSessionService->customerSettingMinutes(),
+            ]
         ));
     }
 }

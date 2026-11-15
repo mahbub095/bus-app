@@ -28,6 +28,9 @@ class GatewaySettingsTest extends TestCase
             $this->originalEnvContent = file_get_contents($envPath);
         }
 
+        // The gateway settings routes sit behind the license gate.
+        $this->activateLicense('gateway-settings-test-license');
+
         // Create standard users
         $this->superAdmin = User::create([
             'name' => 'Rowan Rau MD',

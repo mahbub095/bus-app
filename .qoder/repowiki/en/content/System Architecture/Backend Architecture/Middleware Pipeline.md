@@ -9,9 +9,21 @@
 - [app/Http/Middleware/EnsureLicenseIsActivated.php](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php)
 - [app/Http/Middleware/EnsureUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php)
+- [app/Http/Middleware/ApplySessionLifetime.php](file://backend/app/Http/Middleware/ApplySessionLifetime.php)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php)
+- [app/Services/AdminSessionService.php](file://backend/app/Services/AdminSessionService.php)
 - [app/Models/User.php](file://backend/app/Models/User.php)
 - [app/Services/LicenseService.php](file://backend/app/Services/LicenseService.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added documentation for two new admin session security middleware: `ApplySessionLifetime` and `EnforceAdminSessionTimeout`
+- Updated core components table to include the new middleware classes
+- Enhanced architecture overview with session lifetime configuration flow
+- Added detailed analysis of admin session timeout enforcement mechanisms
+- Updated middleware registration section to reflect new global middleware additions
+- Expanded performance considerations to cover session management overhead
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -25,10 +37,10 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the middleware pipeline architecture used by the application to enforce cross-cutting concerns such as installation gating, license verification, maintenance mode, authentication, authorization, and role-based access control. It focuses on:
+This document explains the middleware pipeline architecture used by the application to enforce cross-cutting concerns such as installation gating, license verification, maintenance mode, authentication, authorization, role-based access control, and admin session security. It focuses on:
 
 - How requests flow through the global and route-level middleware stack.
-- The behavior of custom middleware implementations.
+- The behavior of custom middleware implementations including new admin session security features.
 - Middleware registration, execution order, and aliasing.
 - Examples of chaining, response modification, and early termination.
 - Security implications and performance considerations.
@@ -60,7 +72,7 @@ Services --> Database["Database / Cache"]
 - [routes/api.php:18-75](file://backend/routes/api.php#L18-L75)
 
 ## Core Components
-The middleware pipeline consists of four primary custom middleware classes plus supporting models and services:
+The middleware pipeline consists of six primary custom middleware classes plus supporting models and services:
 
 | Component | Responsibility | Key Behavior |
 |---|---|---|
@@ -68,14 +80,22 @@ The middleware pipeline consists of four primary custom middleware classes plus 
 | `CheckMaintenanceMode` | Maintenance mode enforcement | Returns 503 JSON when maintenance is enabled, with configurable message; excludes site settings. |
 | `EnsureUserIsAdmin` | Admin authorization | Requires authenticated admin user; returns 401/403 for API, redirects for web. |
 | `EnsureUserIsSuperAdmin` | Super-admin authorization | Requires super-admin role; returns 401/403 for API, redirects for web. |
+| `ApplySessionLifetime` | Session lifetime configuration | Configures session and token lifetimes from admin settings before session store initialization. |
+| `EnforceAdminSessionTimeout` | Exact idle timeout enforcement | Signs out admins after configured idle period with automatic sign-out functionality. |
 | `User` model | Role checks | Provides `isAdmin()` and `isSuperAdmin()` helpers. |
 | `LicenseService` | License verification | Validates purchase codes, enforces domain limits, caches activation state. |
+| `AdminSessionService` | Session policy management | Resolves admin and customer session lifetimes from site settings with validation and defaults. |
+
+**Updated** Added two new middleware classes for admin session security and their supporting service.
 
 **Section sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:10-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L10-L167)
 - [app/Http/Middleware/CheckMaintenanceMode.php:10-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L10-L47)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:10-39](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L10-L39)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:10-36](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L10-L36)
+- [app/Http/Middleware/ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
+- [app/Services/AdminSessionService.php:8-121](file://backend/app/Services/AdminSessionService.php#L8-L121)
 - [app/Models/User.php:44-52](file://backend/app/Models/User.php#L44-L52)
 - [app/Services/LicenseService.php:175-194](file://backend/app/Services/LicenseService.php#L175-L194)
 
@@ -90,6 +110,8 @@ sequenceDiagram
 participant Client as "Client"
 participant Bootstrap as "Bootstrap App"
 participant LicenseMW as "EnsureLicenseIsActivated"
+participant SessionMW as "ApplySessionLifetime"
+participant TimeoutMW as "EnforceAdminSessionTimeout"
 participant RouteGroup as "Route Group Middleware"
 participant Controller as "Controller"
 Client->>Bootstrap : HTTP Request
@@ -98,21 +120,28 @@ LicenseMW->>LicenseMW : Check installed + licensed
 alt Uninstalled or unlicensed
 LicenseMW-->>Client : 403 JSON or redirect
 else Allowed
-LicenseMW->>RouteGroup : Next
+LicenseMW->>SessionMW : Next
+SessionMW->>SessionMW : Configure session/token lifetimes
+SessionMW->>TimeoutMW : Next (web group only)
+TimeoutMW->>TimeoutMW : Check admin idle timeout
+TimeoutMW->>RouteGroup : Next
 RouteGroup->>Controller : Invoke controller
 Controller-->>Client : Response
 end
 ```
 
 **Diagram sources**
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [bootstrap/app.php:19-28](file://backend/bootstrap/app.php#L19-L28)
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:86-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L86-L167)
+- [app/Http/Middleware/ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:27-48](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L48)
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 - [routes/api.php:26-75](file://backend/routes/api.php#L26-L75)
 
 ### Execution Order Summary
-- Global middleware runs first: `EnsureLicenseIsActivated`.
-- Route group middleware runs next:
+- Global middleware runs first: `EnsureLicenseIsActivated`, then `ApplySessionLifetime`.
+- Web group middleware runs next: `EnforceAdminSessionTimeout` (exact idle timeout).
+- Route group middleware runs last:
   - Web routes: `auth`, then `admin` or `super_admin`.
   - API routes: `auth:sanctum`, then `CheckMaintenanceMode`.
 
@@ -123,23 +152,25 @@ Global --> InstallCheck{"Installed?"}
 InstallCheck --> |No| RedirectInstall["Redirect or 403 JSON"]
 InstallCheck --> |Yes| LicenseCheck{"Licensed?"}
 LicenseCheck --> |No| RedirectInstall
-LicenseCheck --> |Yes| RouteGroup["Route Group Middleware"]
-RouteGroup --> WebOrApi{"Web or API?"}
-WebOrApi --> |Web| AuthMiddleware["Auth + Admin/SuperAdmin"]
+LicenseCheck --> |Yes| SessionConfig["ApplySessionLifetime<br/>Configure lifetimes"]
+SessionConfig --> WebOrApi{"Web or API?"}
+WebOrApi --> |Web| TimeoutCheck["EnforceAdminSessionTimeout<br/>Check idle timeout"]
 WebOrApi --> |API| SanctumMW["Sanctum Auth"]
+TimeoutCheck --> RouteGroup["Route Group Middleware"]
 SanctumMW --> MaintenanceMW["CheckMaintenanceMode"]
+RouteGroup --> AuthMiddleware["Auth + Admin/SuperAdmin"]
 AuthMiddleware --> Controller["Controller Handler"]
 MaintenanceMW --> Controller
 Controller --> End(["Response Sent"])
 ```
 
 **Diagram sources**
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [bootstrap/app.php:19-28](file://backend/bootstrap/app.php#L19-L28)
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 - [routes/api.php:26-75](file://backend/routes/api.php#L26-L75)
 
 **Section sources**
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [bootstrap/app.php:19-28](file://backend/bootstrap/app.php#L19-L28)
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 - [routes/api.php:26-75](file://backend/routes/api.php#L26-L75)
 
@@ -181,6 +212,75 @@ Licensed --> |Yes| Next
 **Section sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:10-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L10-L167)
 - [app/Services/LicenseService.php:175-194](file://backend/app/Services/LicenseService.php#L175-L194)
+
+### ApplySessionLifetime
+This middleware configures session and token lifetimes based on admin settings before the session store initializes:
+
+- Reads admin session lifetime from `AdminSessionService`.
+- Detects admin API requests (`api/admin/*`) vs customer API requests.
+- Updates framework configuration for session lifetime, remember cookie duration, and Sanctum token expiration.
+- Runs globally before session store initialization to ensure proper timing.
+
+Key behaviors:
+- Sets `session.lifetime` and `auth.guards.web.remember` to admin session minutes.
+- For admin API routes, sets `sanctum.expiration` to admin session minutes.
+- For customer API routes, sets `sanctum.expiration` to customer session minutes (or null for never-expiring tokens).
+- Prevents "remember me" cookies from outliving the configured policy.
+
+```mermaid
+flowchart TD
+Start(["Handle(Request)"]) --> GetMinutes["Get Admin Minutes"]
+GetMinutes --> IsAdminAPI{"Is api/admin/*?"}
+IsAdminAPI --> |Yes| SetAdminConfig["Set sanctum.expiration = admin minutes"]
+IsAdminAPI --> |No| SetCustomerConfig["Set sanctum.expiration = customer minutes"]
+SetAdminConfig --> SetAllConfig["Update session.lifetime & remember duration"]
+SetCustomerConfig --> SetAllConfig
+SetAllConfig --> Next["Next Middleware"]
+```
+
+**Diagram sources**
+- [app/Http/Middleware/ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
+
+**Section sources**
+- [app/Http/Middleware/ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
+- [app/Services/AdminSessionService.php:41-81](file://backend/app/Services/AdminSessionService.php#L41-L81)
+
+### EnforceAdminSessionTimeout
+This middleware enforces exact idle timeout for admin sessions with automatic sign-out functionality:
+
+- Only applies to authenticated admin users (not customers or guests).
+- Tracks last activity timestamp in session using `admin_last_activity` key.
+- Compares current time against configured idle timeout.
+- Automatically signs out expired sessions and redirects to login.
+
+Key behaviors:
+- Uses `AdminSessionService` to get configured timeout in minutes.
+- Stores last activity timestamp on each successful request.
+- On timeout: logs out user, invalidates session, regenerates CSRF token.
+- Returns appropriate responses for both web and API requests.
+- Provides clear "session expired" messaging to users.
+
+```mermaid
+flowchart TD
+Start(["Handle(Request)"]) --> CheckUser{"Authenticated Admin?"}
+CheckUser --> |No| Next["Next Middleware"]
+CheckUser --> |Yes| GetLifetime["Get Lifetime (minutes * 60)"]
+GetLifetime --> GetLastActivity["Get Last Activity Timestamp"]
+GetLastActivity --> HasActivity{"Has Previous Activity?"}
+HasActivity --> |No| UpdateActivity["Update Last Activity"]
+HasActivity --> |Yes| CheckTimeout{"Exceeded Timeout?"}
+CheckTimeout --> |No| UpdateActivity
+CheckTimeout --> |Yes| ExpireSession["Expire Session & Redirect"]
+UpdateActivity --> Next
+ExpireSession --> End(["Response Sent"])
+```
+
+**Diagram sources**
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:27-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L76)
+
+**Section sources**
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
+- [app/Services/AdminSessionService.php:41-57](file://backend/app/Services/AdminSessionService.php#L41-L57)
 
 ### CheckMaintenanceMode
 This middleware enforces maintenance mode using database-backed site settings:
@@ -262,34 +362,46 @@ SuperAdmin --> |Yes| Next["Next Middleware"]
 ### Middleware Registration and Aliasing
 Registration occurs in the bootstrap configuration:
 
-- Global middleware: `EnsureLicenseIsActivated` is appended to run on every request.
+- Global middleware: `EnsureLicenseIsActivated` and `ApplySessionLifetime` are appended to run on every request.
+- Web group middleware: `EnforceAdminSessionTimeout` is added to the 'web' group for exact idle timeout enforcement.
 - Aliases:
   - `admin` maps to `EnsureUserIsAdmin`.
   - `super_admin` maps to `EnsureUserIsSuperAdmin`.
   - `menu_permission` maps to `EnsureUserHasMenuPermission`.
+  - `api_admin` maps to `EnsureApiUserIsAdmin`.
+  - `api_menu` maps to `EnsureApiUserHasMenuPermission`.
 
 ```mermaid
 classDiagram
 class BootstrapApp {
 +withMiddleware(callback)
 +append(middleware)
++appendToGroup(group, middleware)
 +alias(name, middleware)
 }
 class EnsureLicenseIsActivated
+class ApplySessionLifetime
+class EnforceAdminSessionTimeout
 class EnsureUserIsAdmin
 class EnsureUserIsSuperAdmin
 class EnsureUserHasMenuPermission
+class EnsureApiUserIsAdmin
+class EnsureApiUserHasMenuPermission
 BootstrapApp --> EnsureLicenseIsActivated : "append()"
+BootstrapApp --> ApplySessionLifetime : "append()"
+BootstrapApp --> EnforceAdminSessionTimeout : "appendToGroup('web')"
 BootstrapApp --> EnsureUserIsAdmin : "alias('admin')"
 BootstrapApp --> EnsureUserIsSuperAdmin : "alias('super_admin')"
 BootstrapApp --> EnsureUserHasMenuPermission : "alias('menu_permission')"
+BootstrapApp --> EnsureApiUserIsAdmin : "alias('api_admin')"
+BootstrapApp --> EnsureApiUserHasMenuPermission : "alias('api_menu')"
 ```
 
 **Diagram sources**
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [bootstrap/app.php:19-37](file://backend/bootstrap/app.php#L19-L37)
 
 **Section sources**
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [bootstrap/app.php:19-37](file://backend/bootstrap/app.php#L19-L37)
 
 ### Middleware Chaining Examples
 
@@ -358,7 +470,11 @@ EnsureLicenseIsActivated["EnsureLicenseIsActivated"] --> LicenseService["License
 EnsureUserIsAdmin["EnsureUserIsAdmin"] --> User["User Model"]
 EnsureUserIsSuperAdmin["EnsureUserIsSuperAdmin"] --> User
 CheckMaintenanceMode["CheckMaintenanceMode"] --> SiteSetting["Site Setting Access"]
+ApplySessionLifetime["ApplySessionLifetime"] --> AdminSessionService["AdminSessionService"]
+EnforceAdminSessionTimeout["EnforceAdminSessionTimeout"] --> AdminSessionService
 BootstrapApp["Bootstrap App"] --> EnsureLicenseIsActivated
+BootstrapApp --> ApplySessionLifetime
+BootstrapApp --> EnforceAdminSessionTimeout
 BootstrapApp --> EnsureUserIsAdmin
 BootstrapApp --> EnsureUserIsSuperAdmin
 RoutesWeb["Web Routes"] --> EnsureUserIsAdmin
@@ -371,7 +487,9 @@ RoutesApi["API Routes"] --> CheckMaintenanceMode
 - [app/Http/Middleware/EnsureUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L5-L8)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L5-L8)
 - [app/Http/Middleware/CheckMaintenanceMode.php:5-8](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L5-L8)
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [app/Http/Middleware/ApplySessionLifetime.php:5-25](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L5-L25)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:5-25](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L5-L25)
+- [bootstrap/app.php:19-37](file://backend/bootstrap/app.php#L19-L37)
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 - [routes/api.php:26-75](file://backend/routes/api.php#L26-L75)
 
@@ -380,12 +498,16 @@ RoutesApi["API Routes"] --> CheckMaintenanceMode
 - [app/Http/Middleware/EnsureUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L5-L8)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L5-L8)
 - [app/Http/Middleware/CheckMaintenanceMode.php:5-8](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L5-L8)
-- [bootstrap/app.php:19-27](file://backend/bootstrap/app.php#L19-L27)
+- [app/Http/Middleware/ApplySessionLifetime.php:5-25](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L5-L25)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:5-25](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L5-L25)
+- [bootstrap/app.php:19-37](file://backend/bootstrap/app.php#L19-L37)
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 - [routes/api.php:26-75](file://backend/routes/api.php#L26-L75)
 
 ## Performance Considerations
 - Global middleware adds overhead to every request. `EnsureLicenseIsActivated` performs path matching and may call `LicenseService::isActivated()`, which uses cache and database checks.
+- `ApplySessionLifetime` runs on every request to configure session and token lifetimes, but this is lightweight configuration-only logic.
+- `EnforceAdminSessionTimeout` runs on every web request for admin sessions, performing session read/write operations to track activity timestamps.
 - Maintenance mode checks read from site settings on every request within the affected route groups.
 - Authentication middleware (`auth`, `auth:sanctum`) incurs session or token validation costs.
 - To optimize:
@@ -393,8 +515,9 @@ RoutesApi["API Routes"] --> CheckMaintenanceMode
   - Use caching where appropriate (e.g., license activation state).
   - Exclude non-critical routes from expensive middleware.
   - Monitor request latency and adjust middleware order to fail fast on denied requests.
+  - The new session middleware are designed to be efficient, with `ApplySessionLifetime` doing only configuration updates and `EnforceAdminSessionTimeout` performing minimal session operations.
 
-[No sources needed since this section provides general guidance]
+**Updated** Added performance considerations for the new session security middleware.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -404,14 +527,22 @@ Common issues and resolutions:
 - **Maintenance Mode Active**: API responses return 503 JSON with a maintenance message. Update site settings to disable maintenance mode.
 - **Unauthorized Admin Access**: Admin-only routes return 401/403 for API or redirect for web. Ensure the user has the correct role.
 - **Super-Admin Access Denied**: Sensitive routes require super-admin role. Verify user role and permissions.
+- **Admin Session Expires Unexpectedly**: Check admin session lifetime settings in Site Settings → Session Security. Verify the configured timeout value is within acceptable ranges (1 minute to 7 days).
+- **Customer API Tokens Expire**: Review customer session lifetime settings. A value of 0 means tokens never expire, while values above 0 set expiration in minutes (max 30 days).
+- **Session Configuration Not Applied**: Ensure `ApplySessionLifetime` middleware runs before session store initialization. Check that admin session settings are properly saved in the database.
+
+**Updated** Added troubleshooting guidance for the new admin session security features.
 
 **Section sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:98-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L98-L167)
 - [app/Http/Middleware/CheckMaintenanceMode.php:32-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L32-L47)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:14-39](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L14-L39)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:14-36](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L14-L36)
+- [app/Http/Middleware/ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
+- [app/Http/Middleware/EnforceAdminSessionTimeout.php:27-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L76)
+- [app/Services/AdminSessionService.php:30-36](file://backend/app/Services/AdminSessionService.php#L30-L36)
 
 ## Conclusion
-The middleware pipeline provides a robust foundation for enforcing security, licensing, and operational constraints. By combining global and route-level middleware, the application ensures consistent behavior across web and API endpoints. Custom middleware implementations handle authentication, authorization, maintenance mode, and license verification, while route groups enable fine-grained control over middleware chains. Proper registration, execution order, and thoughtful design of middleware logic contribute to both security and performance.
+The middleware pipeline provides a robust foundation for enforcing security, licensing, operational constraints, and admin session security. By combining global and route-level middleware, the application ensures consistent behavior across web and API endpoints. Custom middleware implementations handle authentication, authorization, maintenance mode, license verification, and comprehensive session management, while route groups enable fine-grained control over middleware chains. The addition of `ApplySessionLifetime` and `EnforceAdminSessionTimeout` provides administrators with precise control over session security policies, ensuring both flexibility and security for administrative access. Proper registration, execution order, and thoughtful design of middleware logic contribute to both security and performance.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** Enhanced conclusion to reflect the new admin session security capabilities.

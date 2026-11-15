@@ -20,9 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // License guard runs on every web & API request except /install/*
         $middleware->append(\App\Http\Middleware\EnsureLicenseIsActivated::class);
 
-        // Session expiry configured in admin → must land in the framework
-        // config before the session store boots, hence a global middleware.
-        $middleware->append(\App\Http\Middleware\ApplyAdminSessionLifetime::class);
+        // Session / token lifetimes configured in admin → must land in the
+        // framework config before the session store and Sanctum guard boot.
+        $middleware->append(\App\Http\Middleware\ApplySessionLifetime::class);
 
         // Exact idle timeout for the admin panel (runs after StartSession).
         $middleware->appendToGroup('web', \App\Http\Middleware\EnforceAdminSessionTimeout::class);
@@ -31,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'           => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'super_admin'     => \App\Http\Middleware\EnsureUserIsSuperAdmin::class,
             'menu_permission' => \App\Http\Middleware\EnsureUserHasMenuPermission::class,
+            // Token-based counterparts used by routes/api.php (admin API).
+            'api_admin'       => \App\Http\Middleware\EnsureApiUserIsAdmin::class,
+            'api_menu'        => \App\Http\Middleware\EnsureApiUserHasMenuPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -38,6 +38,10 @@ class BookingFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // The admin CRUD routes exercised below sit behind the license gate.
+        $this->activateLicense('booking-flow-test-license');
+
         $this->seed();
 
         $this->customer = User::create([

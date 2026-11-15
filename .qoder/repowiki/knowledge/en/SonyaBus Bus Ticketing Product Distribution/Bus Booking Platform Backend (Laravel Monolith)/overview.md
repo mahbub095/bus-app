@@ -1,0 +1,1 @@
+Monolithic Laravel 11 application that wires customer booking API, admin Blade dashboard, and installation wizard around shared Eloquent models and service-layer domain classes.

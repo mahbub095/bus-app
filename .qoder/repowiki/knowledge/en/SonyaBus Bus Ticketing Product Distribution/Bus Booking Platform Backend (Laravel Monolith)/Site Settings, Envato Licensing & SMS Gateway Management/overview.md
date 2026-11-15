@@ -1,0 +1,1 @@
+Admin and public controllers plus services for site-wide key/value settings, Envato purchase-code licensing, and SMS/mail/payment gateway configuration.
