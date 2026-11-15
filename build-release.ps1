@@ -69,7 +69,11 @@ $backendExclude = @(
     "storage\framework\cache",
     "storage\framework\sessions",
     "storage\framework\views",
-    "bootstrap\cache\*.php"
+    "storage\framework\installed",
+    "storage\framework\install-status.json",
+    "storage\framework\install-finalize-status.json",
+    "storage\framework\demo-seed-status.json",
+    "bootstrap\cache"
 )
 Copy-Excluding -Source $backendSrc -Destination $backendDest -Exclude $backendExclude
 

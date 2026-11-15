@@ -109,6 +109,47 @@
             flex: 1;
         }
 
+        /* Sidebar compact brand (visible on mobile / always present) */
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px 16px;
+            margin-bottom: 4px;
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-primary);
+            min-height: 58px;
+        }
+
+        .sidebar-brand-text {
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-brand-img {
+            max-height: 34px;
+            max-width: 130px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        @media (min-width: 901px) {
+            /* On desktop the top navbar already has the logo — hide the sidebar brand */
+            .sidebar-brand {
+                display: none;
+            }
+        }
+
         .admin-main {
             flex: 1;
             min-width: 0;
@@ -197,6 +238,14 @@
             font-weight: 800;
             font-size: 20px;
             box-shadow: var(--shadow-neon);
+        }
+
+        .admin-logo-img {
+            max-height: 40px;
+            max-width: 160px;
+            width: auto;
+            object-fit: contain;
+            display: block;
         }
 
         .external-link-btn {
@@ -1726,8 +1775,17 @@
     <header class="app-header">
         <div class="container navbar">
             <a href="/admin" class="logo">
-                <div class="logo-icon">S</div>
-                Sonya<span class="logo-accent">Bus</span> Admin
+                @if(!empty($siteSettings['logo_url'] ?? null))
+                    <img src="{{ $siteSettings['logo_url'] }}"
+                         alt="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
+                         class="admin-logo-img">
+                @elseif(!empty($siteSettings['logo_text'] ?? null))
+                    <div class="logo-icon">{{ strtoupper(substr($siteSettings['logo_text'], 0, 1)) }}</div>
+                    {{ $siteSettings['logo_text'] }} Admin
+                @else
+                    <div class="logo-icon">S</div>
+                    Sonya<span class="logo-accent">Bus</span> Admin
+                @endif
             </a>
             
             <div style="display: flex; align-items: center; gap: 15px;">

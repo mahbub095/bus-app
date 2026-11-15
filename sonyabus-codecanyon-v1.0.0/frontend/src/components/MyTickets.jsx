@@ -11,6 +11,9 @@ export default function MyTickets({
 }) {
   const [cancelBookings, setCancelBookings] = useState([]);
   const [isSearchingCancel, setIsSearchingCancel] = useState(false);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+
+  const PER_PAGE = 10;
 
   // Formatting date strings helpers
   const formatTime = (isoString) => {
@@ -77,6 +80,17 @@ export default function MyTickets({
         `Total Fare: BDT ${Number(booking.total_fare || 0).toLocaleString()}`
       ];
 
+      // Stamp the coach logo in the top-right corner when the API provides one
+      const logoUrl = booking.schedule?.bus?.logo_url;
+      if (logoUrl && logoUrl.startsWith('data:image/')) {
+        try {
+          const subtype = logoUrl.slice(5, logoUrl.indexOf(';')).split('/')[1].toUpperCase();
+          doc.addImage(logoUrl, subtype === 'JPG' ? 'JPEG' : subtype, 158, 10, 34, 16);
+        } catch (err) {
+          // Logo is optional - ignore unsupported formats such as SVG
+        }
+      }
+
       doc.setFontSize(14);
       doc.text(lines[0], 14, 18);
       doc.setFontSize(11);
@@ -97,12 +111,12 @@ export default function MyTickets({
     return headers;
   };
 
-  const fetchMyBookings = async () => {
+  const fetchMyBookings = async (targetPage = 1) => {
     if (!authToken) return;
 
     setIsSearchingCancel(true);
     try {
-      const res = await fetch(`${API_BASE}/bookings/mine`, {
+      const res = await fetch(`${API_BASE}/bookings/mine?page=${targetPage}&per_page=${PER_PAGE}`, {
         headers: authHeaders()
       });
       if (res.status === 401) {
@@ -112,7 +126,15 @@ export default function MyTickets({
       }
       if (res.ok) {
         const data = await res.json();
-        setCancelBookings(data);
+        // API returns a paginated payload; keep a plain-array fallback for older backends
+        const rows = Array.isArray(data) ? data : data.data || [];
+        const current = Array.isArray(data) ? 1 : data.current_page || targetPage;
+        setCancelBookings(rows);
+        setPagination({
+          current_page: current,
+          last_page: Array.isArray(data) ? 1 : data.last_page || 1,
+          total: Array.isArray(data) ? rows.length : data.total ?? rows.length
+        });
       } else {
         showToast('Failed to load your tickets.', 'error');
       }
@@ -121,6 +143,11 @@ export default function MyTickets({
     } finally {
       setIsSearchingCancel(false);
     }
+  };
+
+  const goToPage = (targetPage) => {
+    if (targetPage < 1 || targetPage > pagination.last_page) return;
+    fetchMyBookings(targetPage);
   };
 
   const handleCancelBooking = async (bookingId) => {
@@ -161,7 +188,7 @@ export default function MyTickets({
 
   useEffect(() => {
     if (authToken) {
-      fetchMyBookings();
+      fetchMyBookings(1);
     }
   }, [authToken]);
 
@@ -199,10 +226,11 @@ export default function MyTickets({
             >
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Signed in as <strong style={{ color: 'var(--text-primary)' }}>{authUser.email}</strong>
+                {pagination.total > 0 && <span> · {pagination.total} ticket(s)</span>}
               </span>
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={fetchMyBookings}
+                onClick={() => fetchMyBookings(pagination.current_page)}
                 disabled={isSearchingCancel}
               >
                 {isSearchingCancel ? 'Refreshing...' : 'Refresh My Tickets'}
@@ -262,6 +290,13 @@ export default function MyTickets({
                       </div>
                       <div>
                         Bus Name:{' '}
+                        {b.schedule?.bus?.logo_url && (
+                          <img
+                            src={b.schedule.bus.logo_url}
+                            alt={b.schedule?.bus?.operator_name || 'Coach logo'}
+                            style={{ height: '22px', maxWidth: '56px', objectFit: 'contain', verticalAlign: 'middle', marginRight: '6px' }}
+                          />
+                        )}
                         <strong style={{ color: 'var(--text-primary)' }}>
                           {b.schedule?.bus?.operator_name || 'N/A'}
                         </strong>
@@ -358,6 +393,36 @@ export default function MyTickets({
                   }}
                 >
                   You have no ticket bookings yet. Book a ticket from the home page while logged in.
+                </div>
+              )}
+
+              {!isSearchingCancel && pagination.last_page > 1 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginTop: '16px'
+                  }}
+                >
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => goToPage(pagination.current_page - 1)}
+                    disabled={pagination.current_page <= 1}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    Page {pagination.current_page} of {pagination.last_page}
+                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => goToPage(pagination.current_page + 1)}
+                    disabled={pagination.current_page >= pagination.last_page}
+                  >
+                    Next
+                  </button>
                 </div>
               )}
             </div>

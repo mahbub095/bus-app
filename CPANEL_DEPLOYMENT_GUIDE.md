@@ -274,6 +274,9 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# NOTE: after uploading code changes later, run `php artisan optimize:clear`
+# first, then repeat the three cache commands above.
+
 # Public storage link (if you use uploaded files / favicon)
 php artisan storage:link
 ```
@@ -460,6 +463,11 @@ Should return JSON.
 
 ```bash
 cd ~/backend
+
+# Clear stale caches BEFORE re-caching. A cached routes-v7.php from an older
+# release makes every renamed/new route throw RouteNotFoundException.
+php artisan optimize:clear
+
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache

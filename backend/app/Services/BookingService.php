@@ -265,9 +265,11 @@ class BookingService
                 'departure_time' => $schedule->departure_time->toIso8601String(),
                 'arrival_time' => $schedule->arrival_time->toIso8601String(),
                 'bus' => [
+                    'id' => $schedule->bus->id,
                     'operator_name' => $schedule->bus->operator_name,
                     'coach_number' => $schedule->bus->coach_number,
                     'coach_type' => $schedule->bus->coach_type,
+                    'logo_url' => $schedule->bus->logo_url,
                 ],
                 'route' => [
                     'from' => $schedule->route->departureStation->name,

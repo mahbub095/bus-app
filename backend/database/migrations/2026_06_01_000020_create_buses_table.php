@@ -19,6 +19,8 @@ return new class extends Migration
             $table->integer('total_seats')->default(36);
             $table->string('seat_layout')->default('2+2');
             $table->longText('seat_layout_grid')->nullable();
+            // Base64 data URL of the operator logo
+            $table->longText('logo_url')->nullable();
             $table->timestamps();
 
             // Indexes

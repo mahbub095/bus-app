@@ -9,7 +9,7 @@ class Bus extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['operator_name', 'coach_number', 'coach_type', 'total_seats', 'seat_layout', 'seat_layout_grid'];
+    protected $fillable = ['operator_name', 'coach_number', 'coach_type', 'total_seats', 'seat_layout', 'seat_layout_grid', 'logo_url'];
 
     protected $casts = [
         'seat_layout_grid' => 'array',

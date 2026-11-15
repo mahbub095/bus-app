@@ -43,6 +43,78 @@
         </form>
     </div>
 
+    {{-- Logo Upload Form (separate due to enctype) --}}
+    <div class="settings-section">
+        <div class="settings-section-header">
+            <span class="settings-section-icon">🏷️</span>
+            <div>
+                <h3 class="settings-section-title">Site Logo</h3>
+                <p class="settings-section-desc">
+                    Upload a custom logo image (PNG, SVG, JPG — max 1 MB) that appears in the admin header, admin sidebar, and the customer-facing website navbar.
+                    If no logo is uploaded, the text logo is used instead.
+                </p>
+            </div>
+        </div>
+
+        {{-- Current logo preview --}}
+        @if(!empty($siteSettings['logo_url'] ?? null))
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding: 14px 18px;
+                        background: var(--bg-panel-alt); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); flex-wrap: wrap;">
+                <img src="{{ $siteSettings['logo_url'] }}" alt="Current Logo"
+                     style="max-height: 48px; max-width: 180px; object-fit: contain; border-radius: 4px;">
+                <div style="flex: 1;">
+                    <p style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">Custom logo active</p>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin: 0;">{{ $siteSettings['logo_url'] }}</p>
+                </div>
+                {{-- Delete logo form --}}
+                <form action="{{ route('admin.site-settings.logo.delete') }}" method="POST" style="margin: 0;"
+                      onsubmit="return confirm('Remove the custom logo and revert to text logo?');">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="admin_tab" value="site-settings">
+                    <button type="submit" class="btn btn-secondary"
+                            style="font-size: 12px; padding: 7px 14px; border-color: rgba(239,68,68,.35); color: #F87171;">
+                        🗑 Remove Logo
+                    </button>
+                </form>
+            </div>
+        @else
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 12px 16px;
+                        background: var(--bg-panel-alt); border: 1px dashed var(--border-color); border-radius: var(--border-radius-sm);">
+                {{-- Text logo preview --}}
+                <div style="display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 18px; font-weight: 800;">
+                    <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
+                                width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center;
+                                justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0;">
+                        {{ strtoupper(substr($siteSettings['logo_text'] ?? 'S', 0, 1)) }}
+                    </div>
+                    <span>{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); margin-left: 4px;">← Text logo currently active</span>
+            </div>
+        @endif
+
+        {{-- Upload form --}}
+        <form action="{{ route('admin.site-settings.logo') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="admin_tab" value="site-settings">
+            <div style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+                <div class="input-group" style="flex: 1; min-width: 200px;">
+                    <label for="logo">Upload New Logo</label>
+                    <input type="file" name="logo" id="logo" class="coupon-input"
+                           accept=".png,.svg,.jpg,.jpeg,.gif,.webp"
+                           style="padding: 8px 12px;">
+                </div>
+                <button type="submit" class="btn btn-secondary" style="height: 42px; white-space: nowrap;">
+                    📤 Upload Logo
+                </button>
+            </div>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                Recommended: transparent PNG or SVG, height 40–60 px, max width 200 px.
+            </p>
+        </form>
+    </div>
+
     {{-- Main Settings Form --}}
     <form action="{{ route('admin.site-settings.update') }}" method="POST" id="site-settings-form">
         @csrf
@@ -63,6 +135,16 @@
                     <input type="text" name="site_title" id="site_title" class="coupon-input"
                            value="{{ $siteSettings['site_title'] ?? 'SonyaBus | Premium Bus Ticket Reservation' }}"
                            required>
+                </div>
+                <div class="input-group">
+                    <label for="logo_text">Text Logo Label</label>
+                    <input type="text" name="logo_text" id="logo_text" class="coupon-input"
+                           value="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
+                           placeholder="SonyaBus"
+                           maxlength="50">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Shown in the navbar when no logo image is uploaded. Example: <strong>SonyaBus</strong>
+                    </p>
                 </div>
             </div>
         </div>

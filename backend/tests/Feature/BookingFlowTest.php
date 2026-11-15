@@ -571,8 +571,9 @@ class BookingFlowTest extends TestCase
             ->getJson('/api/bookings/mine');
 
         $response->assertStatus(200)
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.passenger_name', 'My Booking');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.passenger_name', 'My Booking')
+            ->assertJsonPath('total', 1);
     }
 
     /** @test */

@@ -1,11 +1,38 @@
 SonyaBus — Changelog
 ====================
 
+Version 1.1.0 — Security & License Update
+-------------------------------------------
+Release date: 2026-10-08
+
+SECURITY FIXES
+  - File uploads (favicon, logo) now validate extension from actual MIME type
+    instead of trusting the client-provided filename extension
+  - EnvFileWriter now validates key names and prevents path traversal attacks
+  - Password reset codes are no longer written to application logs
+  - Rate limiting (10 req/min) added to all auth endpoints:
+    POST /api/auth/login, /register, /forgot-password, /reset-password
+  - Rate limiting (10 req/min) added to admin login POST /admin/login
+
+LICENSE SYSTEM
+  - Envato purchase code verification via Envato Market API v3
+  - Installation wizard (4 steps: license → database → admin account → finalize)
+  - EnsureLicenseIsActivated global middleware — blocks access until activated
+  - License management tab in Admin → License (super admin only)
+  - Re-verification support for domain migrations
+  - 24-hour cache on license status to avoid per-request DB overhead
+  - APP_LICENSED and ENVATO_ITEM_ID added to .env.example
+
+CODE QUALITY
+  - composer.json: updated name, description, and license to reflect product
+  - RedirectsToAdminTab: added license, site-settings, gateways to allowed tabs
+  - AdminDashboardService: removed duplicate siteSettings/smsConfig fetches
+    (already shared via View::composer in AppServiceProvider)
+
+
 Version 1.0.0 — Initial Release
 ---------------------------------
 Release date: 2026-10-07
-
-Features included in this release:
 
 CUSTOMER APP (React 19 + Vite)
   - Schedule search by origin, destination, date, and coach type
@@ -46,6 +73,5 @@ TECHNICAL
   - DB-level seat locking (SELECT ... FOR UPDATE) to prevent double-booking
   - Configurable charges and discounts via .env (booking.service_charge, etc.)
   - All gateway settings editable at runtime via Admin panel (writes to DB + .env)
-  - PHPUnit feature test suite (65 tests, 236 assertions)
+  - PHPUnit feature test suite
   - APP_FRONTEND_URL configurable for any deployment domain
-

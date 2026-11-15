@@ -7,8 +7,27 @@ export default function Navbar({
   setPaymentFailed,
   authUser,
   handleLogout,
-  openAuthModal
+  openAuthModal,
+  siteSettings,
 }) {
+  // Logo: image if uploaded, otherwise text fallback from site settings
+  const backendOrigin = (import.meta.env.VITE_API_BASE_URL || '')
+    .replace(/\/api\/?$/, '');
+
+  // Build an absolute URL for the logo image so it always points to the
+  // Laravel backend's /uploads/ directory — even when the React app is
+  // served from a different origin (e.g. Vite dev server on :5173).
+  const rawLogoUrl = siteSettings?.logo_url || null;
+  const logoUrl = rawLogoUrl
+    ? (rawLogoUrl.startsWith('http') ? rawLogoUrl : `${backendOrigin}${rawLogoUrl}`)
+    : null;
+
+  const logoText   = siteSettings?.logo_text || 'SonyaBus';
+  const logoLetter = logoText.charAt(0).toUpperCase();
+  const isDefaultText = !siteSettings?.logo_text;
+  const defaultFirst  = 'Sonya';
+  const defaultAccent = 'Bus';
+
   return (
     <header className="app-header">
       <div className="container navbar">
@@ -21,8 +40,32 @@ export default function Navbar({
           }}
           style={{ cursor: 'pointer' }}
         >
-          <div className="logo-icon">S</div>
-          Sonya<span className="logo-accent">Bus</span>
+          {logoUrl ? (
+            /* ── Custom logo image ── */
+            <img
+              src={logoUrl}
+              alt={logoText}
+              style={{
+                maxHeight: '38px',
+                maxWidth: '160px',
+                width: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          ) : isDefaultText ? (
+            /* ── Default "SonyaBus" text logo ── */
+            <>
+              <div className="logo-icon">S</div>
+              {defaultFirst}<span className="logo-accent">{defaultAccent}</span>
+            </>
+          ) : (
+            /* ── Custom text logo from site settings ── */
+            <>
+              <div className="logo-icon">{logoLetter}</div>
+              {logoText}
+            </>
+          )}
         </div>
         <ul className="nav-menu">
           <li
