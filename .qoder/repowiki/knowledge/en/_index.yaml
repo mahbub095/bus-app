@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: dev
 nodes_managed: true
-exported_at: "2026-11-16T07:32:42Z"
+exported_at: "2026-11-16T09:45:16Z"
 modules:
     "":
-        dir_name: SonyaBus Bus Booking System — Product Root
-        title: SonyaBus Bus Booking System — Product Root
+        dir_name: JourneyGo Bus Booking Product Root
+        title: JourneyGo Bus Booking Product Root
         scope:
             - README.md
             - CODECANYON_RELEASE_GUIDE.md
@@ -268,8 +268,8 @@ modules:
         related_to:
             - path: backend
     frontend:
-        dir_name: SonyaBus Customer Frontend (React + Vite)
-        title: SonyaBus Customer Frontend (React + Vite)
+        dir_name: SonyaBus Customer Booking SPA
+        title: SonyaBus Customer Booking SPA
         scope:
             - frontend/
         source_files: []

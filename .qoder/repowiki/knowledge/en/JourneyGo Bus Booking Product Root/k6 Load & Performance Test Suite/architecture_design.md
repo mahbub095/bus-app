@@ -1,0 +1,7 @@
+Four-layer layout with strict dependency direction scenarios → flows → lib → config/helpers:
+- `scenarios/` — k6 entry points exporting an `options` object (stages/VU ramp profile + thresholds preset) plus a default function that instantiates `ApiClient(baseUrl())` and delegates to one flow.
+- `flows/` — pure business-journey functions (`customerLoadJourney`, `bookingJourney`, `seatRaceJourney`, `authJourney`, `searchOnlyJourney`, `admin*`) that orchestrate steps via smaller primitives (`browseHome`, `searchRoutes`, `registerAndMaybeBook`, `tryBookSeat`).
+- `lib/` — HTTP transport (`http.js`) plus domain clients: `CustomerApi` (public `/api/*` bearer-token REST via Laravel Sanctum), `AdminApi` (`/admin/*` session + CSRF), and a facade `ApiClient` exposing shortcuts so flows call `api.searchRoutes(...)` rather than raw HTTP.
+- `config/index.js` — shared constants (`baseUrl()` resolving `__ENV.BASE_URL`, `ADMIN` credentials, `PROMO_CODES`, `DEFAULT_ROUTE`) and pre-baked threshold presets (`strict`/`normal`/`relaxed`/`stress`).
+- `helpers/index.js` — test data generators (`newPassenger`, `pickRoute`, `futureDate`, `availableSeats`, `bookingPayload`, `sleepRandom`).
+Scenarios never touch `lib/` directly; flows never import scenarios. The README documents the intended workflow: add a flow in `flows/`, wire it from a new scenario, run via `k6 run --env BASE_URL=... k6/scenarios/<file>.js`.

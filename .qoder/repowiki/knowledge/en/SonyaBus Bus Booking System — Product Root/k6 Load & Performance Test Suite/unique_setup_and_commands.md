@@ -1,1 +1,0 @@
-Requires the k6 CLI installed via `winget install GrafanaLabs.k6`. Run with `k6 run --env BASE_URL="http://sonyabus-app.test" k6/scenarios/<scenario>.js`; `BASE_URL` overrides the default `http://sonyabus-app.test`. Admin credentials are seeded as `superadmin@sonyabus.com` / `password123`.

@@ -1,0 +1,1 @@
+Grafana k6 performance tests for the JourneyGo booking app, organized as thin scenario runners that compose reusable customer and admin journeys against REST and session APIs.

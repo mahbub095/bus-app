@@ -20,15 +20,17 @@
 - [App.jsx](file://frontend/src/App.jsx)
 - [Navbar.jsx](file://frontend/src/components/Navbar.jsx)
 - [Maintenance.jsx](file://frontend/src/components/Maintenance.jsx)
+- [Footer.jsx](file://frontend/src/components/Footer.jsx)
+- [index.html](file://frontend/index.html)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the new Admin Session Security configuration section
-- Updated architecture diagrams to include session lifetime management components
-- Enhanced security considerations with admin and customer session timeout details
-- Added middleware integration documentation for ApplySessionLifetime and EnforceAdminSessionTimeout
-- Updated troubleshooting guide with session-related issues
+- Updated all branding references from 'SonyaBus' to 'JourneyGo' across site configuration defaults
+- Revised default values for site title, footer information, and SEO metadata to reflect JourneyGo branding
+- Updated admin panel interface to display JourneyGo as the default text logo and company name
+- Enhanced documentation to reflect the comprehensive rebranding implementation
+- Maintained all existing functionality while updating brand-specific content
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -43,9 +45,11 @@
 10. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the site configuration and settings management system that powers runtime customization without code changes. It covers dynamic settings storage, branding customization (logos, favicon, text logo), maintenance mode, SEO and social media metadata, analytics integration, **admin session security configuration**, and the public API used by the frontend to render a live, configurable website experience.
+This document explains the site configuration and settings management system that powers runtime customization without code changes. It covers dynamic settings storage, branding customization (logos, favicon, text logo), maintenance mode, SEO and social media metadata, analytics integration, admin session security configuration, and the public API used by the frontend to render a live, configurable website experience.
 
-The system is built around a key-value settings table with caching, an admin interface for safe updates, and a public API consumed by the React frontend. Maintenance mode is enforced at the middleware layer so customer-facing routes are blocked while the settings endpoint remains available. **New session security features allow administrators to configure both admin dashboard idle timeouts and customer login lifetimes.**
+The system is built around a key-value settings table with caching, an admin interface for safe updates, and a public API consumed by the React frontend. Maintenance mode is enforced at the middleware layer so customer-facing routes are blocked while the settings endpoint remains available. Admin session security features allow administrators to configure both admin dashboard idle timeouts and customer login lifetimes.
+
+**Updated** The system now uses JourneyGo as the default brand identity across all settings, including site titles, footer information, and admin panel branding elements.
 
 ## Project Structure
 The site configuration feature spans database schema, Eloquent model, service layer, admin controller, API controller, middleware, Blade UI, routing, and frontend consumption.
@@ -69,6 +73,8 @@ subgraph "Frontend"
 App["App.jsx"]
 Navbar["Navbar.jsx"]
 Maintenance["Maintenance.jsx"]
+Footer["Footer.jsx"]
+IndexHTML["index.html"]
 end
 DB --> Model
 Model --> Service
@@ -83,6 +89,8 @@ ApiRoutes --> ApiCtrl
 ApiCtrl --> App
 App --> Navbar
 App --> Maintenance
+App --> Footer
+IndexHTML --> App
 ```
 
 **Diagram sources**
@@ -99,6 +107,8 @@ App --> Maintenance
 - [App.jsx:293-325](file://frontend/src/App.jsx#L293-L325)
 - [Navbar.jsx:13-68](file://frontend/src/components/Navbar.jsx#L13-L68)
 - [Maintenance.jsx:1-25](file://frontend/src/components/Maintenance.jsx#L1-L25)
+- [Footer.jsx:1-41](file://frontend/src/components/Footer.jsx#L1-L41)
+- [index.html:1-22](file://frontend/index.html#L1-L22)
 
 **Section sources**
 - [SiteSetting.php:8-80](file://backend/app/Models/SiteSetting.php#L8-L80)
@@ -118,27 +128,29 @@ App --> Maintenance
 - [App.jsx:293-325](file://frontend/src/App.jsx#L293-L325)
 - [Navbar.jsx:13-68](file://frontend/src/components/Navbar.jsx#L13-L68)
 - [Maintenance.jsx:1-25](file://frontend/src/components/Maintenance.jsx#L1-L25)
+- [Footer.jsx:1-41](file://frontend/src/components/Footer.jsx#L1-L41)
+- [index.html:1-22](file://frontend/index.html#L1-L22)
 
 ## Core Components
 - Dynamic settings store: A key-value table with caching for fast reads and cache invalidation on writes.
 - Service layer: Validates, transforms, and persists settings; handles file uploads for favicon and logo; exposes a public API payload.
-- **Admin session service**: Manages admin panel idle timeouts and customer token lifetimes with validation and clamping.
+- Admin session service: Manages admin panel idle timeouts and customer token lifetimes with validation and clamping.
 - Admin controller: Accepts form submissions from the admin panel and redirects with success messages.
 - Public API controller: Returns a sanitized subset of settings for the frontend.
 - Maintenance middleware: Blocks non-exempt routes when maintenance mode is enabled.
-- **Session lifetime middleware**: Applies configured timeouts to Laravel sessions and Sanctum tokens globally.
-- **Admin timeout enforcement**: Ensures exact idle timeout enforcement for admin sessions.
+- Session lifetime middleware: Applies configured timeouts to Laravel sessions and Sanctum tokens globally.
+- Admin timeout enforcement: Ensures exact idle timeout enforcement for admin sessions.
 - Frontend consumers: Dynamically apply title, favicon, SEO tags, analytics script, logo, and maintenance page.
 
 Key responsibilities:
 - Persistence and caching: SiteSetting model.
 - Validation and transformation: SiteSettingsService.
-- **Session security management**: AdminSessionService.
+- Session security management: AdminSessionService.
 - Admin UI and persistence: SiteSettingsController + Blade partial.
 - Public exposure: SiteSettingsApiController.
 - Runtime enforcement: CheckMaintenanceMode.
-- **Session policy application**: ApplySessionLifetime and EnforceAdminSessionTimeout.
-- Frontend application: App.jsx, Navbar.jsx, Maintenance.jsx.
+- Session policy application: ApplySessionLifetime and EnforceAdminSessionTimeout.
+- Frontend application: App.jsx, Navbar.jsx, Maintenance.jsx, Footer.jsx.
 
 **Section sources**
 - [SiteSetting.php:8-80](file://backend/app/Models/SiteSetting.php#L8-L80)
@@ -153,12 +165,13 @@ Key responsibilities:
 - [App.jsx:293-325](file://frontend/src/App.jsx#L293-L325)
 - [Navbar.jsx:13-68](file://frontend/src/components/Navbar.jsx#L13-L68)
 - [Maintenance.jsx:1-25](file://frontend/src/components/Maintenance.jsx#L1-L25)
+- [Footer.jsx:1-41](file://frontend/src/components/Footer.jsx#L1-L41)
 
 ## Architecture Overview
 The system follows a layered architecture:
 - Data layer: Key-value settings persisted in the database.
 - Domain layer: Service encapsulates validation, transformation, and file handling.
-- **Session policy layer**: AdminSessionService manages session security policies.
+- Session policy layer: AdminSessionService manages session security policies.
 - Presentation layer: Admin Blade forms and public JSON API.
 - Enforcement layer: Middleware enforces maintenance mode and session timeouts.
 - Client layer: React app consumes the public API and applies settings dynamically.
@@ -226,7 +239,7 @@ class SiteSetting {
 
 - Caching strategy: All settings are cached under a single key with a short TTL. Reads use the cache; writes clear it.
 - Bulk operations: setMany supports efficient multi-key updates.
-- Defaults: Migration seeds initial keys such as site title, favicon URL, footer content, maintenance flags, SEO fields, **and session security settings**.
+- Defaults: Migration seeds initial keys such as site title, favicon URL, footer content, maintenance flags, SEO fields, and session security settings.
 
 Operational notes:
 - Use getValue for single lookups with defaults.
@@ -246,6 +259,8 @@ Branding is managed through uploaded assets and text fallbacks:
 - Favicon: Upload via admin form; stored as a path and applied to the document head by the frontend.
 - Logo: Upload via admin form; displayed in navbar if present, otherwise falls back to configured text logo.
 - Text logo: Configurable label shown when no image logo is uploaded.
+
+**Updated** The default text logo is now "JourneyGo" and the default site title is "JourneyGo | Premium Bus Ticket Reservation".
 
 ```mermaid
 flowchart TD
@@ -274,6 +289,8 @@ Invalidate --> Done(["Asset ready for frontend"])
 ### Footer Management and Social Media Integration
 Footer content includes company name, copyright text, and a JSON array of links. Open Graph fields support social sharing previews.
 
+**Updated** The default footer company name is now "JourneyGo Enterprise" and the default copyright text is "© 2026 JourneyGo Enterprise Ltd. All rights reserved."
+
 - Footer links: Stored as JSON and decoded for display.
 - Open Graph: Title, description, and image are exposed via the public API and applied to meta tags by the frontend.
 - Analytics: Google Analytics Measurement ID can be configured; the frontend conditionally loads the GA script.
@@ -284,7 +301,7 @@ Footer content includes company name, copyright text, and a JSON array of links.
 - [App.jsx:462-499](file://frontend/src/App.jsx#L462-L499)
 
 ### Admin Session Security Configuration
-**Updated** New session security configuration allows administrators to control both admin dashboard idle timeouts and customer login lifetimes through the admin panel.
+New session security configuration allows administrators to control both admin dashboard idle timeouts and customer login lifetimes through the admin panel.
 
 #### Admin Panel Idle Timeout
 Administrators can configure how long the admin dashboard stays signed in without activity:
@@ -354,6 +371,12 @@ Enabled --> |No| Next
 ### SEO Settings and Public API Exposure
 SEO fields are validated and persisted through the service, then exposed via the public API.
 
+**Updated** The default SEO metadata now includes JourneyGo branding:
+- Meta description: "Book premium bus tickets across Bangladesh with JourneyGo. Secure online booking, custom seat selection, instant PNR invoice, and promo codes."
+- Meta keywords: "bus tickets, Bangladesh, JourneyGo, online booking, bus reservation, seat selection"
+- OG Title: "JourneyGo | Premium Bus Ticket Reservation"
+- OG Description: "Book premium bus tickets across Bangladesh with JourneyGo. Secure online booking, custom seat selection, instant PNR invoice, and promo codes."
+
 - Fields: Meta description, keywords, Open Graph title/description/image, and Google Analytics ID.
 - Public API: Returns a structured object containing site identity, footer, maintenance state, and SEO data.
 
@@ -419,6 +442,8 @@ Api["api.php"] --> ApiCtrl
 FE["App.jsx"] --> ApiCtrl
 FE --> Navbar
 FE --> Maintenance
+FE --> Footer
+IndexHTML --> FE
 ```
 
 **Diagram sources**
@@ -435,6 +460,8 @@ FE --> Maintenance
 - [App.jsx:293-325](file://frontend/src/App.jsx#L293-L325)
 - [Navbar.jsx:13-68](file://frontend/src/components/Navbar.jsx#L13-L68)
 - [Maintenance.jsx:1-25](file://frontend/src/components/Maintenance.jsx#L1-L25)
+- [Footer.jsx:1-41](file://frontend/src/components/Footer.jsx#L1-L41)
+- [index.html:1-22](file://frontend/index.html#L1-L22)
 
 **Section sources**
 - [SiteSetting.php:8-80](file://backend/app/Models/SiteSetting.php#L8-L80)
@@ -450,18 +477,20 @@ FE --> Maintenance
 - [App.jsx:293-325](file://frontend/src/App.jsx#L293-L325)
 - [Navbar.jsx:13-68](file://frontend/src/components/Navbar.jsx#L13-L68)
 - [Maintenance.jsx:1-25](file://frontend/src/components/Maintenance.jsx#L1-L25)
+- [Footer.jsx:1-41](file://frontend/src/components/Footer.jsx#L1-L41)
+- [index.html:1-22](file://frontend/index.html#L1-L22)
 
 ## Performance Considerations
 - Caching: All settings are cached under a single key with a short TTL. Writes invalidate the cache to avoid stale reads.
 - Bulk updates: Prefer setMany to minimize cache invalidations and database writes.
 - File uploads: Validate MIME types and restrict extensions to mitigate security risks and reduce processing overhead.
 - Frontend polling: The app polls the settings endpoint periodically to propagate branding and maintenance changes without requiring a full reload.
-- **Session management**: Global middleware applies session policies efficiently without additional database queries per request.
+- Session management: Global middleware applies session policies efficiently without additional database queries per request.
 
 [No sources needed since this section provides general guidance]
 
 ## Security Considerations
-**Updated** Enhanced security features now include configurable session management:
+Enhanced security features now include configurable session management:
 
 ### Admin Session Security
 - **Idle timeout enforcement**: Admin sessions automatically expire after configured inactivity periods
@@ -496,15 +525,19 @@ Common issues and resolutions:
 - Maintenance mode blocking expected routes:
   - Confirm the route is not exempt. The settings API is exempt; other routes will return a 503 when maintenance is enabled.
   - Verify the maintenance flag is set to true and the message is populated.
-- **Admin session timeout issues**:
+- Admin session timeout issues:
   - Verify the admin_session_lifetime setting is within the valid range (1-10080 minutes).
   - Check that the ApplySessionLifetime middleware is registered globally in bootstrap/app.php.
   - Ensure the EnforceAdminSessionTimeout middleware is properly attached to the web middleware group.
   - Confirm that admin users are being logged out exactly at the configured timeout period.
-- **Customer session problems**:
+- Customer session problems:
   - Verify customer_session_lifetime setting is properly configured (0 for never expire, or specific minute value).
   - Check that Sanctum API tokens are expiring according to the configured policy.
   - Ensure customer login sessions are being terminated when the lifetime expires.
+- Branding display issues:
+  - Verify that the default JourneyGo branding is displaying correctly in the admin panel.
+  - Check that site title, footer company name, and copyright text are set to JourneyGo defaults.
+  - Confirm that the frontend is loading the correct favicon and logo assets.
 
 **Section sources**
 - [SiteSettingsService.php:86-139](file://backend/app/Services/SiteSettingsService.php#L86-L139)
@@ -517,6 +550,8 @@ Common issues and resolutions:
 - [EnforceAdminSessionTimeout.php:27-48](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L48)
 
 ## Conclusion
-The site configuration system provides a robust, secure, and user-friendly way to customize branding, footer content, SEO, analytics, maintenance mode, **and session security** at runtime. The layered design separates concerns between persistence, validation, presentation, and enforcement, while the frontend applies settings dynamically for a seamless user experience. **The new Admin Session Security feature enables administrators to fine-tune both admin dashboard idle timeouts and customer login lifetimes with appropriate validation and enforcement mechanisms.** Future enhancements can extend the settings schema to support currency, taxes, and regional preferences, and introduce backup/restore and versioning capabilities for stronger governance.
+The site configuration system provides a robust, secure, and user-friendly way to customize branding, footer content, SEO, analytics, maintenance mode, and session security at runtime. The layered design separates concerns between persistence, validation, presentation, and enforcement, while the frontend applies settings dynamically for a seamless user experience. 
+
+**Updated** The system now implements comprehensive JourneyGo branding across all settings, including default site titles, footer information, SEO metadata, and admin panel branding elements. The new Admin Session Security feature enables administrators to fine-tune both admin dashboard idle timeouts and customer login lifetimes with appropriate validation and enforcement mechanisms. Future enhancements can extend the settings schema to support currency, taxes, and regional preferences, and introduce backup/restore and versioning capabilities for stronger governance.
 
 [No sources needed since this section summarizes without analyzing specific files]

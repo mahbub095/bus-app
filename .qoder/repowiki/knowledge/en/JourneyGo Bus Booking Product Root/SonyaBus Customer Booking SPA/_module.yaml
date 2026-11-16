@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: frontend
-title: SonyaBus Customer Frontend (React + Vite)
+title: SonyaBus Customer Booking SPA
 scope:
     - frontend/
 source_files: []

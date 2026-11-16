@@ -1,1 +1,0 @@
-Customer-facing React/Vite SPA for the SonyaBus bus booking system, handling authentication, seat booking, payment via ZiniPay, and dynamic site settings from a Laravel backend.

@@ -1,0 +1,1 @@
+Product distribution root that packages the Laravel backend, React frontend, k6 load tests, and CodeCanyon release artifacts around shared Sanctum/ZiniPay contracts and operational guides.

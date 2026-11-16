@@ -1,0 +1,1 @@
+Grafana k6 using ES modules, `__ENV`/`__VU` globals, `fail`, `sleepRandom`; target app uses Laravel Sanctum tokens for public API and session cookies + CSRF for `/admin/*`.

@@ -9,7 +9,15 @@
 - [AuthModal.jsx](file://frontend/src/components/AuthModal.jsx)
 - [BookingPortal.jsx](file://frontend/src/components/BookingPortal.jsx)
 - [ScheduleList.jsx](file://frontend/src/components/ScheduleList.jsx)
+- [BackendOffline.jsx](file://frontend/src/components/BackendOffline.jsx)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Application Bootstrapping section to reflect improved loading state with animated ring loader
+- Enhanced Architecture Overview diagram to show silent boot loading phase
+- Added detailed explanation of probingBackend state management and visual feedback improvements
+- Updated troubleshooting guide with new loading state behaviors
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -30,6 +38,7 @@ This document explains the state management architecture of the customer-facing 
 - `localStorage` for authentication persistence and API base URL caching.
 - Site settings fetched from the backend, with polling and dynamic browser metadata updates.
 - A toast notification system driven by a single toast state object at the root level.
+- **Enhanced**: Improved application bootstrapping with animated ring loader replacing text-heavy backend connection messages.
 
 The goal is to make complex booking flows predictable while keeping dependencies minimal and performance reasonable.
 
@@ -44,6 +53,7 @@ App --> AuthModal["AuthModal.jsx<br/>Login / Register / Reset UI"]
 App --> BookingPortal["BookingPortal.jsx<br/>Search, seats, promo, booking flow"]
 BookingPortal --> ScheduleList["ScheduleList.jsx<br/>Results, seat selection UI"]
 BookingPortal --> Cache["scheduleCache.js<br/>In-memory schedule cache"]
+App --> BackendOffline["BackendOffline.jsx<br/>Connection error handling"]
 ```
 
 **Diagram sources**
@@ -54,6 +64,7 @@ BookingPortal --> Cache["scheduleCache.js<br/>In-memory schedule cache"]
 - [BookingPortal.jsx:1-20](file://frontend/src/components/BookingPortal.jsx#L1-L20)
 - [ScheduleList.jsx:1-37](file://frontend/src/components/ScheduleList.jsx#L1-L37)
 - [scheduleCache.js:1-12](file://frontend/src/scheduleCache.js#L1-L12)
+- [BackendOffline.jsx:1-34](file://frontend/src/components/BackendOffline.jsx#L1-L34)
 
 **Section sources**
 - [main.jsx:1-12](file://frontend/src/main.jsx#L1-L12)
@@ -70,6 +81,7 @@ The following components are central to the state management strategy:
 | `AuthModal.jsx` | Login, register, forgot password, and reset password UI; controlled by parent-provided mode and form state. | Controlled inputs driven by props. |
 | `Toast.jsx` | Rendering success or error messages based on a toast object. | Pure presentation component receiving a toast prop. |
 | `scheduleCache.js` | In-memory cache for schedule search results with TTL-based expiration. | Singleton class with `Map` storage. |
+| `BackendOffline.jsx` | Enhanced connection error handling with candidate URL display and setup guidance. | Props-driven component with enhanced user experience. |
 
 **Section sources**
 - [App.jsx:94-134](file://frontend/src/App.jsx#L94-L134)
@@ -78,16 +90,18 @@ The following components are central to the state management strategy:
 - [AuthModal.jsx:3-13](file://frontend/src/components/AuthModal.jsx#L3-L13)
 - [Toast.jsx:1-24](file://frontend/src/components/Toast.jsx#L1-L24)
 - [scheduleCache.js:3-59](file://frontend/src/scheduleCache.js#L3-L59)
+- [BackendOffline.jsx:1-34](file://frontend/src/components/BackendOffline.jsx#L1-L34)
 
 ## Architecture Overview
 At runtime, the application follows this pattern:
 1. `main.jsx` mounts React and renders `App`.
 2. `App` initializes local state for navigation, toast, auth, site settings, and API connectivity.
-3. On mount, `App` probes for a working API base URL using environment variables, cached values, and candidate URLs.
-4. Once the API base is resolved, `App` fetches site settings and restores authentication from `localStorage`.
-5. `App` passes shared state and handlers down via props to `Navbar`, `BookingPortal`, `MyTickets`, `OffersList`, `UserProfile`, `AuthModal`, and `Footer`.
-6. Feature components manage their own local state and call back into parent-provided handlers when needed.
-7. Schedule search results are cached in memory through `scheduleCache.js`.
+3. **Enhanced**: During bootstrapping, `App` shows a silent animated ring loader while probing for backend connectivity.
+4. On mount, `App` probes for a working API base URL using environment variables, cached values, and candidate URLs.
+5. Once the API base is resolved, `App` fetches site settings and restores authentication from `localStorage`.
+6. `App` passes shared state and handlers down via props to `Navbar`, `BookingPortal`, `MyTickets`, `OffersList`, `UserProfile`, `AuthModal`, and `Footer`.
+7. Feature components manage their own local state and call back into parent-provided handlers when needed.
+8. Schedule search results are cached in memory through `scheduleCache.js`.
 
 ```mermaid
 sequenceDiagram
@@ -98,6 +112,7 @@ participant Backend as "Backend API"
 participant Portal as "BookingPortal.jsx"
 participant Cache as "scheduleCache.js"
 Entry->>App : Render root component
+Note over App : Show animated ring loader (probingBackend=true)
 App->>Storage : Read cached API base
 App->>Backend : Probe site-settings endpoint
 Backend-->>App : Reachable or unreachable
@@ -120,6 +135,7 @@ end
 - [App.jsx:39-92](file://frontend/src/App.jsx#L39-L92)
 - [App.jsx:329-378](file://frontend/src/App.jsx#L329-L378)
 - [App.jsx:382-412](file://frontend/src/App.jsx#L382-L412)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
 - [BookingPortal.jsx:319-365](file://frontend/src/components/BookingPortal.jsx#L319-L365)
 - [scheduleCache.js:14-45](file://frontend/src/scheduleCache.js#L14-L45)
 
@@ -133,6 +149,7 @@ end
 - Site settings, backend offline state, installation completion state, and install redirect URL.
 - Resolved API base URL, probing state, and tried candidates.
 - Dynamic document title, favicon, SEO meta tags, and Google Analytics script injection.
+- **Enhanced**: Silent boot loading state with animated ring loader during backend probing.
 
 Key behaviors:
 - **Toast helper**: Creates a timed toast, clears previous timeouts, and resets after display duration.
@@ -141,6 +158,7 @@ Key behaviors:
 - **Site settings polling**: Fetches site settings once the API base is available and polls every 30 seconds.
 - **Auth restoration**: Restores token and user from `localStorage`, then validates the token by calling `/auth/me`.
 - **Routing and layout**: Renders `Toast`, `Navbar`, verification status, content tabs, `AuthModal`, and `Footer`.
+- **Enhanced boot loading**: Shows animated ring loader during backend probing phase without text messages.
 
 ```mermaid
 flowchart TD
@@ -160,6 +178,7 @@ SetResolved --> FetchSettings
 FetchSettings --> RestoreAuth["Restore auth from localStorage"]
 RestoreAuth --> ValidateToken["Validate token with /auth/me"]
 ValidateToken --> RenderApp["Render main layout"]
+Note during Probe : Show animated ring loader
 ```
 
 **Diagram sources**
@@ -167,6 +186,7 @@ ValidateToken --> RenderApp["Render main layout"]
 - [App.jsx:161-173](file://frontend/src/App.jsx#L161-L173)
 - [App.jsx:329-378](file://frontend/src/App.jsx#L329-L378)
 - [App.jsx:382-427](file://frontend/src/App.jsx#L382-L427)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
 
 **Section sources**
 - [App.jsx:94-173](file://frontend/src/App.jsx#L94-L173)
@@ -175,7 +195,43 @@ ValidateToken --> RenderApp["Render main layout"]
 - [App.jsx:327-427](file://frontend/src/App.jsx#L327-L427)
 - [App.jsx:429-500](file://frontend/src/App.jsx#L429-L500)
 - [App.jsx:502-524](file://frontend/src/App.jsx#L502-L524)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
 - [App.jsx:696-800](file://frontend/src/App.jsx#L696-L800)
+
+### Enhanced Application Bootstrapping with Animated Ring Loader
+**Updated** The application now features an improved bootstrapping experience with a silent animated ring loader that replaces text-heavy backend connection messages.
+
+The bootstrapping process includes:
+- **Silent Loading Phase**: When `probingBackend` is true, the app displays only an animated ring loader without any text messages.
+- **Animated Visual Feedback**: CSS animations create a smooth spinning ring effect with gradient colors.
+- **Accessibility Support**: Includes `prefers-reduced-motion` media query support for users who prefer reduced animations.
+- **Clean User Experience**: Eliminates confusing text messages about backend connection attempts during the initial load.
+
+Implementation details:
+- The `probingBackend` state controls the loading phase visibility.
+- CSS-in-JS styles define the `.app-boot-loader` container and `.boot-ring` animation.
+- The loader uses CSS custom properties for theme compatibility (`--bg-main`, `--border-color`).
+- Animation respects user preferences for reduced motion.
+
+```mermaid
+stateDiagram-v2
+[*] --> BootLoading : App starts
+BootLoading --> ProbingBackend : Set probingBackend=true
+ProbingBackend --> ApiBaseResolved : Backend found
+ProbingBackend --> BackendOffline : No backend found
+ApiBaseResolved --> MainApp : Continue normal flow
+BackendOffline --> RetryAttempt : User clicks retry
+RetryAttempt --> ProbingBackend : Restart probing
+MainApp --> [*] : App running
+```
+
+**Diagram sources**
+- [App.jsx:135-136](file://frontend/src/App.jsx#L135-L136)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
+
+**Section sources**
+- [App.jsx:135-136](file://frontend/src/App.jsx#L135-L136)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
 
 ### Authentication State Persistence
 Authentication state is coordinated at the root level:
@@ -344,6 +400,41 @@ BackendOffline --> Poll
 - [App.jsx:382-412](file://frontend/src/App.jsx#L382-L412)
 - [App.jsx:429-500](file://frontend/src/App.jsx#L429-L500)
 
+### Enhanced Backend Connection Error Handling
+**Updated** The backend connection error handling has been significantly improved with better user experience and diagnostic information.
+
+The `BackendOffline.jsx` component now provides:
+- **Candidate URL Display**: Shows all backend URLs that were automatically attempted during probing.
+- **Setup Guidance**: Provides two distinct setup paths for different environments (development vs. production).
+- **Configuration Display**: Shows the current `VITE_API_BASE_URL` configuration value.
+- **One-Click Retry**: Simple retry button to reattempt connection.
+- **Enhanced Visual Design**: Modern card-based layout with clear error messaging.
+
+Key features:
+- Lists failed candidate URLs with red indicators.
+- Displays environment configuration for troubleshooting.
+- Provides step-by-step setup instructions for common deployment scenarios.
+- Maintains consistent styling with the rest of the application.
+
+```mermaid
+flowchart TD
+BackendDown["Backend Unreachable"] --> ShowOffline["Show BackendOffline component"]
+ShowOffline --> DisplayCandidates["Display tried URLs"]
+DisplayCandidates --> ShowConfig["Show VITE_API_BASE_URL config"]
+ShowConfig --> ProvideGuidance["Provide setup guidance"]
+ProvideGuidance --> UserAction["User takes action"]
+UserAction --> Retry["Click retry button"]
+Retry --> Reprobe["Restart backend probing"]
+```
+
+**Diagram sources**
+- [BackendOffline.jsx:1-170](file://frontend/src/components/BackendOffline.jsx#L1-L170)
+- [App.jsx:737-745](file://frontend/src/App.jsx#L737-L745)
+
+**Section sources**
+- [BackendOffline.jsx:1-170](file://frontend/src/components/BackendOffline.jsx#L1-L170)
+- [App.jsx:737-745](file://frontend/src/App.jsx#L737-L745)
+
 ### Toast Notification System
 The toast system is centralized in `App.jsx` and rendered by `Toast.jsx`:
 - `showToast(message, type, durationMs)` creates a toast, clears previous timers, and hides it after the configured duration.
@@ -439,6 +530,7 @@ SharedProps --> UserProfile["UserProfile.jsx"]
 SharedProps --> Footer["Footer.jsx"]
 BookingPortal --> ScheduleList["ScheduleList.jsx"]
 BookingPortal --> Cache["scheduleCache.js"]
+App --> BackendOffline["BackendOffline.jsx"]
 ```
 
 **Diagram sources**
@@ -446,12 +538,14 @@ BookingPortal --> Cache["scheduleCache.js"]
 - [BookingPortal.jsx:9-20](file://frontend/src/components/BookingPortal.jsx#L9-L20)
 - [ScheduleList.jsx:4-37](file://frontend/src/components/ScheduleList.jsx#L4-L37)
 - [scheduleCache.js:59-65](file://frontend/src/scheduleCache.js#L59-L65)
+- [BackendOffline.jsx:1-34](file://frontend/src/components/BackendOffline.jsx#L1-L34)
 
 **Section sources**
 - [App.jsx:702-800](file://frontend/src/App.jsx#L702-L800)
 - [BookingPortal.jsx:9-20](file://frontend/src/components/BookingPortal.jsx#L9-L20)
 - [ScheduleList.jsx:4-37](file://frontend/src/components/ScheduleList.jsx#L4-L37)
 - [scheduleCache.js:59-65](file://frontend/src/scheduleCache.js#L59-L65)
+- [BackendOffline.jsx:1-34](file://frontend/src/components/BackendOffline.jsx#L1-L34)
 
 ## Performance Considerations
 The current implementation balances simplicity and performance through several techniques:
@@ -463,6 +557,7 @@ The current implementation balances simplicity and performance through several t
 - **Controlled intervals are cleaned up**: Seat expiration checks, settings polling, and result freshness timers are cleared in effect cleanup functions.
 - **AbortController prevents stale probe requests**: API base probing uses timeouts and abort signals.
 - **Conditional rendering reduces work**: Offline, install-not-complete, and maintenance screens short-circuit normal rendering.
+- **Enhanced**: Silent boot loading reduces visual clutter during application initialization.
 
 Recommendations for future optimization:
 - Extract frequently used handler pairs into small memoized utilities where appropriate.
@@ -470,33 +565,36 @@ Recommendations for future optimization:
 - Add debouncing for rapid repeated searches if users can submit multiple times quickly.
 - Monitor `localStorage` size if more persistent data is added.
 - Keep cache TTL configurable per environment to balance freshness and load.
-
-[No sources needed since this section provides general guidance]
+- Consider extracting the boot loading logic into a dedicated component for better maintainability.
 
 ## Troubleshooting Guide
 Common state-related issues and their likely causes:
 
 | Symptom | Likely Cause | Resolution |
 |---|---|---|
-| Backend always shows offline | API base probing failed or no candidate URL is reachable | Verify `VITE_API_BASE_URL`, backend server, CORS, and deployment paths. Use retry connection. |
-| Installation screen appears | Backend returned `installed=false` | Complete the install wizard before using customer or admin routes. |
-| Auth token exists but user is null | Stored token is invalid or expired | The app clears auth on `/auth/me` failure; log in again. |
-| Seat selection rolls back | Backend rejected hold or network error occurred | Check authentication, seat availability, and network connectivity. |
-| Seat holds remain after page close | `beforeunload` request failed silently | The app attempts synchronous XHR; ensure backend accepts the release request. |
-| Schedule results are stale | Cache TTL has not expired yet | Use the refresh button to force a new search. |
-| Toast does not disappear | Previous timeout was not cleared or duration is too long | Inspect `showToast` usage and default durations. |
+| **Application stuck on loading screen** | Backend probing taking too long or failing | Check network connectivity, verify backend server is running, inspect browser console for errors. |
+| **Backend always shows offline** | API base probing failed or no candidate URL is reachable | Verify `VITE_API_BASE_URL`, backend server, CORS, and deployment paths. Use retry connection. |
+| **Installation screen appears** | Backend returned `installed=false` | Complete the install wizard before using customer or admin routes. |
+| **Auth token exists but user is null** | Stored token is invalid or expired | The app clears auth on `/auth/me` failure; log in again. |
+| **Seat selection rolls back** | Backend rejected hold or network error occurred | Check authentication, seat availability, and network connectivity. |
+| **Seat holds remain after page close** | `beforeunload` request failed silently | The app attempts synchronous XHR; ensure backend accepts the release request. |
+| **Schedule results are stale** | Cache TTL has not expired yet | Use the refresh button to force a new search. |
+| **Toast does not disappear** | Previous timeout was not cleared or duration is too long | Inspect `showToast` usage and default durations. |
+| **Boot loader never disappears** | Backend probing loop or network timeout | Check backend connectivity, review candidate URLs in `BackendOffline` component. |
 
 **Section sources**
 - [App.jsx:329-378](file://frontend/src/App.jsx#L329-L378)
 - [App.jsx:502-524](file://frontend/src/App.jsx#L502-L524)
+- [App.jsx:584-619](file://frontend/src/App.jsx#L584-L619)
 - [App.jsx:391-427](file://frontend/src/App.jsx#L391-L427)
 - [BookingPortal.jsx:137-161](file://frontend/src/components/BookingPortal.jsx#L137-L161)
 - [BookingPortal.jsx:163-207](file://frontend/src/components/BookingPortal.jsx#L163-L207)
 - [BookingPortal.jsx:209-289](file://frontend/src/components/BookingPortal.jsx#L209-L289)
 - [BookingPortal.jsx:319-380](file://frontend/src/components/BookingPortal.jsx#L319-L380)
+- [BackendOffline.jsx:1-170](file://frontend/src/components/BackendOffline.jsx#L1-L170)
 
 ## Conclusion
-The customer application implements a lightweight, library-free state management strategy:
+The customer application implements a lightweight, library-free state management strategy with enhanced user experience improvements:
 - `App.jsx` owns global coordination state and persists authentication and API base configuration.
 - Child components manage local UI and workflow state.
 - Props drilling provides explicit data flow between components.
@@ -504,7 +602,7 @@ The customer application implements a lightweight, library-free state management
 - `localStorage` ensures authentication continuity across sessions.
 - Site settings drive branding, SEO, and operational modes like maintenance and installation gating.
 - The toast system offers consistent user feedback.
+- **Enhanced**: Improved application bootstrapping with animated ring loader provides better user experience during backend connection probing.
+- **Enhanced**: Better backend connection error handling with detailed diagnostic information and setup guidance.
 
 This approach is simple, transparent, and suitable for applications that do not require complex cross-component state sharing beyond what props can provide. As the application grows, consider introducing a context provider or lightweight state utility only when props drilling becomes difficult to maintain.
-
-[No sources needed since this section summarizes without analyzing specific files]
