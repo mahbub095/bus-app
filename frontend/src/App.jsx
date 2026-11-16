@@ -73,7 +73,7 @@ const probeApiBase = async (candidates) => {
       const probeUrl = `${base.replace(/\/$/, '')}/site-settings`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch(probeUrl, {
+      await fetch(probeUrl, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
@@ -85,7 +85,7 @@ const probeApiBase = async (candidates) => {
       // Any HTTP response (even 4xx/5xx) means the server is reachable.
       // Network-layer errors throw (and are caught below).
       return base;
-    } catch (err) {
+    } catch {
       // try next candidate
     }
   }
@@ -220,7 +220,7 @@ function App() {
           const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Request failed.');
           showToast(msg, 'error');
         }
-      } catch (err) {
+      } catch {
         showToast('Network error.', 'error');
       } finally {
         setIsAuthLoading(false);
@@ -250,7 +250,7 @@ function App() {
           const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Reset failed.');
           showToast(msg, 'error');
         }
-      } catch (err) {
+      } catch {
         showToast('Network error.', 'error');
       } finally {
         setIsAuthLoading(false);
@@ -279,7 +279,7 @@ function App() {
         const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Authentication failed.');
         showToast(msg, 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Network error during authentication.', 'error');
     } finally {
       setIsAuthLoading(false);
@@ -294,7 +294,7 @@ function App() {
           headers: authHeaders()
         });
       }
-    } catch (err) {
+    } catch {
       // ignore network errors on logout
     }
     clearAuth();
@@ -325,12 +325,12 @@ function App() {
           }
           // License-gated response → treat as backend available but
           // backendOffline flag doesn't apply; handled at route level.
-        } catch (_) { /* JSON parse failed, fall through */ }
+        } catch { /* JSON parse failed, fall through */ }
         setBackendOffline(true);
       } else {
         setBackendOffline(true);
       }
-    } catch (err) {
+    } catch {
       setBackendOffline(true);
     }
   };
@@ -413,7 +413,7 @@ function App() {
         setAuthExpiresAt(savedExpiresAt || null);
         try {
           setAuthUser(JSON.parse(savedUser));
-        } catch (err) {
+        } catch {
           clearAuth();
         }
       }

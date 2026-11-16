@@ -11,6 +11,9 @@
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php)
 - [app/Http/Middleware/ApplySessionLifetime.php](file://backend/app/Http/Middleware/ApplySessionLifetime.php)
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php)
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php)
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php)
+- [app/Http/Middleware/EnsureUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php)
 - [app/Services/AdminSessionService.php](file://backend/app/Services/AdminSessionService.php)
 - [app/Models/User.php](file://backend/app/Models/User.php)
 - [app/Services/LicenseService.php](file://backend/app/Services/LicenseService.php)
@@ -18,12 +21,13 @@
 
 ## Update Summary
 **Changes Made**
-- Added documentation for two new admin session security middleware: `ApplySessionLifetime` and `EnforceAdminSessionTimeout`
-- Updated core components table to include the new middleware classes
-- Enhanced architecture overview with session lifetime configuration flow
-- Added detailed analysis of admin session timeout enforcement mechanisms
-- Updated middleware registration section to reflect new global middleware additions
-- Expanded performance considerations to cover session management overhead
+- Added documentation for two new API-specific authorization middleware: `EnsureApiUserIsAdmin` and `EnsureApiUserHasMenuPermission`
+- Enhanced `ApplySessionLifetime` middleware to support both admin panel and customer API token lifetimes
+- Updated core components table to include the new API middleware classes
+- Expanded architecture overview with API-specific authorization flow
+- Added detailed analysis of API token-based authorization mechanisms
+- Updated middleware registration section to reflect new API aliases
+- Enhanced performance considerations to cover API middleware overhead
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,7 +44,7 @@
 This document explains the middleware pipeline architecture used by the application to enforce cross-cutting concerns such as installation gating, license verification, maintenance mode, authentication, authorization, role-based access control, and admin session security. It focuses on:
 
 - How requests flow through the global and route-level middleware stack.
-- The behavior of custom middleware implementations including new admin session security features.
+- The behavior of custom middleware implementations including new API-specific authorization features.
 - Middleware registration, execution order, and aliasing.
 - Examples of chaining, response modification, and early termination.
 - Security implications and performance considerations.
@@ -72,31 +76,35 @@ Services --> Database["Database / Cache"]
 - [routes/api.php:18-75](file://backend/routes/api.php#L18-L75)
 
 ## Core Components
-The middleware pipeline consists of six primary custom middleware classes plus supporting models and services:
+The middleware pipeline consists of eight primary custom middleware classes plus supporting models and services:
 
 | Component | Responsibility | Key Behavior |
 |---|---|---|
 | `EnsureLicenseIsActivated` | Installation and license gating | Blocks uninstalled or unlicensed routes; allows install, health, payment, and public API reads. |
 | `CheckMaintenanceMode` | Maintenance mode enforcement | Returns 503 JSON when maintenance is enabled, with configurable message; excludes site settings. |
-| `EnsureUserIsAdmin` | Admin authorization | Requires authenticated admin user; returns 401/403 for API, redirects for web. |
-| `EnsureUserIsSuperAdmin` | Super-admin authorization | Requires super-admin role; returns 401/403 for API, redirects for web. |
+| `EnsureUserIsAdmin` | Admin authorization (web) | Requires authenticated admin user; returns 401/403 for API, redirects for web. |
+| `EnsureUserIsSuperAdmin` | Super-admin authorization (web) | Requires super-admin role; returns 401/403 for API, redirects for web. |
+| `EnsureApiUserIsAdmin` | Admin authorization (API) | Token-based admin check for Sanctum-authenticated API requests. |
+| `EnsureApiUserHasMenuPermission` | Menu permission (API) | Token-based menu permission check for Sanctum-authenticated API requests. |
 | `ApplySessionLifetime` | Session lifetime configuration | Configures session and token lifetimes from admin settings before session store initialization. |
 | `EnforceAdminSessionTimeout` | Exact idle timeout enforcement | Signs out admins after configured idle period with automatic sign-out functionality. |
-| `User` model | Role checks | Provides `isAdmin()` and `isSuperAdmin()` helpers. |
+| `User` model | Role checks | Provides `isAdmin()`, `isSuperAdmin()`, and `hasMenuPermission()` helpers. |
 | `LicenseService` | License verification | Validates purchase codes, enforces domain limits, caches activation state. |
 | `AdminSessionService` | Session policy management | Resolves admin and customer session lifetimes from site settings with validation and defaults. |
 
-**Updated** Added two new middleware classes for admin session security and their supporting service.
+**Updated** Added two new API-specific middleware classes and enhanced session lifetime support.
 
 **Section sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:10-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L10-L167)
 - [app/Http/Middleware/CheckMaintenanceMode.php:10-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L10-L47)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:10-39](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L10-L39)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:10-36](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L10-L36)
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:16-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L16-L37)
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:14-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L14-L35)
 - [app/Http/Middleware/ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
 - [app/Services/AdminSessionService.php:8-121](file://backend/app/Services/AdminSessionService.php#L8-L121)
-- [app/Models/User.php:44-52](file://backend/app/Models/User.php#L44-L52)
+- [app/Models/User.php:44-85](file://backend/app/Models/User.php#L44-L85)
 - [app/Services/LicenseService.php:175-194](file://backend/app/Services/LicenseService.php#L175-L194)
 
 ## Architecture Overview
@@ -143,7 +151,7 @@ end
 - Web group middleware runs next: `EnforceAdminSessionTimeout` (exact idle timeout).
 - Route group middleware runs last:
   - Web routes: `auth`, then `admin` or `super_admin`.
-  - API routes: `auth:sanctum`, then `CheckMaintenanceMode`.
+  - API routes: `auth:sanctum`, then `api_admin` or `api_menu`, then `CheckMaintenanceMode`.
 
 ```mermaid
 flowchart TD
@@ -157,7 +165,8 @@ SessionConfig --> WebOrApi{"Web or API?"}
 WebOrApi --> |Web| TimeoutCheck["EnforceAdminSessionTimeout<br/>Check idle timeout"]
 WebOrApi --> |API| SanctumMW["Sanctum Auth"]
 TimeoutCheck --> RouteGroup["Route Group Middleware"]
-SanctumMW --> MaintenanceMW["CheckMaintenanceMode"]
+SanctumMW --> ApiAuth["api_admin / api_menu"]
+ApiAuth --> MaintenanceMW["CheckMaintenanceMode"]
 RouteGroup --> AuthMiddleware["Auth + Admin/SuperAdmin"]
 AuthMiddleware --> Controller["Controller Handler"]
 MaintenanceMW --> Controller
@@ -281,6 +290,72 @@ ExpireSession --> End(["Response Sent"])
 **Section sources**
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
 - [app/Services/AdminSessionService.php:41-57](file://backend/app/Services/AdminSessionService.php#L41-L57)
+
+### EnsureApiUserIsAdmin
+This middleware provides token-based admin authorization for API requests, serving as the counterpart to `EnsureUserIsAdmin`:
+
+- Works with Sanctum bearer tokens instead of session cookies.
+- Extracts the authenticated user from `$request->user()`.
+- Returns 401 JSON if no user is authenticated.
+- Returns 403 JSON if the user is not an admin.
+- Allows the request to proceed if the user has admin privileges.
+
+Key behaviors:
+- Designed specifically for API routes using Sanctum authentication.
+- Uses the same `isAdmin()` method from the User model as the web middleware.
+- Provides consistent error responses for API clients.
+- Enables fine-grained API endpoint protection.
+
+```mermaid
+flowchart TD
+Start(["Handle(Request)"]) --> GetUser["Get User from Request"]
+GetUser --> Authed{"User Authenticated?"}
+Authed --> |No| Return401["Return 401 JSON"]
+Authed --> |Yes| AdminRole{"isAdmin()?"}
+AdminRole --> |No| Return403["Return 403 JSON"]
+AdminRole --> |Yes| Next["Next Middleware"]
+```
+
+**Diagram sources**
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:18-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L18-L37)
+- [app/Models/User.php:55-58](file://backend/app/Models/User.php#L55-L58)
+
+**Section sources**
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:16-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L16-L37)
+- [app/Models/User.php:55-58](file://backend/app/Models/User.php#L55-L58)
+
+### EnsureApiUserHasMenuPermission
+This middleware provides token-based menu permission checking for API requests, serving as the counterpart to `EnsureUserHasMenuPermission`:
+
+- Works with Sanctum bearer tokens instead of session cookies.
+- Accepts a menu parameter to specify which menu permission to check.
+- Returns 401 JSON if no user is authenticated.
+- Returns 403 JSON if the user lacks the required menu permission.
+- Allows the request to proceed if the user has the specified menu permission.
+
+Key behaviors:
+- Designed specifically for API routes using Sanctum authentication.
+- Uses the same `hasMenuPermission()` method from the User model as the web middleware.
+- Supports granular API endpoint permissions (bookings, stations, buses, etc.).
+- Provides consistent error responses for API clients.
+
+```mermaid
+flowchart TD
+Start(["Handle(Request, menu)"]) --> GetUser["Get User from Request"]
+GetUser --> Authed{"User Authenticated?"}
+Authed --> |No| Return401["Return 401 JSON"]
+Authed --> |Yes| CheckPerm{"hasMenuPermission(menu)?"}
+CheckPerm --> |No| Return403["Return 403 JSON"]
+CheckPerm --> |Yes| Next["Next Middleware"]
+```
+
+**Diagram sources**
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:16-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L16-L35)
+- [app/Models/User.php:70-85](file://backend/app/Models/User.php#L70-L85)
+
+**Section sources**
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:14-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L14-L35)
+- [app/Models/User.php:70-85](file://backend/app/Models/User.php#L70-L85)
 
 ### CheckMaintenanceMode
 This middleware enforces maintenance mode using database-backed site settings:
@@ -434,6 +509,32 @@ Controller-->>Client : Response
 **Diagram sources**
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
 
+#### API Admin Routes
+API routes chain Sanctum authentication with API-specific authorization:
+
+- `auth:sanctum`: Ensures API token authentication.
+- `api_admin`: Ensures admin role for API requests.
+- `api_menu`: Ensures menu permissions for API requests.
+
+```mermaid
+sequenceDiagram
+participant Client as "Client"
+participant ApiRoutes as "API Routes"
+participant Sanctum as "Sanctum Auth"
+participant ApiAdmin as "EnsureApiUserIsAdmin"
+participant ApiMenu as "EnsureApiUserHasMenuPermission"
+participant Controller as "Controller"
+Client->>ApiRoutes : Request
+ApiRoutes->>Sanctum : Validate Token
+Sanctum->>ApiAdmin : Check Admin Role
+ApiAdmin->>ApiMenu : Check Menu Permission (if required)
+ApiMenu->>Controller : Invoke Controller
+Controller-->>Client : Response
+```
+
+**Diagram sources**
+- [routes/api.php:104-264](file://backend/routes/api.php#L104-L264)
+
 #### API Customer Routes
 API routes chain Sanctum authentication and maintenance mode:
 
@@ -455,11 +556,12 @@ Controller-->>Client : Response
 ```
 
 **Diagram sources**
-- [routes/api.php:63-75](file://backend/routes/api.php#L63-L75)
+- [routes/api.php:76-88](file://backend/routes/api.php#L76-L88)
 
 **Section sources**
 - [routes/web.php:80-292](file://backend/routes/web.php#L80-L292)
-- [routes/api.php:63-75](file://backend/routes/api.php#L63-L75)
+- [routes/api.php:104-264](file://backend/routes/api.php#L104-L264)
+- [routes/api.php:76-88](file://backend/routes/api.php#L76-L88)
 
 ## Dependency Analysis
 The middleware components depend on models, services, and routing configuration:
@@ -469,6 +571,8 @@ graph TB
 EnsureLicenseIsActivated["EnsureLicenseIsActivated"] --> LicenseService["LicenseService"]
 EnsureUserIsAdmin["EnsureUserIsAdmin"] --> User["User Model"]
 EnsureUserIsSuperAdmin["EnsureUserIsSuperAdmin"] --> User
+EnsureApiUserIsAdmin["EnsureApiUserIsAdmin"] --> User
+EnsureApiUserHasMenuPermission["EnsureApiUserHasMenuPermission"] --> User
 CheckMaintenanceMode["CheckMaintenanceMode"] --> SiteSetting["Site Setting Access"]
 ApplySessionLifetime["ApplySessionLifetime"] --> AdminSessionService["AdminSessionService"]
 EnforceAdminSessionTimeout["EnforceAdminSessionTimeout"] --> AdminSessionService
@@ -477,15 +581,21 @@ BootstrapApp --> ApplySessionLifetime
 BootstrapApp --> EnforceAdminSessionTimeout
 BootstrapApp --> EnsureUserIsAdmin
 BootstrapApp --> EnsureUserIsSuperAdmin
+BootstrapApp --> EnsureApiUserIsAdmin
+BootstrapApp --> EnsureApiUserHasMenuPermission
 RoutesWeb["Web Routes"] --> EnsureUserIsAdmin
 RoutesWeb --> EnsureUserIsSuperAdmin
 RoutesApi["API Routes"] --> CheckMaintenanceMode
+RoutesApi --> EnsureApiUserIsAdmin
+RoutesApi --> EnsureApiUserHasMenuPermission
 ```
 
 **Diagram sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:5-24](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L5-L24)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L5-L8)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L5-L8)
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L5-L8)
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:5-8](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L5-L8)
 - [app/Http/Middleware/CheckMaintenanceMode.php:5-8](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L5-L8)
 - [app/Http/Middleware/ApplySessionLifetime.php:5-25](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L5-L25)
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php:5-25](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L5-L25)
@@ -497,6 +607,8 @@ RoutesApi["API Routes"] --> CheckMaintenanceMode
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:5-24](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L5-L24)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L5-L8)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L5-L8)
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:5-8](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L5-L8)
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:5-8](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L5-L8)
 - [app/Http/Middleware/CheckMaintenanceMode.php:5-8](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L5-L8)
 - [app/Http/Middleware/ApplySessionLifetime.php:5-25](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L5-L25)
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php:5-25](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L5-L25)
@@ -510,14 +622,16 @@ RoutesApi["API Routes"] --> CheckMaintenanceMode
 - `EnforceAdminSessionTimeout` runs on every web request for admin sessions, performing session read/write operations to track activity timestamps.
 - Maintenance mode checks read from site settings on every request within the affected route groups.
 - Authentication middleware (`auth`, `auth:sanctum`) incurs session or token validation costs.
+- New API middleware (`EnsureApiUserIsAdmin`, `EnsureApiUserHasMenuPermission`) add minimal overhead for token-based authorization checks.
 - To optimize:
   - Keep middleware logic lightweight and avoid unnecessary I/O.
   - Use caching where appropriate (e.g., license activation state).
   - Exclude non-critical routes from expensive middleware.
   - Monitor request latency and adjust middleware order to fail fast on denied requests.
   - The new session middleware are designed to be efficient, with `ApplySessionLifetime` doing only configuration updates and `EnforceAdminSessionTimeout` performing minimal session operations.
+  - API middleware leverage existing Sanctum authentication rather than duplicating auth logic.
 
-**Updated** Added performance considerations for the new session security middleware.
+**Updated** Added performance considerations for the new API middleware and enhanced session management.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -527,22 +641,27 @@ Common issues and resolutions:
 - **Maintenance Mode Active**: API responses return 503 JSON with a maintenance message. Update site settings to disable maintenance mode.
 - **Unauthorized Admin Access**: Admin-only routes return 401/403 for API or redirect for web. Ensure the user has the correct role.
 - **Super-Admin Access Denied**: Sensitive routes require super-admin role. Verify user role and permissions.
+- **API Admin Authorization Failed**: API requests return 401/403 JSON. Ensure the Sanctum token is valid and the user has admin privileges.
+- **API Menu Permission Denied**: API requests return 403 JSON with menu-specific messages. Verify the user has the required menu permissions in their profile.
 - **Admin Session Expires Unexpectedly**: Check admin session lifetime settings in Site Settings → Session Security. Verify the configured timeout value is within acceptable ranges (1 minute to 7 days).
 - **Customer API Tokens Expire**: Review customer session lifetime settings. A value of 0 means tokens never expire, while values above 0 set expiration in minutes (max 30 days).
 - **Session Configuration Not Applied**: Ensure `ApplySessionLifetime` middleware runs before session store initialization. Check that admin session settings are properly saved in the database.
+- **Token-Based Authorization Issues**: Verify that API routes use the correct middleware aliases (`api_admin`, `api_menu`) and that Sanctum is properly configured.
 
-**Updated** Added troubleshooting guidance for the new admin session security features.
+**Updated** Added troubleshooting guidance for the new API middleware and enhanced session security features.
 
 **Section sources**
 - [app/Http/Middleware/EnsureLicenseIsActivated.php:98-167](file://backend/app/Http/Middleware/EnsureLicenseIsActivated.php#L98-L167)
 - [app/Http/Middleware/CheckMaintenanceMode.php:32-47](file://backend/app/Http/Middleware/CheckMaintenanceMode.php#L32-L47)
 - [app/Http/Middleware/EnsureUserIsAdmin.php:14-39](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L14-L39)
 - [app/Http/Middleware/EnsureUserIsSuperAdmin.php:14-36](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L14-L36)
+- [app/Http/Middleware/EnsureApiUserIsAdmin.php:18-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L18-L37)
+- [app/Http/Middleware/EnsureApiUserHasMenuPermission.php:16-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L16-L35)
 - [app/Http/Middleware/ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
 - [app/Http/Middleware/EnforceAdminSessionTimeout.php:27-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L76)
 - [app/Services/AdminSessionService.php:30-36](file://backend/app/Services/AdminSessionService.php#L30-L36)
 
 ## Conclusion
-The middleware pipeline provides a robust foundation for enforcing security, licensing, operational constraints, and admin session security. By combining global and route-level middleware, the application ensures consistent behavior across web and API endpoints. Custom middleware implementations handle authentication, authorization, maintenance mode, license verification, and comprehensive session management, while route groups enable fine-grained control over middleware chains. The addition of `ApplySessionLifetime` and `EnforceAdminSessionTimeout` provides administrators with precise control over session security policies, ensuring both flexibility and security for administrative access. Proper registration, execution order, and thoughtful design of middleware logic contribute to both security and performance.
+The middleware pipeline provides a robust foundation for enforcing security, licensing, operational constraints, and comprehensive session management. By combining global and route-level middleware, the application ensures consistent behavior across web and API endpoints. Custom middleware implementations handle authentication, authorization, maintenance mode, license verification, and precise session security policies. The addition of API-specific middleware (`EnsureApiUserIsAdmin` and `EnsureApiUserHasMenuPermission`) provides token-based authorization for Sanctum-authenticated API requests, while the enhanced `ApplySessionLifetime` middleware supports both admin panel and customer API token lifetimes. Proper registration, execution order, and thoughtful design of middleware logic contribute to both security and performance across all request types.
 
-**Updated** Enhanced conclusion to reflect the new admin session security capabilities.
+**Updated** Enhanced conclusion to reflect the new API middleware capabilities and enhanced session management features.

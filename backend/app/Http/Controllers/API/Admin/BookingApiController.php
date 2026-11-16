@@ -52,7 +52,7 @@ class BookingApiController extends BaseAdminApiController
             'schedule_id' => 'required|exists:schedules,id',
             'passenger_name' => 'required|string|max:100',
             'passenger_phone' => 'required|string|max:20',
-            'passenger_email' => 'required|email|max:100',
+            'passenger_email' => 'nullable|email|max:100',
             'seat_numbers' => 'required|string|max:255',
             'payment_method' => 'required|string|max:50',
             'total_fare' => 'nullable|numeric|min:0',
@@ -79,7 +79,7 @@ class BookingApiController extends BaseAdminApiController
         $validated = $request->validate([
             'passenger_name' => 'required|string|max:100',
             'passenger_phone' => 'required|string|max:20',
-            'passenger_email' => 'required|email|max:100',
+            'passenger_email' => 'nullable|email|max:100',
             'seat_numbers' => 'required|string|max:255',
             'total_fare' => 'required|numeric|min:0',
             'payment_method' => 'required|string|max:50',

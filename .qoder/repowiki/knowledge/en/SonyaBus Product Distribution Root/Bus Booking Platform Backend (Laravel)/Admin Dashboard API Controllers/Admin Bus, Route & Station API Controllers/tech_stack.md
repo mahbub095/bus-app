@@ -1,0 +1,1 @@
+Laravel 10+ controllers using Eloquent query builder, request validation rules, and JSON responses; base class + trait composition rather than inheritance of behaviour.

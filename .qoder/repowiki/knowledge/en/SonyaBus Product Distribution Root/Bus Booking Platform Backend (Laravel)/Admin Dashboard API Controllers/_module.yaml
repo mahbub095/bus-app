@@ -1,0 +1,22 @@
+schema_version: 1
+module_path: backend/admin_api
+title: Admin Dashboard API Controllers
+scope:
+    - backend/app/Http/Controllers/API/Admin/AdminAuthController.php
+    - backend/app/Http/Controllers/API/Admin/BaseAdminApiController.php
+    - backend/app/Http/Controllers/API/Admin/BookingApiController.php
+    - backend/app/Http/Controllers/API/Admin/BusApiController.php
+    - backend/app/Http/Controllers/API/Admin/CancelRequestApiController.php
+    - backend/app/Http/Controllers/API/Admin/CoachServiceApiController.php
+    - backend/app/Http/Controllers/API/Admin/DashboardApiController.php
+    - backend/app/Http/Controllers/API/Admin/PromotionApiController.php
+    - backend/app/Http/Controllers/API/Admin/ReportApiController.php
+    - backend/app/Http/Controllers/API/Admin/RouteApiController.php
+    - backend/app/Http/Controllers/API/Admin/ScheduleApiController.php
+    - backend/app/Http/Controllers/API/Admin/SiteSettingsApiController.php
+    - backend/app/Http/Controllers/API/Admin/StationApiController.php
+    - backend/app/Http/Controllers/API/Admin/UserApiController.php
+    - backend/app/Http/Controllers/API/Admin/Concerns/FormatsAdminResources.php
+source_files: []
+depends_on: []
+related_to: []

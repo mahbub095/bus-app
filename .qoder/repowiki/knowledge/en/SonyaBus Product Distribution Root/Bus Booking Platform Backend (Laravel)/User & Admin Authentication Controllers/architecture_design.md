@@ -1,0 +1,7 @@
+Two parallel controller entry points share `App\Models\User` but diverge by channel:
+- `API/UserAuthController.php` extends `BaseController`, exposes JSON endpoints (`register`, `login`, `logout`, `me`, `updatePassword`, `forgotPassword`, `resetPassword`) using Laravel Sanctum's `HasApiTokens` trait — tokens are created via `$user->createToken('frontend-api', ['*'], $expiresAt)` with lifetime delegated to `AdminSessionService::customerTokenExpiresAt()`.
+- `Admin/AuthController.php` extends `BaseAdminController`, uses Laravel's built-in session guard (`Auth::attempt`, `Auth::logout`) and redirects to Blade views (`admin.login`, `admin.dashboard`).
+- Both controllers gate access through role predicates on the `role` column (`user` vs `admin`/`super_admin`) defined in `User::isAdmin()`, `isSuperAdmin()`, `isUser()`; the API additionally rejects non-customer roles at login/forgot-password time.
+- Password reset flow is custom: a hashed 6-digit OTP is stored in the raw `password_reset_tokens` table (not Eloquent) with a 60-minute TTL verified via Carbon, and sent through `ResetPasswordCodeMail`.
+- Dependency direction is one-way: controllers depend on `User`; the model has no controller knowledge and provides role predicates plus `hasMenuPermission()` ACL that grants super admins implicit access and otherwise checks the `menu_permissions` array cast.
+- The `formatUser` helper centralizes the public user payload shape (id, name, email, role) returned across all API responses.

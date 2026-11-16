@@ -28,7 +28,7 @@ export default function SeatMap({
   isBooking,
   seatExpirations = {}
 }) {
-  const [tick, setTick] = React.useState(0);
+  const [, setTick] = React.useState(0);
   React.useEffect(() => {
     const timer = setInterval(() => {
       setTick(t => t + 1);
@@ -76,7 +76,7 @@ export default function SeatMap({
         grid.push(row);
       }
 
-      const lastRowLetter = rowLetters[rIndex++];
+      const lastRowLetter = rowLetters[rIndex];
       const lastRow = [];
       for (let num = 1; num <= 5; num++) {
         lastRow.push({ type: 'seat', label: lastRowLetter + num });
@@ -129,7 +129,7 @@ export default function SeatMap({
         row.push({ type: 'seat', label: 'L-' + rowLetter + '3' });
         lowerGrid.push(row);
       }
-      const lastRowLetter = rowLetters[rIndex++];
+      const lastRowLetter = rowLetters[rIndex];
       const lastRow = [];
       for (let num = 1; num <= 4; num++) {
         lastRow.push({ type: 'seat', label: 'L-' + lastRowLetter + num });
@@ -156,7 +156,7 @@ export default function SeatMap({
         row.push({ type: 'seat', label: 'U-' + rowLetter + '3' });
         upperGrid.push(row);
       }
-      const lastRowLetterU = rowLetters[rIndex++];
+      const lastRowLetterU = rowLetters[rIndex];
       const lastRowU = [];
       for (let num = 1; num <= 4; num++) {
         lastRowU.push({ type: 'seat', label: 'U-' + lastRowLetterU + num });
@@ -216,7 +216,7 @@ export default function SeatMap({
     if (typeof grid === 'string') {
       try {
         grid = JSON.parse(grid);
-      } catch (e) {
+      } catch {
         grid = null;
       }
     }
@@ -476,7 +476,7 @@ export default function SeatMap({
               onChange={(e) => setPassengerDetails((prev) => ({ ...prev, name: e.target.value }))}
               disabled={selectedSeats.length === 0}
             />
-            <label>Email *</label>
+            <label>Email (optional)</label>
             <input
               type="email"
               className="ticket-field"

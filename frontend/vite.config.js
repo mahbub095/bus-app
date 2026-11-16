@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
                   res.writeHead(502, { 'Content-Type': 'application/json' });
                   res.end(JSON.stringify({ error: 'Backend proxy target unreachable: ' + apiTarget }));
                 }
-              } catch (_) { /* ignore */ }
+              } catch { /* ignore */ }
             });
           },
         },

@@ -1,0 +1,42 @@
+# ─── OS / Editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+/vendor/
+
+# ─── Environment files (never commit real credentials) ────────────────────────
+.env
+.env.*
+!.env.example
+!*/.env.example
+
+# ─── Laravel runtime artifacts ────────────────────────────────────────────────
+backend/public/hot
+backend/public/storage
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/storage/framework/testing/*
+backend/bootstrap/cache/*.php
+backend/database/*.sqlite
+backend/bus
+.phpunit.result.cache
+.phpunit.cache/
+
+# ─── Frontend build output ────────────────────────────────────────────────────
+frontend/dist/
+dist/
+
+# ─── Local scratch / release artifacts ────────────────────────────────────────
+.shots/
+preview/
+*.zip
+routes_dump.txt
+tmp_*.php

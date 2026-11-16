@@ -1,0 +1,4 @@
+- Controllers validate incoming requests inline via `$request->validate([...])` rather than using FormRequest classes.
+- JSON responses are built with plain `response()->json([...])` calls returning typed `JsonResponse` methods instead of a unified serializer.
+- Model-to-JSON transformation is delegated to the shared `FormatsAdminResources` trait (`formatUser`, `formatStation`, etc.) rather than being implemented per controller.
+- Shared cross-cutting behaviour (pagination bounds, LIKE escaping, response shape) lives in `BaseAdminApiController` so concrete controllers stay focused on request handling.

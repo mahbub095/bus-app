@@ -1,0 +1,7 @@
+Two thin API controllers under `App\Http\Controllers\API\Admin` extend `BaseAdminApiController` and delegate all persistence/work to domain services (`SiteSettingsService`, `AdminSessionService`, `CoachServicesService`, `SeatMapService`).
+
+- `SiteSettingsApiController` exposes index/update plus favicon/logo upload/delete; it pre-normalizes the request via `mergeCurrentValues` so partial JSON bodies fill required text fields from cached defaults and boolean `maintenance_mode` is coerced to the string values expected by the shared service.
+- `CoachServiceApiController` provides a search endpoint returning schedules enriched with seat maps, plus `toggleBlockedSeat`, `holdSeat`, and `releaseSeat` for per-departure seat management against `SeatMapService`.
+- `Concerns\FormatsAdminResources` is a trait providing canonical `formatStation/formatBus/formatRoute/formatSchedule/formatPromotion/formatUser` helpers that serialize Eloquent models into stable admin JSON shapes, keeping the dashboard payload consistent across modules. It also centralizes parsing of the comma-separated `blocked_seats` DB column via `parseSeatList`.
+
+Dependency direction: controllers → services → models; formatting helpers are pure serializers with no controller state.

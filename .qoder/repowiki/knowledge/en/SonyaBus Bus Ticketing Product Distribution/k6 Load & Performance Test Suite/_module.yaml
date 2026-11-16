@@ -1,9 +1,0 @@
-schema_version: 1
-module_path: load_testing
-title: k6 Load & Performance Test Suite
-scope:
-    - k6/
-source_files: []
-depends_on: []
-related_to:
-    - path: backend

@@ -1,0 +1,4 @@
+- Controllers extend `BaseAdminApiController` and use the `FormatsAdminResources` trait to normalize responses through `itemResponse()` and per-resource formatters like `formatUser` / `formatPromotion`.
+- List endpoints validate optional `search` and `per_page` params, then build queries with `->when($request->filled('search'), ...)` chaining a `likeTerm` search across multiple columns before paginating via `perPage($request)`.
+- Write operations split validation and mass-assignment into local helper methods (`rules()`, `payload()`) so store/update share identical schemas and sanitization.
+- Report types are enumerated in a `const TYPES` array and dispatched through a single `match` expression in `preview()`, keeping new report additions declarative rather than branching.

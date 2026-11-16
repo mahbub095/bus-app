@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export default function UserProfile({
   authUser,
@@ -68,7 +68,7 @@ export default function UserProfile({
         const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Failed to update password.');
         showToast(msg, 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Network error while updating password.', 'error');
     } finally {
       setIsUpdatingProfile(false);

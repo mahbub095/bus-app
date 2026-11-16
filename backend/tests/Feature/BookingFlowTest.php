@@ -95,6 +95,49 @@ class BookingFlowTest extends TestCase
     }
 
     /** @test */
+    public function customer_can_book_without_passenger_email(): void
+    {
+        $response = $this->actingAs($this->customer, 'sanctum')
+            ->postJson('/api/bookings', [
+                'schedule_id'     => $this->schedule->id,
+                'passenger_name'  => 'No Email Passenger',
+                'passenger_phone' => '01711111111',
+                'seat_numbers'    => 'B1',
+                'payment_method'  => 'bKash',
+            ]);
+
+        $response->assertStatus(201);
+
+        $booking = Booking::where('seat_numbers', 'B1')->first();
+        $this->assertNotNull($booking);
+        $this->assertNull($booking->passenger_email);
+    }
+
+    /** @test */
+    public function admin_can_book_without_passenger_email(): void
+    {
+        $this->admin->menu_permissions = ['bookings'];
+        $this->admin->save();
+
+        $this->actingAs($this->admin)
+            ->post('/admin/bookings', [
+                'schedule_id'     => $this->schedule->id,
+                'passenger_name'  => 'No Email Admin Booking',
+                'passenger_phone' => '01799999999',
+                'passenger_gender'=> 'M',
+                'seat_numbers'    => 'B2',
+                'payment_method'  => 'Cash',
+                'status'          => 'BOOKED',
+                'total_fare'      => $this->schedule->fare,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $booking = Booking::where('seat_numbers', 'B2')->first();
+        $this->assertNotNull($booking);
+        $this->assertNull($booking->passenger_email);
+    }
+
+    /** @test */
     public function nagad_payment_creates_booking_with_sold_status(): void
     {
         $response = $this->actingAs($this->customer, 'sanctum')

@@ -1,0 +1,5 @@
+Three thin Laravel controllers under `App\Http\Controllers\API\Admin` that delegate domain logic to services:
+- `BookingApiController` handles CRUD plus admin-only actions (`cancel`, `requestCancel`, `pay`) and integrates with `ZinipayService` for invoice creation.
+- `ScheduleApiController` manages departure-run records via the `Schedule` model with eager-loaded `bus` and `route.departureStation/arrivalStation` relations.
+- `CancelRequestApiController` exposes the cancellation queue (list + approve) built on `AdminBookingService::cancelRequestsQuery`.
+All three extend `BaseAdminApiController` (providing `itemResponse`, `serviceResponse`, `perPage`, filter helpers) and share response formatting through `BookingService::formatForApi`; `ScheduleApiController` additionally uses the `FormatsAdminResources` concern for `formatSchedule`. Dependency direction is one-way: controller → service/model, never the reverse.

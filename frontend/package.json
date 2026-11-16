@@ -1,8 +1,13 @@
 {
-  "name": "frontend",
+  "name": "sonyabus-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.1.0",
+  "description": "SonyaBus customer app - React 19 + Vite SPA for bus schedule search, seat selection and online payment.",
+  "license": "proprietary",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

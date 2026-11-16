@@ -1,0 +1,1 @@
+Admin dashboard endpoints for managing site-wide settings (branding, SEO, session policy) and searching coach departures with seat blocking/holding.

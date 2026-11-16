@@ -1,10 +1,10 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "sonyabus/bus-booking-system",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
-    "license": "MIT",
+    "description": "SonyaBus - Laravel 12 API and admin dashboard for a bus ticket booking system with seat maps, ZiniPay payments, SMS alerts and Envato license activation.",
+    "keywords": ["bus", "bus booking", "ticket booking", "laravel", "admin dashboard", "seat map", "zinipay"],
+    "license": "proprietary",
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",

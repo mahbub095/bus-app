@@ -1,10 +1,10 @@
 # ============================================================
 # SonyaBus — CodeCanyon Release Packager
 # Run from the repo root:  .\build-release.ps1
-# Output: sonyabus-codecanyon-v1.0.0.zip in the repo root
+# Output: sonyabus-codecanyon-v1.1.0.zip in the repo root
 # ============================================================
 
-$VERSION   = "1.0.0"
+$VERSION   = "1.1.0"
 $RELEASE   = "sonyabus-codecanyon-v$VERSION"
 $DEST      = Join-Path $PSScriptRoot $RELEASE
 $ZIP_OUT   = Join-Path $PSScriptRoot "$RELEASE.zip"
@@ -35,8 +35,8 @@ function Copy-Excluding {
                 if ($rel -eq $pat)                    { return $false }
                 if ($rel.StartsWith("$pat\"))          { return $false }
                 if ($rel.StartsWith("$pat/"))          { return $false }
-                # wildcard match on filename
-                if ($_.Name -like $pat)               { return $false }
+                # wildcard match on filename only when the pattern asks for one
+                if ($pat -match '[*?]' -and $_.Name -like $pat) { return $false }
             }
             return $true
         }
@@ -65,6 +65,9 @@ $backendExclude = @(
     ".env",
     "node_modules",
     ".phpunit.result.cache",
+    "bus",                                  # local SQLite scratch database
+    "tmp_routes_check.php",                 # route audit helper
+    "database\*.sqlite",
     "storage\logs",
     "storage\framework\cache",
     "storage\framework\sessions",
@@ -73,7 +76,8 @@ $backendExclude = @(
     "storage\framework\install-status.json",
     "storage\framework\install-finalize-status.json",
     "storage\framework\demo-seed-status.json",
-    "bootstrap\cache"
+    "bootstrap\cache",
+    "public\hot"
 )
 Copy-Excluding -Source $backendSrc -Destination $backendDest -Exclude $backendExclude
 
@@ -114,7 +118,7 @@ Copy-Item -Recurse -Path $docSrc -Destination $docDest -Force
 
 # ── 4. Root files ────────────────────────────────────────────
 Write-Host "  Copying root files..." -ForegroundColor Yellow
-foreach ($f in @("changelog.txt", "license.txt")) {
+foreach ($f in @("changelog.txt", "license.txt", "README.md")) {
     $src = Join-Path $ROOT $f
     if (Test-Path $src) {
         Copy-Item -Path $src -Destination (Join-Path $DEST $f) -Force

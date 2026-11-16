@@ -1,0 +1,5 @@
+- List endpoints validate filters inline via `$request->validate([...])` or a shared `validateFilters` helper, then chain `when()` clauses onto the Eloquent query before paginating.
+- Single-item responses are wrapped with the base controller's `itemResponse($data, $message)` helper rather than raw `response()->json(...)` calls.
+- Business mutations go through service methods (`adminBookingService->cancelBooking`, `approveCancelRequest`, `bookingService->createForAdmin`) so controllers stay thin.
+- API payloads are normalized by calling `BookingService::formatForApi` on every returned booking entity, keeping admin and customer shapes identical.
+- Controller constructors use PHP 8 property promotion to inject dependencies (`protected BookingService $bookingService`, etc.) instead of setter-style injection.

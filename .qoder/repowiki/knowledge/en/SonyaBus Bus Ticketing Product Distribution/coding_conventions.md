@@ -1,2 +1,0 @@
-- Cross-cutting operational knowledge is published as top-level Markdown guides (security, database optimization, SMS, cPanel deployment) rather than embedded in source, keeping the shipped product clean for buyers.
-- Environment-driven configuration is enforced through `.env.example` files at each sub-project boundary with no hardcoded secrets.

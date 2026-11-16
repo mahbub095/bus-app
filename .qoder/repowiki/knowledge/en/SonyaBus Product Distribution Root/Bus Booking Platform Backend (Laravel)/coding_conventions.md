@@ -1,0 +1,5 @@
+- Business logic lives in `App\Services\*` classes; controllers only validate input, call services, and return responses.
+- Each admin resource has a paired pair of controllers — a Blade controller under `App\Http\Controllers\Admin\` and an API controller under `App\Http\Controllers\API\Admin\` — exposing the same operations over session and Sanctum tokens respectively.
+- Resource-level access control is expressed as `menu_permission:<resource>` (web) or `api_menu:<resource>` (API) middleware groups around each CRUD block.
+- Domain entities are modeled as Eloquent classes under `app/Models` with corresponding database migrations prefixed by date and a numeric suffix.
+- External integrations (payment, SMS, mail, Envato license) are encapsulated in dedicated service classes (`ZinipayService`, `SmsGatewayService`, `LicenseService`, `EnvFileWriter`) rather than called inline from controllers.

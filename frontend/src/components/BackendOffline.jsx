@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Shown when the Laravel backend is unreachable (network error on /api/site-settings).
  * Enhanced version:

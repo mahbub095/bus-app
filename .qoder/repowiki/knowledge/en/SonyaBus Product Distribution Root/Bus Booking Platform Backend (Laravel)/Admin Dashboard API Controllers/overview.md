@@ -1,0 +1,1 @@
+Laravel API controllers that mirror the Blade admin dashboard, delegating business logic to shared App\Services and returning JSON payloads shaped by a common resource formatter.

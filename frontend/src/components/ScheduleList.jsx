@@ -217,8 +217,3 @@ export default function ScheduleList({
     </section>
   );
 }
-
-// Helper to determine selectable seats
-function isSeatSelectable(status) {
-  return status === 'available';
-}

@@ -1,0 +1,1 @@
+Run `build-release.ps1` from the repo root to produce the CodeCanyon ZIP (`sonyabus-codecanyon-v1.0.0.zip`). Local development installs composer dependencies in `backend/` and runs `npm install && npm run build` in `frontend/`, then serves `backend/public/` and `frontend/dist/` as separate web roots per `CPANEL_DEPLOYMENT_GUIDE.md`.

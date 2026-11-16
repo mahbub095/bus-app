@@ -1,1 +1,0 @@
-Laravel 11 with Sanctum for API tokens, Blade + Vite for the admin UI, Eloquent ORM, queued jobs, and PHPUnit for tests.

@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: backend/admin_api/admin_auth_dashboard
+title: Admin API Authentication & Dashboard
+scope:
+    - backend/app/Http/Controllers/API/Admin/AdminAuthController.php
+    - backend/app/Http/Controllers/API/Admin/BaseAdminApiController.php
+    - backend/app/Http/Controllers/API/Admin/DashboardApiController.php
+source_files: []
+depends_on: []
+related_to: []

@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: backend/admin_api/booking_schedule
+title: Admin Booking, Schedule & Cancellation Request API
+scope:
+    - backend/app/Http/Controllers/API/Admin/BookingApiController.php
+    - backend/app/Http/Controllers/API/Admin/ScheduleApiController.php
+    - backend/app/Http/Controllers/API/Admin/CancelRequestApiController.php
+source_files: []
+depends_on: []
+related_to: []

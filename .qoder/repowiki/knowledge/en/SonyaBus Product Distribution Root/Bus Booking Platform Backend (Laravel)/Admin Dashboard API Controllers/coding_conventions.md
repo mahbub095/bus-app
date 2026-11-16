@@ -1,0 +1,4 @@
+- Controllers extend BaseAdminApiController and delegate all business logic to App\Services, returning results via serviceResponse or itemResponse.
+- JSON payloads for models go through the corresponding format* method in FormatsAdminResources rather than being built inline.
+- Pagination is requested via the per_page query parameter and clamped between DEFAULT_PER_PAGE (15) and MAX_PER_PAGE (100).
+- Search input is normalised through likeTerm before being interpolated into SQL LIKE clauses.

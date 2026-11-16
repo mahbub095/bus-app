@@ -1,0 +1,1 @@
+Laravel controllers + Eloquent models; ISO-8601 date serialization via Laravel's `toIso8601String()` on Carbon instances; seat identifiers validated with regex `^(L-|U-)?[A-Z][1-4]$`.
