@@ -7,12 +7,15 @@
 - [frontend/package.json](file://frontend/package.json)
 - [backend/app/Http/Controllers/Install/InstallController.php](file://backend/app/Http/Controllers/Install/InstallController.php)
 - [backend/app/Console/Commands/InstallFinalize.php](file://backend/app/Console/Commands/InstallFinalize.php)
-- [backend/app/Services/LicenseService.php](file://backend/app/Services/LicenseService.php)
-- [backend/config/envato.php](file://backend/config/envato.php)
-- [backend/database/migrations/2026_10_08_100000_create_license_table.php](file://backend/database/migrations/2026_10_08_100000_create_license_table.php)
 - [backend/routes/web.php](file://backend/routes/web.php)
-- [backend/routes/api.php](file://backend/routes/api.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Removed CodeCanyon-specific installation procedures and Envato license verification steps
+- Simplified installation process to focus on core application setup
+- Updated environment configuration to remove Envato-specific requirements
+- Streamlined troubleshooting section for common installation issues
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -26,9 +29,9 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-SonyaBus is a full-stack bus ticket booking system with a Laravel 12 backend API and a React 19 customer-facing SPA, plus an admin dashboard for managing routes, schedules, bookings, promotions, reports, and system settings. The system includes Envato license verification, interactive seat maps, online payments via ZiniPay, SMS notifications, role-based access control, maintenance mode, and security hardening.
+SonyaBus is a full-stack bus ticket booking system with a Laravel 12 backend API and a React 19 customer-facing SPA, plus an admin dashboard for managing routes, schedules, bookings, promotions, reports, and system settings. The system includes interactive seat maps, online payments via ZiniPay, SMS notifications, role-based access control, maintenance mode, and security hardening.
 
-This guide helps you install the backend and frontend, configure environment variables, activate your Envato license, set up the database, and get the application running quickly.
+This guide helps you install the backend and frontend, configure environment variables, set up the database, and get the application running quickly without complex licensing procedures.
 
 **Section sources**
 - [README.md:1-271](file://README.md#L1-L271)
@@ -46,15 +49,13 @@ RWeb["routes/web.php"]
 RApi["routes/api.php"]
 InstCtrl["InstallController"]
 InstCmd["InstallFinalize command"]
-LicSvc["LicenseService"]
-DBMig["license migration"]
+DBMig["Database migrations"]
 end
 subgraph "Frontend (React 19)"
 SPA["Customer SPA"]
 end
 SPA --> RApi
 RWeb --> InstCtrl
-InstCtrl --> LicSvc
 InstCtrl --> InstCmd
 InstCmd --> DBMig
 ```
@@ -64,58 +65,46 @@ InstCmd --> DBMig
 - [backend/routes/api.php:18-75](file://backend/routes/api.php#L18-L75)
 - [backend/app/Http/Controllers/Install/InstallController.php:1-287](file://backend/app/Http/Controllers/Install/InstallController.php#L1-L287)
 - [backend/app/Console/Commands/InstallFinalize.php:1-268](file://backend/app/Console/Commands/InstallFinalize.php#L1-L268)
-- [backend/app/Services/LicenseService.php:1-408](file://backend/app/Services/LicenseService.php#L1-L408)
-- [backend/database/migrations/2026_10_08_100000_create_license_table.php:1-30](file://backend/database/migrations/2026_10_08_100000_create_license_table.php#L1-L30)
 
 **Section sources**
 - [README.md:46-80](file://README.md#L46-L80)
 
 ## Core Components
-- Installation Wizard: Guides you through license verification, database connection, admin account creation, and finalization.
-- License Verification: Validates Envato purchase codes against the Envato Market API and enforces domain limits.
+- Installation Wizard: Guides you through database connection, admin account creation, and finalization.
 - Database Setup: Runs migrations or imports SQL files during installation.
 - Admin and Customer APIs: Provide endpoints for admin operations and customer booking flows.
 
 Key responsibilities:
 - InstallController orchestrates the multi-step installation flow.
-- InstallFinalize runs background tasks to migrate, persist license, create super admin, and lock installer.
-- LicenseService handles Envato API calls, caching, domain limit checks, and .env updates.
+- InstallFinalize runs background tasks to migrate, create super admin, and lock installer.
 - Routes define public API endpoints and admin routes.
 
 **Section sources**
 - [backend/app/Http/Controllers/Install/InstallController.php:1-287](file://backend/app/Http/Controllers/Install/InstallController.php#L1-L287)
 - [backend/app/Console/Commands/InstallFinalize.php:1-268](file://backend/app/Console/Commands/InstallFinalize.php#L1-L268)
-- [backend/app/Services/LicenseService.php:1-408](file://backend/app/Services/LicenseService.php#L1-L408)
 - [backend/routes/web.php:27-42](file://backend/routes/web.php#L27-L42)
 - [backend/routes/api.php:18-75](file://backend/routes/api.php#L18-L75)
 
 ## Architecture Overview
 At a high level:
 - The React SPA calls the Laravel API for stations, search, promotions, authentication, bookings, and seat holds.
-- The installation wizard is accessible at /install until the system is installed and licensed.
-- After installation, the system uses Sanctum for authenticated API requests and enforces license activation.
+- The installation wizard is accessible at /install until the system is installed.
+- After installation, the system uses Sanctum for authenticated API requests.
 
 ```mermaid
 sequenceDiagram
 participant Browser as "Browser"
 participant WebRoutes as "web.php"
 participant InstallCtrl as "InstallController"
-participant LicenseSvc as "LicenseService"
-participant EnvatoAPI as "Envato Market API"
 participant FinalizeCmd as "InstallFinalize"
 participant DB as "MySQL"
 Browser->>WebRoutes : GET /install
 WebRoutes->>InstallCtrl : showLicense()
-Browser->>WebRoutes : POST /install/license/verify
-InstallCtrl->>LicenseSvc : verify(purchase_code)
-LicenseSvc->>EnvatoAPI : Author sale check
-EnvatoAPI-->>LicenseSvc : Purchase data
-LicenseSvc-->>InstallCtrl : success/failure
-InstallCtrl->>Browser : redirect to /install/database
+Browser->>WebRoutes : POST /install/database/save
+InstallCtrl->>DB : test connection
 Browser->>WebRoutes : POST /install/finalize/run
 InstallCtrl->>FinalizeCmd : run in background
 FinalizeCmd->>DB : migrate + create tables
-FinalizeCmd->>LicenseSvc : persistVerifiedLicense()
 FinalizeCmd->>DB : create super admin
 FinalizeCmd->>Browser : status polling -> complete
 ```
@@ -123,7 +112,6 @@ FinalizeCmd->>Browser : status polling -> complete
 **Diagram sources**
 - [backend/routes/web.php:27-42](file://backend/routes/web.php#L27-L42)
 - [backend/app/Http/Controllers/Install/InstallController.php:46-209](file://backend/app/Http/Controllers/Install/InstallController.php#L46-L209)
-- [backend/app/Services/LicenseService.php:56-158](file://backend/app/Services/LicenseService.php#L56-L158)
 - [backend/app/Console/Commands/InstallFinalize.php:51-259](file://backend/app/Console/Commands/InstallFinalize.php#L51-L259)
 
 ## Detailed Component Analysis
@@ -156,7 +144,6 @@ These requirements are documented in the project README and enforced by the back
    - APP_URL
    - APP_FRONTEND_URL
    - DB_* (host, port, database, username, password)
-   - ENVATO_ITEM_ID
 6. Set file permissions:
    - chmod -R 775 storage bootstrap/cache
    - chown -R www-data:www-data storage bootstrap/cache
@@ -206,8 +193,6 @@ Backend .env essentials:
 - APP_URL: Base URL of the backend.
 - APP_FRONTEND_URL: Base URL of the React SPA.
 - DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD: Database credentials.
-- ENVATO_ITEM_ID: Numeric ID from your CodeCanyon item URL.
-- Optional: ENVATO_PERSONAL_TOKEN (for seller-side verification), ENVATO_SKIP_VERIFY (local dev bypass).
 
 Frontend .env essentials:
 - VITE_API_BASE_URL: Backend API base URL.
@@ -215,63 +200,11 @@ Frontend .env essentials:
 
 Important:
 - Do not commit secrets; use .env.example as a template.
-- The installation wizard may update certain keys like APP_INSTALLED and APP_LICENSED.
+- The installation wizard may update certain keys like APP_INSTALLED.
 
 **Section sources**
 - [README.md:112-113](file://README.md#L112-L113)
 - [README.md:122-123](file://README.md#L122-L123)
-- [backend/config/envato.php:18-39](file://backend/config/envato.php#L18-L39)
-
-### License Activation Process
-
-Overview:
-- Open your backend URL in a browser; you will be redirected to /install.
-- Step 1: Enter your Envato purchase code.
-- Step 2: Enter MySQL credentials and optionally import a SQL file.
-- Step 3: Create a super-admin account and finalize installation.
-- After activation, the installer is locked and inaccessible.
-
-What you need:
-- Envato Purchase Code from CodeCanyon Downloads.
-- Personal Token generated at build.envato.com/create-token with Verify Purchases permission.
-- Item ID set as ENVATO_ITEM_ID in .env.
-
-How it works:
-- InstallController verifies the purchase code using LicenseService.
-- LicenseService validates format, performs local bypass if enabled, checks Envato API responses, ensures the code belongs to this product, and enforces domain limits.
-- On successful finalization, InstallFinalize persists the license record, creates the super admin, and locks the installer.
-
-```mermaid
-flowchart TD
-Start(["Open /install"]) --> LicenseStep["Enter Purchase Code"]
-LicenseStep --> ValidateFormat{"Valid UUID?"}
-ValidateFormat --> |No| ErrorInvalid["Reject invalid format"]
-ValidateFormat --> |Yes| LocalBypass{"Local bypass enabled?"}
-LocalBypass --> |Yes| DomainCheck["Check domain limit"]
-LocalBypass --> |No| EnvatoCall["Call Envato Market API"]
-EnvatoCall --> CheckProduct{"Matches item_id?"}
-CheckProduct --> |No| ErrorWrongProduct["Reject wrong product"]
-CheckProduct --> |Yes| DomainCheck
-DomainCheck --> DomainOK{"Within domain limit?"}
-DomainOK --> |No| ErrorDomainLimit["Reject exceeding domains"]
-DomainOK --> |Yes| SuccessVerify["Store pending license in session"]
-SuccessVerify --> DBStep["Enter DB credentials"]
-DBStep --> FinalizeStep["Create super admin and finalize"]
-FinalizeStep --> LockInstaller["Lock installer and clear caches"]
-LockInstaller --> End(["Installation complete"])
-```
-
-**Diagram sources**
-- [backend/app/Http/Controllers/Install/InstallController.php:54-79](file://backend/app/Http/Controllers/Install/InstallController.php#L54-L79)
-- [backend/app/Services/LicenseService.php:56-158](file://backend/app/Services/LicenseService.php#L56-L158)
-- [backend/app/Console/Commands/InstallFinalize.php:175-228](file://backend/app/Console/Commands/InstallFinalize.php#L175-L228)
-
-**Section sources**
-- [README.md:134-143](file://README.md#L134-L143)
-- [README.md:147-163](file://README.md#L147-L163)
-- [backend/app/Http/Controllers/Install/InstallController.php:46-79](file://backend/app/Http/Controllers/Install/InstallController.php#L46-L79)
-- [backend/app/Services/LicenseService.php:56-158](file://backend/app/Services/LicenseService.php#L56-L158)
-- [backend/app/Console/Commands/InstallFinalize.php:175-228](file://backend/app/Console/Commands/InstallFinalize.php#L175-L228)
 
 ### Initial Database Setup
 During installation:
@@ -280,33 +213,70 @@ During installation:
 - If no SQL file is provided, migrations run automatically during finalization.
 
 Database schema highlights:
-- A license table stores purchase metadata and activation state.
-- Other core tables include users, buses, routes, schedules, bookings, promotions, stations, and site settings.
+- Core tables include users, buses, routes, schedules, bookings, promotions, stations, and site settings.
 
 ```mermaid
 erDiagram
-LICENSE {
+USERS {
 bigint id PK
-string purchase_code UK
-string envato_username
-string buyer_email
-timestamp purchase_date
-string license_type
-boolean is_verified
-timestamp verified_at
-string app_url
+string name
+string email
+string password
+string role
+timestamp created_at
+timestamp updated_at
+}
+BUSES {
+bigint id PK
+string name
+string number_plate
+int seats
+timestamp created_at
+timestamp updated_at
+}
+ROUTES {
+bigint id PK
+string from_station
+string to_station
+decimal distance
+decimal fare
+timestamp created_at
+timestamp updated_at
+}
+SCHEDULES {
+bigint id PK
+bigint bus_id FK
+bigint route_id FK
+datetime departure_time
+datetime arrival_time
+int available_seats
+timestamp created_at
+timestamp updated_at
+}
+BOOKINGS {
+bigint id PK
+bigint user_id FK
+bigint schedule_id FK
+string passenger_name
+string passenger_email
+json seats
+decimal total_amount
+string status
 timestamp created_at
 timestamp updated_at
 }
 ```
 
 **Diagram sources**
-- [backend/database/migrations/2026_10_08_100000_create_license_table.php:11-22](file://backend/database/migrations/2026_10_08_100000_create_license_table.php#L11-L22)
+- [backend/database/migrations/0001_01_01_000000_create_users_table.php:1-30](file://backend/database/migrations/0001_01_01_000000_create_users_table.php#L1-L30)
+- [backend/database/migrations/2026_06_01_000020_create_buses_table.php:1-30](file://backend/database/migrations/2026_06_01_000020_create_buses_table.php#L1-L30)
+- [backend/database/migrations/2026_06_01_000030_create_routes_table.php:1-30](file://backend/database/migrations/2026_06_01_000030_create_routes_table.php#L1-L30)
+- [backend/database/migrations/2026_06_01_000040_create_schedules_table.php:1-30](file://backend/database/migrations/2026_06_01_000040_create_schedules_table.php#L1-L30)
+- [backend/database/migrations/2026_06_01_000050_create_bookings_table.php:1-30](file://backend/database/migrations/2026_06_01_000050_create_bookings_table.php#L1-L30)
 
 **Section sources**
 - [backend/app/Http/Controllers/Install/InstallController.php:90-144](file://backend/app/Http/Controllers/Install/InstallController.php#L90-L144)
 - [backend/app/Console/Commands/InstallFinalize.php:66-167](file://backend/app/Console/Commands/InstallFinalize.php#L66-L167)
-- [backend/database/migrations/2026_10_08_100000_create_license_table.php:1-30](file://backend/database/migrations/2026_10_08_100000_create_license_table.php#L1-L30)
 
 ### Quick Start Commands
 Backend:
@@ -314,7 +284,7 @@ Backend:
 - composer install --no-dev --optimize-autoloader
 - cp .env.example .env
 - php artisan key:generate
-- Edit .env (APP_URL, APP_FRONTEND_URL, DB_*, ENVATO_ITEM_ID)
+- Edit .env (APP_URL, APP_FRONTEND_URL, DB_*)
 - chmod -R 775 storage bootstrap/cache
 - chown -R www-data:www-data storage bootstrap/cache
 
@@ -335,7 +305,7 @@ Serve:
 ## Dependency Analysis
 - Backend depends on Laravel 12, Sanctum, DomPDF, and other packages defined in composer.json.
 - Frontend depends on React 19 and Vite as defined in package.json.
-- Installation flow depends on InstallController, LicenseService, and InstallFinalize command.
+- Installation flow depends on InstallController and InstallFinalize command.
 - Routes define public API endpoints and admin routes.
 
 ```mermaid
@@ -347,7 +317,6 @@ PackageJSON["package.json"] --> React["React 19"]
 PackageJSON --> Vite["Vite"]
 WebRoutes["web.php"] --> InstallCtrl["InstallController"]
 ApiRoutes["api.php"] --> CustomerAPI["Customer API"]
-InstallCtrl --> LicenseSvc["LicenseService"]
 InstallCtrl --> FinalizeCmd["InstallFinalize"]
 ```
 
@@ -357,7 +326,6 @@ InstallCtrl --> FinalizeCmd["InstallFinalize"]
 - [backend/routes/web.php:27-42](file://backend/routes/web.php#L27-L42)
 - [backend/routes/api.php:18-75](file://backend/routes/api.php#L18-L75)
 - [backend/app/Http/Controllers/Install/InstallController.php:1-287](file://backend/app/Http/Controllers/Install/InstallController.php#L1-L287)
-- [backend/app/Services/LicenseService.php:1-408](file://backend/app/Services/LicenseService.php#L1-L408)
 - [backend/app/Console/Commands/InstallFinalize.php:1-268](file://backend/app/Console/Commands/InstallFinalize.php#L1-L268)
 
 **Section sources**
@@ -377,10 +345,6 @@ InstallCtrl --> FinalizeCmd["InstallFinalize"]
 ## Troubleshooting Guide
 
 Common issues and resolutions:
-- License verification fails:
-  - Ensure ENVATO_ITEM_ID is set correctly in .env.
-  - Verify your Envato Personal Token has the correct permissions.
-  - Confirm the purchase code matches the SonyaBus product.
 - Installer remains accessible after installation:
   - The installer locks itself when APP_INSTALLED=true and the installed marker file exists.
   - Clear caches and ensure storage/framework/installed exists.
@@ -393,19 +357,19 @@ Common issues and resolutions:
 - Permission errors:
   - Ensure storage and bootstrap/cache are writable by the web server user.
   - Set ownership to www-data:www-data where applicable.
+- Migration failures:
+  - Check database permissions and ensure all required tables can be created.
+  - Review migration logs for specific error details.
 
 Relevant implementation details:
 - InstallController validates inputs, tests DB connections via raw PDO, writes credentials to .env, and triggers background finalization.
-- InstallFinalize manages migrations, license persistence, super admin creation, and installer locking.
-- LicenseService enforces domain limits and interacts with Envato API.
+- InstallFinalize manages migrations, super admin creation, and installer locking.
 
 **Section sources**
 - [backend/app/Http/Controllers/Install/InstallController.php:90-144](file://backend/app/Http/Controllers/Install/InstallController.php#L90-L144)
 - [backend/app/Console/Commands/InstallFinalize.php:66-228](file://backend/app/Console/Commands/InstallFinalize.php#L66-L228)
-- [backend/app/Services/LicenseService.php:56-158](file://backend/app/Services/LicenseService.php#L56-L158)
-- [backend/config/envato.php:18-39](file://backend/config/envato.php#L18-L39)
 
 ## Conclusion
-You now have the essential steps to install and configure SonyaBus, including backend and frontend setup, environment configuration, Envato license activation, and initial database setup. For detailed server configurations and advanced topics, consult the documentation index and the specific guides referenced throughout this document.
+You now have the essential steps to install and configure SonyaBus, including backend and frontend setup, environment configuration, and initial database setup. The simplified installation process focuses on core application setup without complex licensing procedures. For detailed server configurations and advanced topics, consult the documentation index and the specific guides referenced throughout this document.
 
 [No sources needed since this section summarizes without analyzing specific files]

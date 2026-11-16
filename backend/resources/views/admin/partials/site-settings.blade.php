@@ -19,13 +19,28 @@
             </div>
         </div>
         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
-            @if(!empty($siteSettings['favicon_url']))
-                <div class="favicon-preview">
-                    <img src="{{ $siteSettings['favicon_url'] }}" alt="Current Favicon"
-                         style="width: 32px; height: 32px; border-radius: 4px;">
-                    <span style="font-size: 12px; color: var(--text-secondary);">Current: {{ $siteSettings['favicon_url'] }}</span>
+            @php
+                $faviconSetting = trim((string) ($siteSettings['favicon_url'] ?? ''));
+                $faviconSrc = $faviconSetting === ''
+                    ? asset('favicon.svg')
+                    : (\Illuminate\Support\Str::startsWith($faviconSetting, ['http://', 'https://', '//'])
+                        ? $faviconSetting
+                        : asset(ltrim($faviconSetting, '/')));
+            @endphp
+            <div class="favicon-preview">
+                <span class="favicon-preview-tile">
+                    <img src="{{ $faviconSrc }}" alt="Current favicon"
+                         onerror="this.style.display='none'; this.parentNode.classList.add('is-missing');">
+                </span>
+                <div>
+                    <p style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0 0 2px;">
+                        {{ $faviconSetting === '' ? 'Default brand icon active' : 'Custom favicon active' }}
+                    </p>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin: 0; word-break: break-all;">
+                        {{ $faviconSetting === '' ? 'favicon.svg — upload a file below to replace it.' : $faviconSetting }}
+                    </p>
                 </div>
-            @endif
+            </div>
         </div>
         <form action="{{ route('admin.site-settings.favicon') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -86,9 +101,9 @@
                     <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
                                 width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center;
                                 justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0;">
-                        {{ strtoupper(substr($siteSettings['logo_text'] ?? 'S', 0, 1)) }}
+                        {{ strtoupper(substr($siteSettings['logo_text'] ?? 'J', 0, 1)) }}
                     </div>
-                    <span>{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}</span>
+                    <span>{{ $siteSettings['logo_text'] ?? 'JourneyGo' }}</span>
                 </div>
                 <span style="font-size: 12px; color: var(--text-muted); margin-left: 4px;">← Text logo currently active</span>
             </div>
@@ -133,17 +148,17 @@
                 <div class="input-group">
                     <label for="site_title">Website Title</label>
                     <input type="text" name="site_title" id="site_title" class="coupon-input"
-                           value="{{ $siteSettings['site_title'] ?? 'SonyaBus | Premium Bus Ticket Reservation' }}"
+                           value="{{ $siteSettings['site_title'] ?? 'JourneyGo | Premium Bus Ticket Reservation' }}"
                            required>
                 </div>
                 <div class="input-group">
                     <label for="logo_text">Text Logo Label</label>
                     <input type="text" name="logo_text" id="logo_text" class="coupon-input"
-                           value="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
-                           placeholder="SonyaBus"
+                           value="{{ $siteSettings['logo_text'] ?? 'JourneyGo' }}"
+                           placeholder="JourneyGo"
                            maxlength="50">
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-                        Shown in the navbar when no logo image is uploaded. Example: <strong>SonyaBus</strong>
+                        Shown in the navbar when no logo image is uploaded. Example: <strong>JourneyGo</strong>
                     </p>
                 </div>
             </div>
@@ -162,12 +177,12 @@
                 <div class="input-group">
                     <label for="footer_company_name">Company Name</label>
                     <input type="text" name="footer_company_name" id="footer_company_name" class="coupon-input"
-                           value="{{ $siteSettings['footer_company_name'] ?? 'SonyaBus Enterprise' }}" required>
+                           value="{{ $siteSettings['footer_company_name'] ?? 'JourneyGo Enterprise' }}" required>
                 </div>
                 <div class="input-group">
                     <label for="footer_copyright">Copyright Text</label>
                     <input type="text" name="footer_copyright" id="footer_copyright" class="coupon-input"
-                           value="{{ $siteSettings['footer_copyright'] ?? '© 2026 SonyaBus Enterprise Ltd. All rights reserved.' }}" required>
+                           value="{{ $siteSettings['footer_copyright'] ?? '© 2026 JourneyGo Enterprise Ltd. All rights reserved.' }}" required>
                 </div>
             </div>
 
@@ -242,7 +257,7 @@
                     <label for="seo_meta_keywords">Meta Keywords</label>
                     <input type="text" name="seo_meta_keywords" id="seo_meta_keywords" class="coupon-input"
                            value="{{ $siteSettings['seo_meta_keywords'] ?? '' }}"
-                           placeholder="bus tickets, Bangladesh, SonyaBus, online booking">
+                           placeholder="bus tickets, Bangladesh, JourneyGo, online booking">
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                         Comma-separated keywords related to your business.
                     </p>
@@ -403,11 +418,34 @@
     .favicon-preview {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
         background-color: var(--sidebar-hover);
         padding: 10px 16px;
         border-radius: var(--border-radius-sm);
         border: 1px solid var(--border-color);
+    }
+
+    .favicon-preview-tile {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .favicon-preview-tile img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+    }
+
+    .favicon-preview-tile.is-missing {
+        border-style: dashed;
     }
 
     /* Toggle Switch */

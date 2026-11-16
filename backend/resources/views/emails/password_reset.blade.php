@@ -103,14 +103,14 @@
         <div class="container">
             <!-- Header -->
             <div class="header">
-                <a href="#" class="logo">Sonya<span>Bus</span></a>
+                <a href="#" class="logo">Journey<span>Go</span></a>
             </div>
 
             <!-- Content -->
             <div class="content">
                 <h1>Password Reset Request</h1>
                 <p>Hello,</p>
-                <p>We received a request to reset the password for your SonyaBus account. Please use the verification code below to proceed with setting up a new password.</p>
+                <p>We received a request to reset the password for your JourneyGo account. Please use the verification code below to proceed with setting up a new password.</p>
                 
                 <div class="code-container">
                     <div class="code">{{ $code }}</div>
@@ -118,12 +118,12 @@
                 </div>
 
                 <p>If you did not request a password reset, no further action is required. Your account remains secure.</p>
-                <p>Best regards,<br>The SonyaBus Team</p>
+                <p>Best regards,<br>The JourneyGo Team</p>
             </div>
 
             <!-- Footer -->
             <div class="footer">
-                <p>&copy; {{ date('Y') }} SonyaBus. All rights reserved.</p>
+                <p>&copy; {{ date('Y') }} JourneyGo. All rights reserved.</p>
             </div>
         </div>
     </div>

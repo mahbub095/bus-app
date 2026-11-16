@@ -18,10 +18,10 @@ return new class extends Migration
 
         // Seed default settings
         $defaults = [
-            'site_title' => 'SonyaBus | Premium Bus Ticket Reservation',
+            'site_title' => 'JourneyGo | Premium Bus Ticket Reservation',
             'favicon_url' => '/favicon.svg',
-            'footer_company_name' => 'SonyaBus Enterprise',
-            'footer_copyright' => '© 2026 SonyaBus Enterprise Ltd. All rights reserved.',
+            'footer_company_name' => 'JourneyGo Enterprise',
+            'footer_copyright' => '© 2026 JourneyGo Enterprise Ltd. All rights reserved.',
             'footer_links' => json_encode([
                 ['label' => 'Search Buses', 'tab' => 'home'],
                 ['label' => 'My Tickets', 'tab' => 'cancel'],
@@ -30,10 +30,10 @@ return new class extends Migration
             ]),
             'maintenance_mode' => 'false',
             'maintenance_message' => 'We are currently performing scheduled maintenance. Our booking platform will be back online shortly. Thank you for your patience.',
-            'seo_meta_description' => 'Book premium bus tickets across Bangladesh with SonyaBus. Secure online booking, custom seat selection, instant PNR invoice, and promo codes.',
-            'seo_meta_keywords' => 'bus tickets, Bangladesh, SonyaBus, online booking, bus reservation, seat selection',
-            'seo_og_title' => 'SonyaBus | Premium Bus Ticket Reservation',
-            'seo_og_description' => 'Book premium bus tickets across Bangladesh with SonyaBus. Secure online booking, custom seat selection, instant PNR invoice, and promo codes.',
+            'seo_meta_description' => 'Book premium bus tickets across Bangladesh with JourneyGo. Secure online booking, custom seat selection, instant PNR invoice, and promo codes.',
+            'seo_meta_keywords' => 'bus tickets, Bangladesh, JourneyGo, online booking, bus reservation, seat selection',
+            'seo_og_title' => 'JourneyGo | Premium Bus Ticket Reservation',
+            'seo_og_description' => 'Book premium bus tickets across Bangladesh with JourneyGo. Secure online booking, custom seat selection, instant PNR invoice, and promo codes.',
             'seo_og_image' => '',
             'seo_google_analytics_id' => '',
         ];

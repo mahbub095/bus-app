@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
 
         if (! $isInstalled) {
             // Share empty defaults so admin.layout doesn't crash
-            View::composer('admin.layout', function ($view) {
+            View::composer(['admin.layout', 'admin.login', 'admin.dashboard'], function ($view) {
                 $view->with('siteSettings', []);
                 $view->with('smsConfig', null);
             });
@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Share site settings with the admin layout so the dynamic footer
         // works on all admin pages (dashboard, login, etc.)
-        View::composer('admin.layout', function ($view) {
+        View::composer(['admin.layout', 'admin.login', 'admin.dashboard'], function ($view) {
             try {
                 if (Schema::hasTable('site_settings')) {
                     $view->with('siteSettings', SiteSetting::getAllCached());

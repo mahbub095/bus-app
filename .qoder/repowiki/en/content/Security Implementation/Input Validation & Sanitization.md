@@ -3,6 +3,8 @@
 <cite>
 **Referenced Files in This Document**
 - [BookingController.php](file://backend/app/Http/Controllers/API/BookingController.php)
+- [AdminBookingController.php](file://backend/app/Http/Controllers/Admin/BookingController.php)
+- [BookingApiController.php](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php)
 - [UserAuthController.php](file://backend/app/Http/Controllers/API/UserAuthController.php)
 - [SearchController.php](file://backend/app/Http/Controllers/API/SearchController.php)
 - [BookingService.php](file://backend/app/Services/BookingService.php)
@@ -15,7 +17,15 @@
 - [EnsureUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php)
 - [User.php](file://backend/app/Models/User.php)
 - [Booking.php](file://backend/app/Models/Booking.php)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated passenger_email validation rules from required to optional across all booking endpoints
+- Added documentation for the database migration supporting nullable email addresses
+- Updated booking request validation examples to reflect optional email support
+- Enhanced admin booking flow documentation to support both API and admin scenarios without mandatory emails
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -29,7 +39,7 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains how SonyaBus validates and sanitizes input, protects against common web vulnerabilities, and secures data flows for bus ticket booking operations. It focuses on Laravel request validation rules used across API controllers and services, CSRF protection via Sanctum and session configuration, XSS prevention through safe rendering practices, SQL injection mitigation using parameterized queries, and secure handling of sensitive inputs such as seats, fares, promotions, and user credentials.
+This document explains how SonyaBus validates and sanitizes input, protects against common web vulnerabilities, and secures data flows for bus ticket booking operations. It focuses on Laravel request validation rules used across API controllers and services, CSRF protection via Sanctum and session configuration, XSS prevention through safe rendering practices, SQL injection mitigation using parameterized queries, and secure handling of sensitive inputs such as seats, fares, promotions, and user credentials. **Updated**: The system now supports optional passenger email addresses across all booking flows, accommodating both customer-facing APIs and administrative booking scenarios where email contact may not be available.
 
 ## Project Structure
 The security-relevant parts of the backend are organized around:
@@ -75,6 +85,7 @@ AdminWeb["Admin Web Routes<br/>routes/web.php"] --> AdminMiddleware["EnsureUserI
 
 Key validation patterns observed:
 - Required fields validated with presence and type constraints
+- **Updated**: Passenger email is now optional across all booking endpoints while maintaining email format validation when provided
 - Enumerated values restricted with allow-lists
 - Numeric ranges constrained to prevent abuse
 - Database existence checks for foreign keys
@@ -83,8 +94,8 @@ Key validation patterns observed:
 
 **Section sources**
 - [BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
-- [BookingController.php:42-60](file://backend/app/Http/Controllers/API/BookingController.php#L42-L60)
-- [BookingController.php:82-116](file://backend/app/Http/Controllers/API/BookingController.php#L82-L116)
+- [AdminBookingController.php:20-52](file://backend/app/Http/Controllers/Admin/BookingController.php#L20-L52)
+- [BookingApiController.php:49-73](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php#L49-L73)
 - [UserAuthController.php:17-39](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L39)
 - [UserAuthController.php:41-70](file://backend/app/Http/Controllers/API/UserAuthController.php#L41-L70)
 - [UserAuthController.php:88-111](file://backend/app/Http/Controllers/API/UserAuthController.php#L88-L111)
@@ -130,7 +141,8 @@ BC-->>FE : JSON response
 ### Booking Request Validation and Business Rules
 - Controller-level validation enforces:
   - schedule_id must exist in schedules
-  - passenger_name, passenger_phone, passenger_email required with length limits
+  - passenger_name, passenger_phone required with length limits
+  - **Updated**: passenger_email is now optional but validated as email format when provided
   - seat_numbers string with maximum length
   - payment_method enumerated by business context
   - total_fare nullable numeric non-negative
@@ -170,8 +182,47 @@ CreateBooking --> Success(["Return Booking Result"])
 
 **Section sources**
 - [BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
+- [AdminBookingController.php:20-52](file://backend/app/Http/Controllers/Admin/BookingController.php#L20-L52)
+- [BookingApiController.php:49-73](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php#L49-L73)
 - [BookingService.php:28-131](file://backend/app/Services/BookingService.php#L28-L131)
 - [BookingService.php:304-333](file://backend/app/Services/BookingService.php#L304-L333)
+
+### Optional Email Support Across All Booking Flows
+**New** The system now supports optional passenger email addresses across all booking endpoints:
+
+- **Customer API**: `passenger_email` validated as `nullable|email|max:100`
+- **Admin Web Interface**: `passenger_email` validated as `nullable|email|max:100`  
+- **Admin API**: `passenger_email` validated as `nullable|email|max:100`
+- **Database Schema**: Migration makes `passenger_email` column nullable
+
+This change enables flexible booking scenarios:
+- Customer bookings without email addresses
+- Administrative bookings for walk-in customers
+- Bulk booking operations where email collection is not feasible
+- Legacy data compatibility with existing records
+
+```mermaid
+flowchart TD
+EmailFlow["Email Handling Flow"] --> CustomerAPI["Customer API<br/>nullable|email|max:100"]
+EmailFlow --> AdminWeb["Admin Web<br/>nullable|email|max:100"]
+EmailFlow --> AdminAPI["Admin API<br/>nullable|email|max:100"]
+CustomerAPI --> DBMigration["Database Migration<br/>nullable column"]
+AdminWeb --> DBMigration
+AdminAPI --> DBMigration
+DBMigration --> FlexibleBookings["Flexible Booking Scenarios"]
+```
+
+**Diagram sources**
+- [BookingController.php:25](file://backend/app/Http/Controllers/API/BookingController.php#L25)
+- [AdminBookingController.php:26](file://backend/app/Http/Controllers/Admin/BookingController.php#L26)
+- [BookingApiController.php:55](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php#L55)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php:12-16](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php#L12-L16)
+
+**Section sources**
+- [BookingController.php:25](file://backend/app/Http/Controllers/API/BookingController.php#L25)
+- [AdminBookingController.php:26](file://backend/app/Http/Controllers/Admin/BookingController.php#L26)
+- [BookingApiController.php:55](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php#L55)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php:12-16](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php#L12-L16)
 
 ### Search Parameters Validation
 - Search endpoint validates:
@@ -363,7 +414,7 @@ SC --> CSVC["CoachServicesService"]
 ## Troubleshooting Guide
 - Validation failures:
   - Review controller validation rules for each endpoint
-  - Inspect error messages returned by Laravel’s validator
+  - Inspect error messages returned by Laravel's validator
 - Authentication issues:
   - Verify Sanctum token generation and deletion on logout
   - Confirm throttle middleware is configured correctly
@@ -372,12 +423,18 @@ SC --> CSVC["CoachServicesService"]
 - Database errors:
   - Inspect transaction boundaries and locking strategies
   - Ensure foreign key constraints are satisfied
+- **Updated**: Email validation issues:
+  - Verify that null email values are properly handled throughout the booking pipeline
+  - Check that frontend forms properly submit null or empty email values
+  - Ensure email format validation only applies when email is provided
 
 **Section sources**
 - [BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
+- [AdminBookingController.php:20-52](file://backend/app/Http/Controllers/Admin/BookingController.php#L20-L52)
+- [BookingApiController.php:49-73](file://backend/app/Http/Controllers/API/Admin/BookingApiController.php#L49-L73)
 - [UserAuthController.php:41-70](file://backend/app/Http/Controllers/API/UserAuthController.php#L41-L70)
 - [EnsureUserIsAdmin.php:12-39](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L39)
 - [BookingService.php:52-127](file://backend/app/Services/BookingService.php#L52-L127)
 
 ## Conclusion
-SonyaBus applies robust input validation at the controller layer and enforces business rules in services. Security measures include Sanctum-based authentication, rate limiting, transactional database operations with row locking, and careful use of Eloquent to prevent SQL injection. CORS and session configurations provide foundational protections against CSRF and cross-origin risks. While no file upload endpoints were present in the analyzed scope, any future uploads should follow strict MIME, size, and path controls. By maintaining these patterns, SonyaBus mitigates common vulnerabilities in bus ticket booking workflows.
+SonyaBus applies robust input validation at the controller layer and enforces business rules in services. Security measures include Sanctum-based authentication, rate limiting, transactional database operations with row locking, and careful use of Eloquent to prevent SQL injection. CORS and session configurations provide foundational protections against CSRF and cross-origin risks. **Updated**: The system now supports flexible booking workflows with optional passenger email addresses across all endpoints, enabling both customer-facing APIs and administrative booking scenarios without requiring email contact information. While no file upload endpoints were present in the analyzed scope, any future uploads should follow strict MIME, size, and path controls. By maintaining these patterns, SonyaBus mitigates common vulnerabilities in bus ticket booking workflows while providing enhanced flexibility for diverse booking requirements.

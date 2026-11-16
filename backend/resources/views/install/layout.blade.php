@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Installation') - SonyaBus</title>
+    <title>@yield('title', 'Installation') - JourneyGo</title>
+    @include('admin.partials.favicon')
     <style>
         * {
             margin: 0;
@@ -223,7 +224,7 @@
 <body>
     <div class="install-container">
         <div class="install-header">
-            <h1>SonyaBus Installation</h1>
+            <h1>JourneyGo Installation</h1>
             <p>@yield('subtitle', 'Setting up your bus booking system')</p>
         </div>
 
@@ -232,7 +233,7 @@
         </div>
 
         <div class="install-footer">
-            <p>SonyaBus &copy; 2026 | <a href="https://codecanyon.net" target="_blank">CodeCanyon</a></p>
+            <p>JourneyGo &copy; 2026 | <a href="https://codecanyon.net" target="_blank">CodeCanyon</a></p>
         </div>
     </div>
 </body>

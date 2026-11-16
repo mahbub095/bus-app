@@ -10,7 +10,15 @@
 - [BookingController.php](file://backend/app/Http/Controllers/API/BookingController.php)
 - [BookingService.php](file://backend/app/Services/BookingService.php)
 - [SeatMapService.php](file://backend/app/Services/SeatMapService.php)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated passenger email validation rules to make email field optional
+- Modified frontend components to handle null email values gracefully
+- Updated backend validation to accept nullable email fields
+- Added database migration to support nullable passenger email column
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -26,7 +34,7 @@
 ## Introduction
 This document explains the complete SonyaBus booking workflow: route search, schedule filtering, seat selection, passenger information collection, pricing calculation, seat holding, booking validation, payment initiation, and confirmation. It focuses on how frontend components coordinate with backend controllers and services to manage state, concurrency, availability, and lifecycle transitions.
 
-The journey is designed around optimistic user interactions with strong server-side validation and locking. Seat availability is shown live, seats can be temporarily held while a customer completes checkout, and bookings are persisted only after all validations pass.
+The journey is designed around optimistic user interactions with strong server-side validation and locking. Seat availability is shown live, seats can be temporarily held while a customer completes checkout, and bookings are persisted only after all validations pass. **Updated**: The passenger email field is now optional during the booking process, allowing users to book tickets without providing an email address while maintaining data integrity and system functionality.
 
 ## Project Structure
 The booking flow spans React components for the customer UI and Laravel API endpoints plus services for business logic.
@@ -59,7 +67,7 @@ BookingCtrl --> SeatMapSvc
 ```
 
 **Diagram sources**
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
@@ -69,7 +77,7 @@ BookingCtrl --> SeatMapSvc
 - [BookingService.php:1-335](file://backend/app/Services/BookingService.php#L1-L335)
 
 **Section sources**
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SearchController.php:1-33](file://backend/app/Http/Controllers/API/SearchController.php#L1-L33)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 
@@ -87,7 +95,7 @@ BookingCtrl --> SeatMapSvc
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SearchController.php:1-33](file://backend/app/Http/Controllers/API/SearchController.php#L1-L33)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [BookingService.php:1-335](file://backend/app/Services/BookingService.php#L1-L335)
@@ -180,7 +188,7 @@ ShowResults --> End
 - [SearchController.php:14-30](file://backend/app/Http/Controllers/API/SearchController.php#L14-L30)
 
 ### Seat Map Interaction and Real-Time Availability
-When a schedule is expanded, the seat map component renders the bus layout based on the bus’s seat layout and total seats. It supports multiple layouts including standard 2+2, 1+2, 2+2_last5, and sleeper configurations. The seat map displays statuses such as available, selected, sold_m, sold_f, booked_m, booked_f, and blocked.
+When a schedule is expanded, the seat map component renders the bus layout based on the bus's seat layout and total seats. It supports multiple layouts including standard 2+2, 1+2, 2+2_last5, and sleeper configurations. The seat map displays statuses such as available, selected, sold_m, sold_f, booked_m, booked_f, and blocked.
 
 Real-time behavior:
 - The portal polls the search endpoint every 5 seconds while a schedule is selected, refreshing the schedule object and updating the seat map.
@@ -224,15 +232,16 @@ HoldSuccess --> |No| RollbackSelect["Rollback selection + show error"]
 
 ### Passenger Information Collection and Promo Application
 The seat map sidebar collects:
-- Boarding point and dropping point, derived from the schedule’s route points.
+- Boarding point and dropping point, derived from the schedule's route points.
 - Mobile number, passenger name, email, gender.
 - Payment method selection (currently ZiniPay).
 - Promo code application.
 
-Validation rules enforced before booking:
+**Updated** Validation rules enforced before booking:
 - At least one seat must be selected.
-- Passenger name, phone, and email are required.
-- Phone must meet minimum digit length.
+- Passenger name and phone are required.
+- Email is now optional - users can leave it blank or provide a valid email address.
+- Phone must meet minimum digit length (11 digits).
 - Boarding and dropping points must be selected.
 
 Promo codes are validated through a dedicated endpoint and applied as a discount amount subtracted from the calculated total.
@@ -251,23 +260,23 @@ Valid --> |Yes| Ready["Ready to submit booking"]
 
 **Diagram sources**
 - [SeatMap.jsx:421-542](file://frontend/src/components/SeatMap.jsx#L421-L542)
-- [BookingPortal.jsx:445-467](file://frontend/src/components/BookingPortal.jsx#L445-L467)
-- [BookingPortal.jsx:469-498](file://frontend/src/components/BookingPortal.jsx#L469-L498)
+- [BookingPortal.jsx:470-496](file://frontend/src/components/BookingPortal.jsx#L470-L496)
+- [BookingPortal.jsx:498-515](file://frontend/src/components/BookingPortal.jsx#L498-L515)
 
 **Section sources**
 - [SeatMap.jsx:421-542](file://frontend/src/components/SeatMap.jsx#L421-L542)
-- [BookingPortal.jsx:445-467](file://frontend/src/components/BookingPortal.jsx#L445-L467)
-- [BookingPortal.jsx:469-498](file://frontend/src/components/BookingPortal.jsx#L469-L498)
+- [BookingPortal.jsx:470-496](file://frontend/src/components/BookingPortal.jsx#L470-L496)
+- [BookingPortal.jsx:498-515](file://frontend/src/components/BookingPortal.jsx#L498-L515)
 
 ### Pricing Calculations
 Pricing is computed both on the frontend and backend:
 - Frontend calculates seat fare, service charge, gateway charge, discounts, and applies promo discount to display a grand total.
-- Backend calculates the final total fare using the seat map service’s pricing breakdown and applies promotion discount if provided.
+- Backend calculates the final total fare using the seat map service's pricing breakdown and applies promotion discount if provided.
 
 Important notes:
 - Gateway charges and discounts are applied when the payment method is not cash.
 - Promotion discount cannot reduce the total below zero.
-- The backend’s total fare is authoritative for persistence and reporting.
+- The backend's total fare is authoritative for persistence and reporting.
 
 ```mermaid
 flowchart TD
@@ -298,12 +307,13 @@ The backend booking service enforces critical constraints within a database tran
 - Rebuilds the seat map and verifies requested seats are selectable.
 - Calculates total fare and resolves booking status based on payment method.
 - Persists the booking record with passenger and route point data.
-- Cleans up seat holds for the user’s selected seats.
+- Cleans up seat holds for the user's selected seats.
 - For ZiniPay, attaches an invoice and returns a payment URL; otherwise sends verification SMS and returns the booking.
 
-Status resolution:
+**Updated** Status resolution:
 - ZiniPay creates PENDING bookings requiring payment completion.
 - Other methods typically result in SOLD status.
+- Email field is now nullable, allowing bookings without email addresses.
 
 Cancellation:
 - Customers can cancel PENDING bookings directly.
@@ -383,7 +393,7 @@ Ctrl-->>B : message "reserved by another user"
 
 ### Booking Modification Capabilities
 Within the current implementation:
-- Direct modification of an existing booking’s seats or passenger details is not exposed through the documented endpoints.
+- Direct modification of an existing booking's seats or passenger details is not exposed through the documented endpoints.
 - Cancellation is supported:
   - PENDING bookings can be cancelled directly.
   - Other statuses can transition to CANCEL_REQUESTED, awaiting administrative action.
@@ -421,14 +431,14 @@ BookingService --> SeatMapService
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SearchController.php:1-33](file://backend/app/Http/Controllers/API/SearchController.php#L1-L33)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [BookingService.php:1-335](file://backend/app/Services/BookingService.php#L1-L335)
 - [SeatMapService.php:1-593](file://backend/app/Services/SeatMapService.php#L1-L593)
 
 **Section sources**
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SearchController.php:1-33](file://backend/app/Http/Controllers/API/SearchController.php#L1-L33)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [BookingService.php:1-335](file://backend/app/Services/BookingService.php#L1-L335)
@@ -457,20 +467,24 @@ Common issues and resolutions:
 - Invalid promo code: ensure code exists and is applicable; discount is applied only if valid.
 - Booking failed due to invalid seats: reselect seats ensuring they remain available until submission.
 - Authentication errors: log in again if session expired; portal will redirect to login.
+- Email validation errors: ensure email format is correct if provided, or leave the field blank as it's now optional.
 
 Operational tips:
 - Use the refresh button to force live schedule data.
 - Watch the live status indicator for seat map sync timing.
 - Keep track of seat hold countdowns; expired seats require reselection.
 - Verify payment URL redirection for ZiniPay bookings.
+- Email field is now optional - users can proceed without providing an email address.
 
 **Section sources**
 - [BookingPortal.jsx:291-380](file://frontend/src/components/BookingPortal.jsx#L291-L380)
-- [BookingPortal.jsx:445-467](file://frontend/src/components/BookingPortal.jsx#L445-L467)
-- [BookingPortal.jsx:469-575](file://frontend/src/components/BookingPortal.jsx#L469-L575)
+- [BookingPortal.jsx:470-496](file://frontend/src/components/BookingPortal.jsx#L470-L496)
+- [BookingPortal.jsx:498-575](file://frontend/src/components/BookingPortal.jsx#L498-L575)
 - [SeatMap.jsx:386-418](file://frontend/src/components/SeatMap.jsx#L386-L418)
 
 ## Conclusion
-SonyaBus implements a robust booking workflow combining optimistic frontend interactions with strict backend validation and concurrency controls. The search phase leverages caching for performance, while the seat map provides real-time availability and interactive selection. Seat holds protect inventory during checkout, and the booking service ensures data integrity through transactions and locking. Pricing calculations are consistent across frontend and backend, and promotional discounts are applied safely. Cancellation flows support both immediate cancellation and administrative review. Future enhancements could introduce real-time event streaming and explicit booking modification capabilities.
+SonyaBus implements a robust booking workflow combining optimistic frontend interactions with strict backend validation and concurrency controls. The search phase leverages caching for performance, while the seat map provides real-time availability and interactive selection. Seat holds protect inventory during checkout, and the booking service ensures data integrity through transactions and locking. Pricing calculations are consistent across frontend and backend, and promotional discounts are applied safely. Cancellation flows support both immediate cancellation and administrative review. 
+
+**Updated**: The passenger email field is now optional during the booking process, providing greater flexibility for users who prefer not to share their email address. This change maintains system integrity while improving user experience. Future enhancements could introduce real-time event streaming and explicit booking modification capabilities.
 
 [No sources needed since this section summarizes without analyzing specific files]

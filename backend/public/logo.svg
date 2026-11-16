@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96" viewBox="0 0 360 96" role="img" aria-label="JourneyGo">
+  <defs>
+    <linearGradient id="jgTile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="jgGo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="16" width="64" height="64" rx="18" fill="url(#jgTile)"/>
+  <path d="M46.7 33.5 V52 a11.6 11.6 0 0 1 -23.3 0" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="56.3" cy="32" r="3.5" fill="#ffffff" fill-opacity="0.9"/>
+  <text x="88" y="63" font-family="Segoe UI, system-ui, -apple-system, Arial, sans-serif" font-size="40" font-weight="800" letter-spacing="-0.5">
+    <tspan fill="#0f172a">Journey</tspan><tspan fill="url(#jgGo)">Go</tspan>
+  </text>
+</svg>

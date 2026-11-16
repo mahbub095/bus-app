@@ -1,6 +1,6 @@
-# SonyaBus — Customer App (React 19 + Vite)
+# JourneyGo — Customer App (React 19 + Vite)
 
-Customer-facing single page application for the SonyaBus booking system:
+Customer-facing single page application for the JourneyGo booking system:
 schedule search, gender-aware seat map, checkout, ZiniPay payment redirect and
 "my tickets".
 

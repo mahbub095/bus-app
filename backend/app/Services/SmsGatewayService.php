@@ -67,7 +67,7 @@ class SmsGatewayService
             return ['success' => false, 'message' => 'Enter a valid Bangladesh mobile number (e.g. 01712345678).'];
         }
 
-        $message = $customMessage ?: 'SonyaBus SMS test: your gateway configuration is working.';
+        $message = $customMessage ?: 'JourneyGo SMS test: your gateway configuration is working.';
 
         return $this->sendMessage($config, $phone, $message, ['test' => true]);
     }
@@ -146,7 +146,7 @@ class SmsGatewayService
             );
         }
 
-        return "SonyaBus ticket confirmed. PNR {$pnr}, Seats {$booking->seat_numbers}, Fare BDT {$booking->total_fare}.";
+        return "JourneyGo ticket confirmed. PNR {$pnr}, Seats {$booking->seat_numbers}, Fare BDT {$booking->total_fare}.";
     }
 
     /**

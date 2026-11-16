@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'SonyaBus | Admin Dashboard Portal')</title>
+    <title>@yield('title', 'JourneyGo | Admin Dashboard Portal')</title>
+    @include('admin.partials.favicon')
     
     @include('admin.partials.fonts')
 
@@ -1785,14 +1786,14 @@
             <a href="/admin" class="logo">
                 @if(!empty($siteSettings['logo_url'] ?? null))
                     <img src="{{ $siteSettings['logo_url'] }}"
-                         alt="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
+                         alt="{{ $siteSettings['logo_text'] ?? 'JourneyGo' }}"
                          class="admin-logo-img">
                 @elseif(!empty($siteSettings['logo_text'] ?? null))
                     <div class="logo-icon">{{ strtoupper(substr($siteSettings['logo_text'], 0, 1)) }}</div>
                     {{ $siteSettings['logo_text'] }} Admin
                 @else
-                    <div class="logo-icon">S</div>
-                    Sonya<span class="logo-accent">Bus</span> Admin
+                    <div class="logo-icon">J</div>
+                    Journey<span class="logo-accent">Go</span> Admin
                 @endif
             </a>
             
@@ -1858,7 +1859,7 @@
     <!-- Footer -->
     <footer class="app-footer">
         <div class="container">
-            <p>{{ $siteSettings['footer_copyright'] ?? '© 2026 SonyaBus Enterprise Ltd. All rights reserved.' }} Admin Dashboard Control Portal.</p>
+            <p>{{ $siteSettings['footer_copyright'] ?? '© 2026 JourneyGo Enterprise Ltd. All rights reserved.' }} Admin Dashboard Control Portal.</p>
         </div>
     </footer>
 

@@ -63,7 +63,7 @@ export default function MyTickets({
       const doc = new JsPdfClass();
 
       const lines = [
-        'SonyaBus - Ticket Invoice',
+        'JourneyGo - Ticket Invoice',
         `PNR: ${booking.pnr}`,
         `Passenger: ${booking.passenger_name}`,
         `Phone: ${booking.passenger_phone}`,

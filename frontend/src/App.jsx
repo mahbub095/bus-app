@@ -632,7 +632,7 @@ function App() {
           <div className="backend-offline-icon">🧩</div>
           <h1 className="backend-offline-title">Installation Not Complete</h1>
           <p className="backend-offline-desc">
-            The SonyaBus booking engine has been detected, but the 4-step
+            The JourneyGo booking engine has been detected, but the 4-step
             install wizard has not been completed yet. You must finish the
             installation process before the website, admin panel, or any
             other routes will work.

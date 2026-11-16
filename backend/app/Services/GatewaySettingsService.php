@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
  */
 class GatewaySettingsService
 {
-    private const DEFAULT_TEST_SMS = 'SonyaBus SMS Test: Gateway settings are working correctly.';
+    private const DEFAULT_TEST_SMS = 'JourneyGo SMS Test: Gateway settings are working correctly.';
 
     public function __construct(
         protected EnvFileWriter $envFileWriter,

@@ -52,7 +52,7 @@
         <div class="input-group mt-16">
             <label for="message_template">Booking SMS Message Template</label>
             <textarea name="message_template" id="message_template" class="coupon-input" rows="3"
-                      placeholder="Template text for passenger ticket confirmations...">{{ old('message_template', $sms?->message_template ?? 'SonyaBus ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}') }}</textarea>
+                      placeholder="Template text for passenger ticket confirmations...">{{ old('message_template', $sms?->message_template ?? 'JourneyGo ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}') }}</textarea>
             <p class="gateway-field-hint">
                 Available variables:
                 <code>{PNR}</code>, <code>{SEATS}</code>, <code>{FARE}</code>, <code>{STATUS}</code>

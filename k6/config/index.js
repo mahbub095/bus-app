@@ -3,7 +3,7 @@
 export const DEFAULT_BASE_URL = 'http://sonyabus-app.test';
 
 export const ADMIN = {
-    email: 'superadmin@sonyabus.com',
+    email: 'superadmin@journeygo.com',
     password: 'password123',
 };
 

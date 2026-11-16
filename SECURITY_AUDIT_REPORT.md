@@ -362,7 +362,7 @@ Or use React's built-in escaping (already done by default in JSX).
 **File:** [backend/database/migrations/2026_06_02_000001_add_role_to_users_table.php](backend/database/migrations/2026_06_02_000001_add_role_to_users_table.php)  
 **Issue:**
 ```php
-DB::table('users')->where('email', 'admin@sonyabus.com')->update(['role' => 'admin']);
+DB::table('users')->where('email', 'admin@journeygo.com')->update(['role' => 'admin']);
 ```
 **Risk:** Hardcoded admin email breaks if changed; no easy way to manage admin roles.
 
@@ -381,7 +381,7 @@ use Illuminate\Database\Seeder;
 class AdminUserSeeder extends Seeder {
     public function run(): void {
         User::updateOrCreate(
-            ['email' => env('ADMIN_EMAIL', 'admin@sonyabus.com')],
+            ['email' => env('ADMIN_EMAIL', 'admin@journeygo.com')],
             [
                 'name' => 'Admin User',
                 'password' => bcrypt(env('ADMIN_PASSWORD', 'ChangeMe123!')),

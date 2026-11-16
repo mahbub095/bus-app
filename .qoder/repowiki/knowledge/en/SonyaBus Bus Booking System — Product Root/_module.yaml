@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: SonyaBus Product Distribution Root
+title: SonyaBus Bus Booking System — Product Root
 scope:
     - README.md
     - CODECANYON_RELEASE_GUIDE.md

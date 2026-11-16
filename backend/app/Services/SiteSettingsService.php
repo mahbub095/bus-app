@@ -28,13 +28,13 @@ class SiteSettingsService
         }
 
         return [
-            'site_title' => $settings['site_title'] ?? 'SonyaBus',
+            'site_title' => $settings['site_title'] ?? 'JourneyGo',
             'favicon_url' => $settings['favicon_url'] ?? '/favicon.svg',
             'logo_url' => $settings['logo_url'] ?? null,
             'logo_text' => $settings['logo_text'] ?? null,
             'footer' => [
-                'company_name' => $settings['footer_company_name'] ?? 'SonyaBus Enterprise',
-                'copyright' => $settings['footer_copyright'] ?? '© 2026 SonyaBus Enterprise Ltd.',
+                'company_name' => $settings['footer_company_name'] ?? 'JourneyGo Enterprise',
+                'copyright' => $settings['footer_copyright'] ?? '© 2026 JourneyGo Enterprise Ltd.',
                 'links' => $footerLinks,
             ],
             'maintenance' => [

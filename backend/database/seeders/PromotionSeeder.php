@@ -10,7 +10,7 @@ class PromotionSeeder extends Seeder
     public function run(): void
     {
         Promotion::updateOrCreate(
-            ['code' => 'SONYANEW'],
+            ['code' => 'JOURNEYNEW'],
             [
                 'discount_amount' => 150.00,
                 'description' => '150 BDT discount for your first ticket reservation'

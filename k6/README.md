@@ -1,6 +1,6 @@
 # k6 Load Testing
 
-Performance tests for the SonyaBus booking app. Each **scenario** file is a thin runner; the real logic lives in **flows**.
+Performance tests for the JourneyGo booking app. Each **scenario** file is a thin runner; the real logic lives in **flows**.
 
 ## Folder structure
 
@@ -109,7 +109,7 @@ Admin uses **session cookies** on `/admin/api/*`, not Sanctum tokens.
 
 Default admin user (from database seeder):
 
-- Email: `superadmin@sonyabus.com`
+- Email: `superadmin@journeygo.com`
 - Password: `password123`
 
 Change in `config/index.js` if needed.

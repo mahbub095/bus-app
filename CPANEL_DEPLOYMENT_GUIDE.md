@@ -119,7 +119,7 @@ Edit `.env` for production (full example in section 5). Do **not** upload `.env`
 DB_CONNECTION=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=youruser_sonyabus
+DB_DATABASE=youruser_journeygo
 DB_USERNAME=youruser_sonyabus_user
 DB_PASSWORD=your_strong_password
 ```
@@ -204,7 +204,7 @@ Use **File Manager** or **FTP** (FileZilla). Example layout under your account h
 Edit `backend/.env` on the server (File Manager → Edit, or upload from your PC):
 
 ```env
-APP_NAME=SonyaBus
+APP_NAME=JourneyGo
 APP_ENV=production
 APP_KEY=                           # generate in step 8
 APP_DEBUG=false
@@ -219,7 +219,7 @@ LOG_LEVEL=error
 DB_CONNECTION=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=youruser_sonyabus
+DB_DATABASE=youruser_journeygo
 DB_USERNAME=youruser_sonyabus_user
 DB_PASSWORD=your_strong_password
 
@@ -377,9 +377,9 @@ Change these immediately on production.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | superadmin@sonyabus.com | password123 |
-| Admin | admin@sonyabus.com | password123 |
-| Customer | user@sonyabus.com | password123 |
+| Super Admin | superadmin@journeygo.com | password123 |
+| Admin | admin@journeygo.com | password123 |
+| Customer | user@journeygo.com | password123 |
 
 **Admin panel URL:** `https://api.yourdomain.com/admin/login`  
 **Customer site:** `https://yourdomain.com`

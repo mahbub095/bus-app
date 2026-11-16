@@ -27,7 +27,7 @@
             Installation Successful!
         </h2>
         <p style="color: #555; font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
-            SonyaBus is installed and your license is activated.<br>
+            JourneyGo is installed and your license is activated.<br>
             You can now log in to the admin dashboard.
         </p>
         <a href="/admin/login" style="

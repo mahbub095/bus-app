@@ -10,7 +10,7 @@
     <a href="/admin" class="sidebar-brand">
         @if(!empty($siteSettings['logo_url'] ?? null))
             <img src="{{ $siteSettings['logo_url'] }}"
-                 alt="{{ $siteSettings['logo_text'] ?? 'SonyaBus' }}"
+                 alt="{{ $siteSettings['logo_text'] ?? 'JourneyGo' }}"
                  class="sidebar-brand-img">
         @elseif(!empty($siteSettings['logo_text'] ?? null))
             <div class="logo-icon" style="width:30px;height:30px;font-size:15px;border-radius:8px;flex-shrink:0;">
@@ -20,8 +20,8 @@
                 {{ $siteSettings['logo_text'] }}
             </span>
         @else
-            <div class="logo-icon" style="width:30px;height:30px;font-size:15px;border-radius:8px;flex-shrink:0;">S</div>
-            <span class="sidebar-brand-text">SonyaBus</span>
+            <div class="logo-icon" style="width:30px;height:30px;font-size:15px;border-radius:8px;flex-shrink:0;">J</div>
+            <span class="sidebar-brand-text">JourneyGo</span>
         @endif
     </a>
 

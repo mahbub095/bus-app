@@ -1,6 +1,6 @@
-# SonyaBus — Backend (Laravel 12)
+# JourneyGo — Backend (Laravel 12)
 
-Laravel 12 API + admin dashboard for the SonyaBus bus ticket booking system.
+Laravel 12 API + admin dashboard for the JourneyGo bus ticket booking system.
 
 This application serves two surfaces from one codebase:
 
