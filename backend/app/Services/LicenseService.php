@@ -139,7 +139,7 @@ class LicenseService
             if ($returnedItemId !== (string) $envatoItemId) {
                 return $this->fail(
                     'This purchase code is for a different product. ' .
-                    'Please use the purchase code from your SonyaBus download.'
+                    'Please use the purchase code from your JourneyGo download.'
                 );
             }
 
@@ -245,7 +245,7 @@ class LicenseService
         $pseudoData = [
             'item'        => ['id' => (string) config('envato.item_id', '0')],
             'buyer'       => 'seller_test_account',
-            'buyer_email' => 'seller@sonyabus.test',
+            'buyer_email' => 'seller@journeygo.test',
             'sold_at'     => now()->toIso8601String(),
             'license'     => 'Extended License',
         ];
@@ -313,7 +313,7 @@ class LicenseService
 
             return [
                 'success'  => true,
-                'message'  => 'License verified successfully! Welcome to SonyaBus.',
+                'message'  => 'License verified successfully! Welcome to JourneyGo.',
                 'license'  => $license,
                 'api_data' => $apiData,
             ];
@@ -366,7 +366,7 @@ class LicenseService
             ->retry(2, 500)
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $token,
-                'User-Agent'    => 'SonyaBus License Verification/1.0',
+                'User-Agent'    => 'JourneyGo License Verification/1.0',
                 'Accept'        => 'application/json',
             ])
             ->get($url, ['code' => $purchaseCode]);

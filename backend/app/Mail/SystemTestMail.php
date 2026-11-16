@@ -26,7 +26,7 @@ class SystemTestMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'SonyaBus SMTP Mailer Test',
+            subject: 'JourneyGo SMTP Mailer Test',
         );
     }
 
@@ -36,7 +36,7 @@ class SystemTestMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            htmlString: 'This is a test email sent from the SonyaBus Admin Dashboard to verify your SMTP configuration.',
+            htmlString: 'This is a test email sent from the JourneyGo Admin Dashboard to verify your SMTP configuration.',
         );
     }
 }

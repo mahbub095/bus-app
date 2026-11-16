@@ -8,7 +8,15 @@
 - [Admin BookingController.php](file://backend/app/Http/Controllers/Admin/BookingController.php)
 - [Booking Model.php](file://backend/app/Models/Booking.php)
 - [ZinipayPaymentTest.php](file://backend/tests/Feature/ZinipayPaymentTest.php)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated ZinipayService documentation to reflect null passenger email handling
+- Added explanation of email fallback mechanism using mail settings
+- Updated invoice creation flow to include email validation and fallback logic
+- Enhanced error handling section with email-related scenarios
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -30,6 +38,8 @@ The implementation uses:
 - Webhook handling for asynchronous payment confirmation
 - Tests that validate callback and webhook behavior
 
+**Updated** The system now handles cases where passengers don't provide email addresses during booking, automatically falling back to the global sender address configured in mail settings to ensure compatibility with ZiniPay's email requirements.
+
 ## Project Structure
 The ZiniPay integration spans a small set of focused backend components:
 - `ZinipayService`: Gateway client for invoice creation and payment verification
@@ -48,6 +58,7 @@ ADMIN_BC["Admin\\BookingController"]
 PAYMENT_CTRL["PaymentController"]
 SERVICE["ZinipayService"]
 DB[("Bookings Database")]
+MAIL_CONFIG["Mail Settings"]
 end
 subgraph "External"
 ZP["ZiniPay Gateway"]
@@ -61,6 +72,7 @@ PAYMENT_CTRL --> SERVICE
 PAYMENT_CTRL --> DB
 API_BC --> DB
 ADMIN_BC --> DB
+SERVICE --> MAIL_CONFIG
 ```
 
 **Diagram sources**
@@ -70,7 +82,7 @@ ADMIN_BC --> DB
 - [ZinipayService.php:27-97](file://backend/app/Services/ZinipayService.php#L27-L97)
 
 **Section sources**
-- [ZinipayService.php:1-141](file://backend/app/Services/ZinipayService.php#L1-L141)
+- [ZinipayService.php:1-143](file://backend/app/Services/ZinipayService.php#L1-L143)
 - [PaymentController.php:1-162](file://backend/app/Http/Controllers/PaymentController.php#L1-L162)
 - [API BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [Admin BookingController.php:1-137](file://backend/app/Http/Controllers/Admin/BookingController.php#L1-L137)
@@ -80,6 +92,7 @@ ADMIN_BC --> DB
 - `ZinipayService`
   - `createInvoice(Booking $booking, string $source = 'frontend'): ?array`
     - Creates a payment invoice with ZiniPay
+    - **Updated** Now handles null passenger emails by falling back to global mail sender address
     - Returns an array containing `payment_url` and optionally `invoice_id`, or `null` on failure
   - `verifyPayment(string $invoiceId): ?string`
     - Verifies the current status of an invoice
@@ -109,10 +122,11 @@ ADMIN_BC --> DB
 
 - `Booking` model
   - Stores `payment_method`, `payment_invoice_id`, and `status`
+  - **Updated** `passenger_email` field is now nullable to support bookings without email addresses
   - Provides computed `pnr` attribute for ticket display
 
 **Section sources**
-- [ZinipayService.php:20-139](file://backend/app/Services/ZinipayService.php#L20-L139)
+- [ZinipayService.php:20-141](file://backend/app/Services/ZinipayService.php#L20-L141)
 - [PaymentController.php:18-136](file://backend/app/Http/Controllers/PaymentController.php#L18-L136)
 - [API BookingController.php:118-148](file://backend/app/Http/Controllers/API/BookingController.php#L118-L148)
 - [Admin BookingController.php:120-135](file://backend/app/Http/Controllers/Admin/BookingController.php#L120-L135)
@@ -127,13 +141,21 @@ participant Client as "Client"
 participant API as "API\\BookingController"
 participant Admin as "Admin\\BookingController"
 participant Service as "ZinipayService"
+participant MailConfig as "Mail Settings"
 participant Gateway as "ZiniPay Gateway"
 participant PayCtrl as "PaymentController"
 participant DB as "Database"
 Note over Client,DB : Customer pays online
 Client->>API : POST /api/bookings/{id}/pay
 API->>Service : createInvoice(booking, 'frontend')
-Service->>Gateway : POST /v1/payment/create
+Service->>Service : Check passenger_email
+alt Email present
+Service->>Gateway : POST /v1/payment/create (with customer email)
+else Email null
+Service->>MailConfig : Get mail.from.address
+MailConfig-->>Service : Global sender address
+Service->>Gateway : POST /v1/payment/create (with fallback email)
+end
 Gateway-->>Service : {payment_url, invoice_id}
 Service-->>API : {payment_url, invoice_id}
 API->>DB : Update booking.payment_invoice_id
@@ -171,7 +193,7 @@ end
 **Diagram sources**
 - [API BookingController.php:118-148](file://backend/app/Http/Controllers/API/BookingController.php#L118-L148)
 - [ZinipayService.php:27-97](file://backend/app/Services/ZinipayService.php#L27-L97)
-- [ZinipayService.php:105-139](file://backend/app/Services/ZinipayService.php#L105-L139)
+- [ZinipayService.php:105-141](file://backend/app/Services/ZinipayService.php#L105-L141)
 - [PaymentController.php:21-136](file://backend/app/Http/Controllers/PaymentController.php#L21-L136)
 
 ## Detailed Component Analysis
@@ -181,11 +203,13 @@ Responsibilities:
 - Initialize configuration values for API key and base URL
 - Create invoices with customer metadata and redirect URLs
 - Verify invoice status asynchronously and synchronously
+- **Updated** Handle null passenger emails with intelligent fallback to mail settings
 
 Key behaviors:
 - `createInvoice`
   - Validates API key presence
   - Builds redirect, cancel, and webhook URLs
+  - **Updated** Implements email fallback logic: uses passenger email if available, otherwise falls back to `mail.from.address` config, with final fallback to 'noreply@sonyabus.com'
   - Rewrites hostnames to `127.0.0.1` in local/testing environments to bypass sandbox domain checks
   - Sends HTTP POST to `/v1/payment/create`
   - Returns `payment_url` and optional `invoice_id`
@@ -201,12 +225,14 @@ Error handling strategy:
 - Non-success HTTP responses are logged with status and body
 - Exceptions are caught and logged
 - Methods return safe defaults (`null`) to callers
+- **Updated** Email fallback ensures gateway compatibility even when passenger email is missing
 
 Security considerations:
 - Uses HTTPS base URL configured via service config
 - Includes API key in headers
 - Avoids exposing secrets in logs beyond structured context
 - Local/testing environment hostname rewriting supports sandbox testing without changing production URLs
+- **Updated** Email fallback uses configured mail settings rather than hardcoded values
 
 ```mermaid
 classDiagram
@@ -222,10 +248,10 @@ class ZinipayService {
 **Diagram sources**
 - [ZinipayService.php:9-18](file://backend/app/Services/ZinipayService.php#L9-L18)
 - [ZinipayService.php:27-97](file://backend/app/Services/ZinipayService.php#L27-L97)
-- [ZinipayService.php:105-139](file://backend/app/Services/ZinipayService.php#L105-L139)
+- [ZinipayService.php:105-141](file://backend/app/Services/ZinipayService.php#L105-L141)
 
 **Section sources**
-- [ZinipayService.php:1-141](file://backend/app/Services/ZinipayService.php#L1-L141)
+- [ZinipayService.php:1-143](file://backend/app/Services/ZinipayService.php#L1-L143)
 
 ### PaymentController
 Responsibilities:
@@ -345,6 +371,7 @@ Relevant fields:
 - `payment_method`: e.g., `zinipay`
 - `payment_invoice_id`: external invoice reference
 - `status`: e.g., `PENDING`, `SOLD`, `CANCELLED`
+- **Updated** `passenger_email`: now nullable to support bookings without email addresses
 
 Computed attribute:
 - `pnr`: formatted ticket identifier
@@ -354,7 +381,7 @@ Computed attribute:
 - [Booking Model.php:43-47](file://backend/app/Models/Booking.php#L43-L47)
 
 ## Dependency Analysis
-The following diagram shows how controllers depend on the service and how the service depends on the external gateway.
+The following diagram shows how controllers depend on the service and how the service depends on the external gateway and mail configuration.
 
 ```mermaid
 graph LR
@@ -362,6 +389,7 @@ API_BC["API\\BookingController"] --> SERVICE["ZinipayService"]
 ADMIN_BC["Admin\\BookingController"] --> SERVICE
 PAYMENT_CTRL["PaymentController"] --> SERVICE
 SERVICE --> GATEWAY["ZiniPay Gateway"]
+SERVICE --> MAIL_CONFIG["Mail Settings"]
 PAYMENT_CTRL --> DB[("Bookings Database")]
 API_BC --> DB
 ADMIN_BC --> DB
@@ -377,15 +405,14 @@ ADMIN_BC --> DB
 - [API BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [Admin BookingController.php:1-137](file://backend/app/Http/Controllers/Admin/BookingController.php#L1-L137)
 - [PaymentController.php:1-162](file://backend/app/Http/Controllers/PaymentController.php#L1-L162)
-- [ZinipayService.php:1-141](file://backend/app/Services/ZinipayService.php#L1-L141)
+- [ZinipayService.php:1-143](file://backend/app/Services/ZinipayService.php#L1-L143)
 
 ## Performance Considerations
 - HTTP timeouts: Both invoice creation and verification use a timeout to avoid hanging requests during gateway latency.
 - Logging overhead: Extensive logging helps diagnose issues but should be monitored to avoid excessive log volume under high traffic.
 - Idempotent webhook handling: The webhook handler avoids duplicate updates by checking existing booking status and re-verifying with the gateway.
 - Minimal database writes: Only essential fields are updated (invoice ID and status), reducing contention.
-
-[No sources needed since this section provides general guidance]
+- **Updated** Email fallback resolution is cached by Laravel's config system, minimizing performance impact.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -404,10 +431,16 @@ Common issues and resolutions:
 - Authorization errors
   - Symptom: Customer cannot pay their own booking
   - Resolution: Ensure the authenticated user matches the booking owner
+- **Updated** Null passenger email causing gateway errors
+  - Symptom: Invoice creation fails due to missing customer email
+  - Resolution: Configure `mail.from.address` in mail settings; the system will automatically fall back to this address when passenger email is null
+- **Updated** Mail settings not configured
+  - Symptom: Fallback email not working properly
+  - Resolution: Ensure `mail.from.address` is configured in site settings; the system has a default fallback to 'noreply@sonyabus.com'
 
 **Section sources**
 - [ZinipayService.php:27-97](file://backend/app/Services/ZinipayService.php#L27-L97)
-- [ZinipayService.php:105-139](file://backend/app/Services/ZinipayService.php#L105-L139)
+- [ZinipayService.php:105-141](file://backend/app/Services/ZinipayService.php#L105-L141)
 - [PaymentController.php:21-136](file://backend/app/Http/Controllers/PaymentController.php#L21-L136)
 
 ## Conclusion
@@ -417,6 +450,6 @@ The ZiniPay integration centers around a clean separation of concerns:
 - Webhooks provide reliable asynchronous confirmation with idempotent updates
 - Tests validate critical paths for callback and webhook scenarios
 
-For refunds, the current codebase does not implement a refund endpoint or logic. Refund handling would require extending `ZinipayService` with a dedicated refund method and adding corresponding controller endpoints and tests.
+**Updated** The system now gracefully handles bookings without passenger email addresses by automatically falling back to the global mail sender address configured in mail settings. This ensures compatibility with ZiniPay's email requirements while maintaining flexibility for different booking scenarios.
 
-[No sources needed since this section summarizes without analyzing specific files]
+For refunds, the current codebase does not implement a refund endpoint or logic. Refund handling would require extending `ZinipayService` with a dedicated refund method and adding corresponding controller endpoints and tests.

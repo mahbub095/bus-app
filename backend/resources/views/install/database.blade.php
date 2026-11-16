@@ -51,7 +51,7 @@
             <div class="form-group" style="margin-top: 16px;">
                 <label for="db_database">Database Name</label>
                 <input type="text" id="db_database" name="db_database"
-                       value="{{ old('db_database', 'sonyabus') }}" required>
+                       value="{{ old('db_database', 'journeygo') }}" required>
             </div>
 
             <div class="form-group">

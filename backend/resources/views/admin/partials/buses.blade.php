@@ -113,7 +113,7 @@
             @method('POST')
             <input type="hidden" name="_edit_id" value="">
             <div class="input-group">
-                <label>Operator Company (e.g. Sonya Enterprise)</label>
+                <label>Operator Company (e.g. JourneyGo Express)</label>
                 <input type="text" name="operator_name" class="coupon-input" placeholder="Operator Name" required
                     value="{{ old('operator_name') }}">
             </div>

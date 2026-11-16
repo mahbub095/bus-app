@@ -28,7 +28,7 @@ class ResetPasswordCodeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your SonyaBus Password Reset Code',
+            subject: 'Your JourneyGo Password Reset Code',
         );
     }
 

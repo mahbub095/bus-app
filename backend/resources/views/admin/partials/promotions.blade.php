@@ -64,7 +64,7 @@
             @method('POST')
             <input type="hidden" name="_edit_id" value="">
             <div class="input-group">
-                <label>Coupon Code (e.g. SONYANEW)</label>
+                <label>Coupon Code (e.g. JOURNEYNEW)</label>
                 <input type="text" name="code" class="coupon-input" placeholder="Code" required
                     value="{{ old('code') }}">
             </div>

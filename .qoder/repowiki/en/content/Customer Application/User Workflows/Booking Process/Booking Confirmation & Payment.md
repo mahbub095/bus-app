@@ -12,9 +12,18 @@
 - [api.php](file://backend/routes/api.php)
 - [booking.php](file://backend/config/booking.php)
 - [2026_06_01_000050_create_bookings_table.php](file://backend/database/migrations/2026_06_01_000050_create_bookings_table.php)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php)
 - [BookingPortal.jsx](file://frontend/src/components/BookingPortal.jsx)
 - [zinipay.js](file://frontend/src/zinipay.js)
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated passenger email validation rules to be optional instead of required
+- Modified frontend validation to allow empty email fields with proper error handling
+- Added backend fallback mechanism using global sender address for payment notifications when email is null
+- Updated database schema to make passenger_email column nullable
+- Enhanced ZiniPay integration to handle null email addresses gracefully
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -29,6 +38,8 @@
 
 ## Introduction
 This document explains the end-to-end booking confirmation and payment workflow, including passenger information collection, validation rules, promo code application, pricing calculations, ZiniPay integration, PNR generation, ticket confirmation, success/failure handling, webhook processing, refund considerations, and security measures. It is intended for developers, integrators, and support engineers who need to understand how a customer selects seats, submits a booking, pays via ZiniPay, and receives a confirmed ticket.
+
+**Updated** The system now supports optional passenger email addresses during booking, with automatic fallback to global sender address for payment notifications when email is not provided.
 
 ## Project Structure
 The booking and payment flow spans:
@@ -58,6 +69,7 @@ M["Models/Booking.php"]
 PR["Models/Promotion.php"]
 CFG["config/booking.php"]
 MIG["migrations/create_bookings_table.php"]
+NMIG["migrations/make_passenger_email_nullable.php"]
 end
 FP --> R
 FP --> BC
@@ -74,6 +86,7 @@ PC --> M
 ZP --> M
 M --> CFG
 M --> MIG
+M --> NMIG
 ```
 
 **Diagram sources**
@@ -88,6 +101,7 @@ M --> MIG
 - [Promotion.php:12-16](file://backend/app/Models/Promotion.php#L12-L16)
 - [booking.php:3-10](file://backend/config/booking.php#L3-L10)
 - [2026_06_01_000050_create_bookings_table.php:14-42](file://backend/database/migrations/2026_06_01_000050_create_bookings_table.php#L14-L42)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php:10-16](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php#L10-L16)
 
 **Section sources**
 - [BookingPortal.jsx:469-575](file://frontend/src/components/BookingPortal.jsx#L469-L575)
@@ -101,13 +115,14 @@ M --> MIG
 - [Promotion.php:12-16](file://backend/app/Models/Promotion.php#L12-L16)
 - [booking.php:3-10](file://backend/config/booking.php#L3-L10)
 - [2026_06_01_000050_create_bookings_table.php:14-42](file://backend/database/migrations/2026_06_01_000050_create_bookings_table.php#L14-L42)
+- [2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php:10-16](file://backend/database/migrations/2026_11_16_000000_make_passenger_email_nullable_on_bookings_table.php#L10-L16)
 
 ## Core Components
-- Passenger input and validation: The frontend collects name, phone, email, gender, boarding/dropping points, selected seats, and promo code. It enforces minimum phone length and required fields before calling the backend.
+- Passenger input and validation: The frontend collects name, phone, email (now optional), gender, boarding/dropping points, selected seats, and promo code. It enforces minimum phone length and required fields before calling the backend. Email validation now allows empty values with proper error messaging.
 - Seat reservation: The frontend uses hold/release endpoints to temporarily reserve seats while the user completes booking. The backend validates seat availability and prevents double booking using cache-based holds and database locks.
 - Pricing and promo: The backend calculates fare based on seat count, service/gateway charges, discounts, and optional promo discount. Cash vs gateway payments affect charge application.
 - Booking creation: The backend creates a booking record with status depending on payment method (PENDING for ZiniPay, SOLD for cash). For ZiniPay, it creates an invoice and returns a payment URL.
-- Payment integration: ZiniPay invoice creation and verification are handled by a dedicated service. Callbacks and webhooks update booking status to SOLD or CANCELLED and send SMS notifications.
+- Payment integration: ZiniPay invoice creation and verification are handled by a dedicated service. Callbacks and webhooks update booking status to SOLD or CANCELLED and send SMS notifications. When passenger email is null, the system falls back to the global sender address.
 - Ticket confirmation: On successful payment, the frontend displays the booking receipt and PNR. Public booking lookup is available by ID.
 
 **Section sources**
@@ -150,6 +165,7 @@ BS->>DB : create booking (status=PENDING if ZiniPay)
 alt ZiniPay
 BS->>ZS : createInvoice(booking, 'frontend')
 ZS-->>BS : {payment_url, invoice_id}
+Note over ZS : Uses global sender address if passenger_email is null
 BS-->>BC : {payment_url, invoice_id, booking}
 else Cash
 BS-->>BC : {booking}
@@ -179,13 +195,16 @@ PC-->>FE : redirect to success or failure
 
 ### Passenger Information Collection and Validation
 - Frontend validation:
-  - Required fields: passenger name, phone, email, boarding point, dropping point.
+  - Required fields: passenger name, phone, boarding point, dropping point.
+  - **Updated**: Email field is now optional - users can leave it blank or provide a valid email address.
   - Phone must be at least 11 digits after removing non-digits.
   - Maximum 4 seats per booking enforced in UI.
   - Promo code applied via separate endpoint before booking submission.
+  - Email validation only triggers if an email is provided, showing appropriate error message for invalid formats.
 - Backend validation:
   - schedule_id must exist.
-  - passenger_name, passenger_phone, passenger_email required with max lengths.
+  - passenger_name, passenger_phone required with max lengths.
+  - **Updated**: passenger_email is now `nullable|email|max:100` instead of required.
   - seat_numbers required string; parsed into list.
   - payment_method required string.
   - total_fare nullable numeric min 0.
@@ -194,11 +213,11 @@ PC-->>FE : redirect to success or failure
   - promo_code optional string.
   - status sometimes allowed for admin override.
 
-Validation ensures data integrity before seat locking and pricing calculation.
+Validation ensures data integrity before seat locking and pricing calculation while accommodating optional email addresses.
 
 **Section sources**
-- [BookingPortal.jsx:469-575](file://frontend/src/components/BookingPortal.jsx#L469-L575)
-- [BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
+- [BookingPortal.jsx:475-492](file://frontend/src/components/BookingPortal.jsx#L475-L492)
+- [BookingController.php:21-35](file://backend/app/Http/Controllers/API/BookingController.php#L21-L35)
 
 ### Seat Availability and Hold Mechanism
 - Seat codes are generated from bus layout configuration or default rows/columns.
@@ -213,7 +232,7 @@ Validation ensures data integrity before seat locking and pricing calculation.
   - Checks cache holds to prevent another user from holding the same seat.
   - Sets a 2-minute hold with expiry timestamp stored in cache.
 - Release endpoint:
-  - Removes user’s hold for a specific seat.
+  - Removes user's hold for a specific seat.
 - During booking creation:
   - Locks active bookings for the schedule to avoid race conditions.
   - Re-validates seat availability against current seat map.
@@ -302,7 +321,7 @@ PromoApply --> ReturnTotal
   - Clean up seat holds for booked seats.
   - If ZiniPay, create invoice and return payment URL; otherwise return booking details.
 - PNR generation:
-  - PNR is derived from booking id with prefix “SE” and zero-padded to five digits.
+  - PNR is derived from booking id with prefix "SE" and zero-padded to five digits.
 
 ```mermaid
 classDiagram
@@ -363,6 +382,7 @@ BookingService --> Booking : "creates"
 - Invoice creation:
   - Requires API key configured in services.zinipay.api_key.
   - Sends request to https://api.zinipay.com/v1/payment/create with customer name, email, amount, metadata (booking_id, source), redirect/cancel/webhook URLs.
+  - **Updated**: When passenger_email is null, the system automatically falls back to the global sender address (config('mail.from.address') or 'noreply@sonyabus.com').
   - In local/testing environments, hostnames are replaced with 127.0.0.1 to bypass sandbox domain checks.
   - Returns payment_url and invoice_id; logs errors if missing or unsuccessful.
 - Verification:
@@ -379,6 +399,7 @@ participant ZS as "ZinipayService.php"
 participant ZP as "ZiniPay API"
 BS->>ZS : createInvoice(booking, 'frontend')
 ZS->>ZP : POST /v1/payment/create
+Note over ZS : Uses passenger_email or falls back to global sender address
 ZP-->>ZS : {payment_url, invoice_id}
 ZS-->>BS : {payment_url, invoice_id}
 Note over ZS,ZP : Headers include zini-api-key
@@ -561,14 +582,20 @@ Common issues and resolutions:
   - Verify booking_id and payment_invoice_id are correctly passed in callbacks/webhooks.
 - SMS not sent:
   - Ensure SMS gateway is configured; SMS is sent only on confirmed bookings (PAID/SOLD/BOOKED).
+- **Updated**: Email validation errors:
+  - If email is provided but invalid, users see "Please enter a valid email address or leave it blank."
+  - Empty email fields are now accepted without validation errors.
 
 **Section sources**
 - [BookingController.php:19-40](file://backend/app/Http/Controllers/API/BookingController.php#L19-L40)
 - [SeatMapService.php:502-561](file://backend/app/services/SeatMapService.php#L502-L561)
 - [PaymentController.php:21-160](file://backend/app/Http/Controllers/PaymentController.php#L21-L160)
 - [ZinipayService.php:27-97](file://backend/app/Services/ZinipayService.php#L27-L97)
+- [BookingPortal.jsx:488-492](file://frontend/src/components/BookingPortal.jsx#L488-L492)
 
 ## Conclusion
-The booking confirmation and payment workflow integrates seat management, pricing, promo discounts, and ZiniPay payment processing with robust validation, concurrency controls, and secure webhook handling. While refunds are not implemented, cancellation flows provide a foundation for future enhancements. Operators should monitor API keys, webhook reachability, and SMS configuration to ensure reliable ticket issuance and customer notifications.
+The booking confirmation and payment workflow integrates seat management, pricing, promo discounts, and ZiniPay payment processing with robust validation, concurrency controls, and secure webhook handling. The system now supports optional passenger email addresses, providing flexibility for customers while maintaining reliable payment notification delivery through automatic fallback to global sender addresses. While refunds are not implemented, cancellation flows provide a foundation for future enhancements. Operators should monitor API keys, webhook reachability, and SMS configuration to ensure reliable ticket issuance and customer notifications.
+
+**Updated** The enhanced email handling improves user experience by allowing bookings without email addresses while ensuring payment notifications continue to function properly through intelligent fallback mechanisms.
 
 [No sources needed since this section summarizes without analyzing specific files]

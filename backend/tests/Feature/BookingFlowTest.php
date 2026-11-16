@@ -239,7 +239,7 @@ class BookingFlowTest extends TestCase
     /** @test */
     public function valid_promo_code_reduces_total_fare(): void
     {
-        $promo = Promotion::where('code', 'SONYANEW')->first();
+        $promo = Promotion::where('code', 'JOURNEYNEW')->first();
         $baseFare = (float) $this->schedule->fare;
 
         $response = $this->actingAs($this->customer, 'sanctum')
@@ -250,7 +250,7 @@ class BookingFlowTest extends TestCase
                 'passenger_email' => 'promo@test.com',
                 'seat_numbers'    => 'G3',
                 'payment_method'  => 'bKash',
-                'promo_code'      => 'SONYANEW',
+                'promo_code'      => 'JOURNEYNEW',
             ]);
 
         $response->assertStatus(201);

@@ -11,13 +11,13 @@ export default function Maintenance({ siteSettings }) {
           {siteSettings?.maintenance?.message || 'We are currently performing scheduled maintenance. Please check back soon.'}
         </p>
         <div className="maintenance-brand">
-          <div className="logo-icon" style={{ width: 32, height: 32, fontSize: 16 }}>S</div>
+          <div className="logo-icon" style={{ width: 32, height: 32, fontSize: 16 }}>J</div>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18 }}>
-            {siteSettings?.footer?.company_name || 'SonyaBus'}
+            {siteSettings?.footer?.company_name || 'JourneyGo'}
           </span>
         </div>
         <div className="maintenance-footer">
-          {siteSettings?.footer?.copyright || '© 2026 SonyaBus Enterprise Ltd.'}
+          {siteSettings?.footer?.copyright || '© 2026 JourneyGo Enterprise Ltd.'}
         </div>
       </div>
     </div>

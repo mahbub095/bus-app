@@ -20,11 +20,11 @@ export default function Navbar({
     ? (rawLogoUrl.startsWith('http') ? rawLogoUrl : `${backendOrigin}${rawLogoUrl}`)
     : null;
 
-  const logoText   = siteSettings?.logo_text || 'SonyaBus';
+  const logoText   = siteSettings?.logo_text || 'JourneyGo';
   const logoLetter = logoText.charAt(0).toUpperCase();
   const isDefaultText = !siteSettings?.logo_text;
-  const defaultFirst  = 'Sonya';
-  const defaultAccent = 'Bus';
+  const defaultFirst  = 'Journey';
+  const defaultAccent = 'Go';
 
   return (
     <header className="app-header">
@@ -52,9 +52,9 @@ export default function Navbar({
               }}
             />
           ) : isDefaultText ? (
-            /* ── Default "SonyaBus" text logo ── */
+            /* ── Default "JourneyGo" text logo ── */
             <>
-              <div className="logo-icon">S</div>
+              <div className="logo-icon">J</div>
               {defaultFirst}<span className="logo-accent">{defaultAccent}</span>
             </>
           ) : (

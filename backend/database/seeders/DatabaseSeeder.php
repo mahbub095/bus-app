@@ -14,25 +14,25 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Seed Admin User
         User::updateOrCreate(
-            ['email' => 'superadmin@sonyabus.com'],
+            ['email' => 'superadmin@journeygo.com'],
             [
-                'name' => 'Sonya Super Admin',
+                'name' => 'JourneyGo Super Admin',
                 'password' => bcrypt('password123'),
                 'role' => 'super_admin',
             ]
         );
 
         User::updateOrCreate(
-            ['email' => 'admin@sonyabus.com'],
+            ['email' => 'admin@journeygo.com'],
             [
-                'name' => 'Sonya Admin',
+                'name' => 'JourneyGo Admin',
                 'password' => bcrypt('password123'),
                 'role' => 'admin',
             ]
         );
 
         User::updateOrCreate(
-            ['email' => 'user@sonyabus.com'],
+            ['email' => 'user@journeygo.com'],
             [
                 'name' => 'Demo Customer',
                 'password' => bcrypt('password123'),

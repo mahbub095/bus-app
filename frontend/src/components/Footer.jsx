@@ -9,7 +9,7 @@ export default function Footer({
     <footer className="app-footer">
       <div className="container">
         <div className="footer-logo">
-          {siteSettings?.footer?.company_name || 'SonyaBus Enterprise'}
+          {siteSettings?.footer?.company_name || 'JourneyGo Enterprise'}
         </div>
         <ul className="footer-links">
           {siteSettings?.footer?.links && Array.isArray(siteSettings.footer.links) ? (
@@ -67,7 +67,7 @@ export default function Footer({
         </ul>
         <p>
           {siteSettings?.footer?.copyright ||
-            '© 2026 SonyaBus Enterprise Ltd. All rights reserved. Built with React + Laravel.'}
+            '© 2026 JourneyGo Enterprise Ltd. All rights reserved. Built with React + Laravel.'}
         </p>
       </div>
     </footer>

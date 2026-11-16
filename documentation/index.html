@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SonyaBus — Installation &amp; User Guide</title>
+<title>JourneyGo — Installation &amp; User Guide</title>
 <style>
   :root {
     --primary: #6366f1;
@@ -89,7 +89,7 @@
 
 <!-- ─── Sidebar ─── -->
 <aside class="sidebar">
-  <div class="sidebar-logo">Sonya<span>Bus</span></div>
+  <div class="sidebar-logo">Journey<span>Go</span></div>
   <nav>
     <div class="section">Getting started</div>
     <a href="#introduction">Introduction</a>
@@ -125,14 +125,14 @@
 <main class="content">
 
   <div class="hero">
-    <h1>SonyaBus — Bus Ticket Booking System</h1>
+    <h1>JourneyGo — Bus Ticket Booking System</h1>
     <p>Full-stack booking platform · Laravel 12 backend · React 19 customer app · ZiniPay payments · SMS notifications</p>
   </div>
 
   <!-- INTRODUCTION -->
   <section id="introduction">
     <h2>Introduction</h2>
-    <p><strong>SonyaBus</strong> is a complete bus ticket booking system with two separate surfaces:</p>
+    <p><strong>JourneyGo</strong> is a complete bus ticket booking system with two separate surfaces:</p>
     <ul>
       <li><strong>Customer React app</strong> — search schedules, choose seats on an interactive seat map, pay online, manage tickets, apply promo codes.</li>
       <li><strong>Laravel Admin dashboard</strong> — manage coaches, routes, schedules, bookings, cancel requests, promotions, users &amp; roles, reports (PDF &amp; Excel), and all gateway settings.</li>
@@ -152,7 +152,7 @@
   <section id="license">
     <h2>License Activation</h2>
     <p>
-      SonyaBus requires a valid <a href="https://codecanyon.net" target="_blank">CodeCanyon</a> purchase code to operate.
+      JourneyGo requires a valid <a href="https://codecanyon.net" target="_blank">CodeCanyon</a> purchase code to operate.
       Activation happens through the built-in installation wizard the first time you open the app.
       The application will automatically redirect every request to <code>/install</code> until a license is verified.
     </p>
@@ -162,7 +162,7 @@
       <tr><th>Item</th><th>Where to find it</th></tr>
       <tr>
         <td>Purchase Code</td>
-        <td>Envato Market → Your Account → <strong>Downloads</strong> → click <em>Licenses &amp; Purchase Codes</em> next to SonyaBus</td>
+        <td>Envato Market → Your Account → <strong>Downloads</strong> → click <em>Licenses &amp; Purchase Codes</em> next to JourneyGo</td>
       </tr>
       <tr>
         <td>Personal Token</td>
@@ -248,7 +248,7 @@ php artisan key:generate</code></pre>
 
     <div class="callout callout-info">
       <strong>ℹ ENVATO_ITEM_ID</strong> is the numeric ID in your CodeCanyon item URL:<br>
-      <code>https://codecanyon.net/item/sonyabus/<strong>12345678</strong></code> → set <code>ENVATO_ITEM_ID=12345678</code>
+      <code>https://codecanyon.net/item/journeygo/<strong>12345678</strong></code> → set <code>ENVATO_ITEM_ID=12345678</code>
     </div>
 
     <h3>Step 4 — Set storage permissions</h3>
@@ -292,7 +292,7 @@ npm run build</code></pre>
   <section id="cpanel-install">
     <h2>cPanel Installation</h2>
     <p>
-      Follow these steps to install SonyaBus on shared hosting (Hostinger, Namecheap, Bluehost, etc.) that comes with cPanel.
+      Follow these steps to install JourneyGo on shared hosting (Hostinger, Namecheap, Bluehost, etc.) that comes with cPanel.
     </p>
 
     <div class="callout callout-warning">
@@ -302,7 +302,7 @@ npm run build</code></pre>
 
     <h3>Step 1 — Create Two Subdomains</h3>
     <p>
-      SonyaBus keeps its backend and frontend on separate domains/subdomains.
+      JourneyGo keeps its backend and frontend on separate domains/subdomains.
       Create them from cPanel → <strong>Domains / Subdomains</strong>:
     </p>
     <table>
@@ -373,14 +373,14 @@ ENVATO_ITEM_ID=12345678   &lt;-- your CodeCanyon item ID
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=yourusername_sonyabus   &lt;-- cPanel database name
+DB_DATABASE=yourusername_journeygo   &lt;-- cPanel database name
 DB_USERNAME=yourusername_dbuser     &lt;-- cPanel database user
 DB_PASSWORD=your_db_password</code></pre>
 
     <h3>Step 5 — Create a MySQL Database</h3>
     <p>cPanel → <strong>MySQL Databases</strong>:</p>
     <ol class="steps">
-      <li>Create a new database, e.g. <code>yourusername_sonyabus</code></li>
+      <li>Create a new database, e.g. <code>yourusername_journeygo</code></li>
       <li>Create a new user, e.g. <code>yourusername_dbuser</code> — use a strong password</li>
       <li>Give the user <strong>ALL PRIVILEGES</strong> on the database</li>
     </ol>
@@ -512,7 +512,7 @@ php artisan storage:link</code></pre>
     <h4>Step 3 — Create the Database</h4>
     <p>
       Click the <strong>Database</strong> icon in Laragon (HeidiSQL will open).
-      Left panel → right click → <strong>Create new → Database</strong> → name it <code>sonyabus</code>.
+      Left panel → right click → <strong>Create new → Database</strong> → name it <code>journeygo</code>.
     </p>
 
     <h4>Step 4 — Set Up the Backend</h4>
@@ -535,7 +535,7 @@ ENVATO_ITEM_ID=12345678
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sonyabus
+DB_DATABASE=journeygo
 DB_USERNAME=root
 DB_PASSWORD=        # no default password in Laragon</code></pre>
 
@@ -639,7 +639,7 @@ php artisan queue:work</code></pre>
     <p>In XAMPP → Apache → click <strong>Restart</strong>.</p>
 
     <h4>Step 3 — Create the Database</h4>
-    <p>In your browser, go to <code>http://localhost/phpmyadmin</code> → create a new database: <code>sonyabus</code></p>
+    <p>In your browser, go to <code>http://localhost/phpmyadmin</code> → create a new database: <code>journeygo</code></p>
 
     <h4>Step 4 — Set Up the Backend</h4>
     <p>Open XAMPP Shell or Windows Terminal (cmd):</p>
@@ -653,7 +653,7 @@ php artisan storage:link</code></pre>
     <pre><code>APP_URL=http://bus-api.local
 APP_FRONTEND_URL=http://localhost:5173
 DB_HOST=127.0.0.1
-DB_DATABASE=sonyabus
+DB_DATABASE=journeygo
 DB_USERNAME=root
 DB_PASSWORD=     # no default password in XAMPP</code></pre>
 
@@ -677,7 +677,7 @@ npm run dev</code></pre>
   <!-- BACKEND ENV -->
   <section id="backend-env">
     <h2>Backend .env Reference</h2>
-    <pre><code>APP_NAME=SonyaBus
+    <pre><code>APP_NAME=JourneyGo
 APP_ENV=production
 APP_KEY=           # generated by php artisan key:generate
 APP_DEBUG=false    # MUST be false in production
@@ -691,7 +691,7 @@ ENVATO_ITEM_ID=12345678
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sonyabus
+DB_DATABASE=journeygo
 DB_USERNAME=db_user
 DB_PASSWORD=db_password
 
@@ -706,7 +706,7 @@ MAIL_USERNAME=your@email.com
 MAIL_PASSWORD=your_smtp_password
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=noreply@yourdomain.com
-MAIL_FROM_NAME="SonyaBus"
+MAIL_FROM_NAME="JourneyGo"
 
 ZINIPAY_API_KEY=your_zinipay_api_key
 ZINIPAY_BASE_URL=https://api.zinipay.com
@@ -745,7 +745,7 @@ VITE_ZINIPAY_API_KEY=your_zinipay_api_key</code></pre>
 server {
     listen 80;
     server_name yourdomain.com;
-    root /var/www/sonyabus/frontend/dist;
+    root /var/www/journeygo/frontend/dist;
     index index.html;
 
     location / {
@@ -757,7 +757,7 @@ server {
 server {
     listen 80;
     server_name api.yourdomain.com;
-    root /var/www/sonyabus/backend/public;
+    root /var/www/journeygo/backend/public;
     index index.php;
 
     location / {
@@ -775,8 +775,8 @@ server {
 
     <h3>Apache — .htaccess (included in backend/public/)</h3>
     <p>Laravel ships with a <code>public/.htaccess</code> file. Ensure <code>mod_rewrite</code> is enabled and <code>AllowOverride All</code> is set for the document root.</p>
-    <pre><code>DocumentRoot /var/www/sonyabus/backend/public
-&lt;Directory /var/www/sonyabus/backend/public&gt;
+    <pre><code>DocumentRoot /var/www/journeygo/backend/public
+&lt;Directory /var/www/journeygo/backend/public&gt;
     Options -Indexes +FollowSymLinks
     AllowOverride All
     Require all granted
@@ -799,19 +799,19 @@ server {
       <tr><th>Role</th><th>Email</th><th>Password</th><th>Access</th></tr>
       <tr>
         <td><span class="badge badge-red">Super Admin</span></td>
-        <td>superadmin@sonyabus.com</td>
+        <td>superadmin@journeygo.com</td>
         <td><code>password123</code></td>
         <td>Full access to all settings, gateways, users</td>
       </tr>
       <tr>
         <td><span class="badge badge-blue">Admin</span></td>
-        <td>admin@sonyabus.com</td>
+        <td>admin@journeygo.com</td>
         <td><code>password123</code></td>
         <td>Bookings, schedules, buses, reports</td>
       </tr>
       <tr>
         <td><span class="badge badge-green">Customer</span></td>
-        <td>user@sonyabus.com</td>
+        <td>user@journeygo.com</td>
         <td><code>password123</code></td>
         <td>Customer React app</td>
       </tr>
@@ -1084,7 +1084,7 @@ server {
   <!-- USER MANUAL -->
   <section id="user-manual">
     <h2>User Manual</h2>
-    <p>This section walks you through the day-to-day usage of SonyaBus — both the <strong>Admin Panel</strong> and the <strong>Customer App</strong>.</p>
+    <p>This section walks you through the day-to-day usage of JourneyGo — both the <strong>Admin Panel</strong> and the <strong>Customer App</strong>.</p>
 
     <!-- ADMIN MANUAL -->
     <h3>Admin Panel Manual</h3>
@@ -1146,7 +1146,7 @@ server {
     </ol>
 
     <h4>Reports</h4>
-    <p>SonyaBus ships with <strong>11 report types</strong> accessible from the <strong>Ticket Reports</strong> menu:</p>
+    <p>JourneyGo ships with <strong>11 report types</strong> accessible from the <strong>Ticket Reports</strong> menu:</p>
     <ol>
       <li>Ticket Selling Report — all paid ticket sales by date, route, coach type, and payment method.</li>
       <li>Booking Report — active bookings (PAID, SOLD, BOOKED) with full status breakdown.</li>
@@ -1250,7 +1250,7 @@ ZINIPAY_BASE_URL=https://api.zinipay.com</code></pre>
   <!-- SMS -->
   <section id="sms">
     <h2>SMS Gateway Setup</h2>
-    <p>SonyaBus supports multiple SMS drivers. You can configure the gateway from <strong>Admin → Integrations &amp; Gateways → SMS</strong> without touching any code.</p>
+    <p>JourneyGo supports multiple SMS drivers. You can configure the gateway from <strong>Admin → Integrations &amp; Gateways → SMS</strong> without touching any code.</p>
     <table>
       <tr><th>Driver key</th><th>Provider</th><th>Notes</th></tr>
       <tr><td><code>smsnetbd</code></td><td>SMS.NET.BD</td><td>Default — POST with api_key parameter</td></tr>
@@ -1260,7 +1260,7 @@ ZINIPAY_BASE_URL=https://api.zinipay.com</code></pre>
     </table>
     <h3>Message template placeholders</h3>
     <p>Use these tokens in your SMS message template:</p>
-    <pre><code>SonyaBus ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}</code></pre>
+    <pre><code>JourneyGo ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}</code></pre>
     <table>
       <tr><th>Placeholder</th><th>Replaced with</th></tr>
       <tr><td><code>{PNR}</code></td><td>Ticket reference, e.g. SE00123</td></tr>
@@ -1284,7 +1284,7 @@ MAIL_USERNAME=your@email.com
 MAIL_PASSWORD=your_smtp_password
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=noreply@yourdomain.com
-MAIL_FROM_NAME="SonyaBus"</code></pre>
+MAIL_FROM_NAME="JourneyGo"</code></pre>
     <p>You can also update mail settings live from <strong>Admin → Integrations → Mail</strong> and send a test email to verify the connection.</p>
     <div class="callout callout-info">
       <strong>ℹ Local testing:</strong> Set <code>MAIL_MAILER=log</code> to write emails to <code>storage/logs/laravel.log</code> instead of sending them.
@@ -1299,24 +1299,24 @@ MAIL_FROM_NAME="SonyaBus"</code></pre>
     <pre><code>cd backend
 php artisan queue:work --tries=3 --sleep=3</code></pre>
     <h3>Recommended: Supervisor (Linux)</h3>
-    <pre><code>[program:sonyabus-worker]
+    <pre><code>[program:journeygo-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/sonyabus/backend/artisan queue:work --tries=3 --sleep=3
+command=php /var/www/journeygo/backend/artisan queue:work --tries=3 --sleep=3
 autostart=true
 autorestart=true
 numprocs=1
 redirect_stderr=true
-stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
+stdout_logfile=/var/www/journeygo/backend/storage/logs/worker.log</code></pre>
     <h3>Laravel Scheduler (optional)</h3>
     <p>Add this cron entry on the server to run the Laravel scheduler every minute:</p>
-    <pre><code>* * * * * cd /var/www/sonyabus/backend &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code></pre>
+    <pre><code>* * * * * cd /var/www/journeygo/backend &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code></pre>
   </section>
 
   <!-- UPDATING -->
   <section id="updating">
-    <h2>Updating SonyaBus</h2>
+    <h2>Updating JourneyGo</h2>
     <ol class="steps">
-      <li>Back up your database: <code>mysqldump sonyabus &gt; sonyabus_backup.sql</code></li>
+      <li>Back up your database: <code>mysqldump journeygo &gt; journeygo_backup.sql</code></li>
       <li>Replace the <code>backend/</code> and <code>frontend/src/</code> files with the new version (keep your <code>.env</code> files).</li>
       <li>Run <code>composer install --no-dev --optimize-autoloader</code> in <code>backend/</code>.</li>
       <li>Run <code>php artisan migrate</code> to apply any new database migrations.</li>
@@ -1375,7 +1375,7 @@ stdout_logfile=/var/www/sonyabus/backend/storage/logs/worker.log</code></pre>
       </tr>
       <tr>
         <td>License wizard: "purchase code is for a different product"</td>
-        <td>You are using a purchase code from a different CodeCanyon item. Use the purchase code for SonyaBus.</td>
+        <td>You are using a purchase code from a different CodeCanyon item. Use the purchase code for JourneyGo.</td>
       </tr>
     </table>
 

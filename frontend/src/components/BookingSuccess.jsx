@@ -24,7 +24,7 @@ export default function BookingSuccess({
 
       <div className="ticket-wrapper">
         <div className="ticket-header">
-          <div className="ticket-brand">SonyaBus Enterprise</div>
+          <div className="ticket-brand">JourneyGo Enterprise</div>
           <div className="ticket-pnr">PNR: {bookingSuccess.pnr}</div>
         </div>
 

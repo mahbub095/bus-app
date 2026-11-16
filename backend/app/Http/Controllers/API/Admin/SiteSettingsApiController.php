@@ -78,7 +78,7 @@ class SiteSettingsApiController extends BaseAdminApiController
         $settings = SiteSetting::getAllCached();
 
         return [
-            'site_title' => $settings['site_title'] ?? 'SonyaBus',
+            'site_title' => $settings['site_title'] ?? 'JourneyGo',
             'logo_text' => $settings['logo_text'] ?? '',
             'logo_url' => $settings['logo_url'] ?? null,
             'favicon_url' => $settings['favicon_url'] ?? '/favicon.svg',
@@ -122,9 +122,9 @@ class SiteSettingsApiController extends BaseAdminApiController
         // resend them, so fall back to the stored value — or the shipped
         // default on a fresh install.
         $defaults = [
-            'site_title' => 'SonyaBus',
-            'footer_company_name' => 'SonyaBus Enterprise',
-            'footer_copyright' => '© SonyaBus Enterprise Ltd.',
+            'site_title' => 'JourneyGo',
+            'footer_company_name' => 'JourneyGo Enterprise',
+            'footer_copyright' => '© JourneyGo Enterprise Ltd.',
         ];
 
         foreach ($defaults as $key => $default) {

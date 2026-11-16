@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: codecanyon_release
-title: SonyaBus Codecanyon Release Package
+title: CodeCanyon Release Package (v1.0.0)
 scope:
     - sonyabus-codecanyon-v1.0.0/
 source_files: []

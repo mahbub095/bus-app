@@ -22,7 +22,7 @@
                 <div class="input-group">
                     <label for="test_message">Test Message (Optional)</label>
                     <input type="text" name="test_message" id="test_message" class="coupon-input"
-                           value="{{ old('test_message') }}" placeholder="SonyaBus diagnostics test message">
+                           value="{{ old('test_message') }}" placeholder="JourneyGo diagnostics test message">
                 </div>
                 <button type="submit" class="btn btn-secondary btn-sm gateway-test-btn">
                     🚀 Dispatch Test SMS

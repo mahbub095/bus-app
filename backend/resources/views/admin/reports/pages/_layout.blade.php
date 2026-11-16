@@ -11,7 +11,7 @@
 ====================================================================== --}}
 @extends('admin.layout')
 
-@section('title', $reportTitle . ' | SonyaBus Admin')
+@section('title', $reportTitle . ' | JourneyGo Admin')
 
 @php $activeTab = 'reports'; @endphp
 

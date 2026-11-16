@@ -14,7 +14,7 @@ import { Trend, Counter, Rate } from 'k6/metrics';
 
 // ── কনফিগ ─────────────────────────────────────────────────────────────────────
 const BASE_URL = 'http://127.0.0.1:8000';
-const EMAIL    = 'superadmin@sonyabus.com';
+const EMAIL    = 'superadmin@journeygo.com';
 const PASSWORD = 'password123';
 
 // ── কাস্টম মেট্রিক্স ─────────────────────────────────────────────────────────

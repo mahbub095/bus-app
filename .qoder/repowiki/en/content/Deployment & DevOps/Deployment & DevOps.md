@@ -8,12 +8,22 @@
 - [backend/config/app.php](file://backend/config/app.php)
 - [backend/config/database.php](file://backend/config/database.php)
 - [backend/config/queue.php](file://backend/config/queue.php)
-- [sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php](file://sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php)
+- [backend/app/Services/EnvFileWriter.php](file://backend/app/Services/EnvFileWriter.php)
 - [k6/README.md](file://k6/README.md)
 - [k6/scenarios/homepage_load.js](file://k6/scenarios/homepage_load.js)
 - [k6/scenarios/admin_dashboard.js](file://k6/scenarios/admin_dashboard.js)
 - [SECURITY_IMPLEMENTATION_GUIDE.md](file://SECURITY_IMPLEMENTATION_GUIDE.md)
+- [build-release.ps1](file://build-release.ps1)
+- [CODECANYON_RELEASE_GUIDE.md](file://CODECANYON_RELEASE_GUIDE.md)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Removed all references to legacy `sonyabus-codecanyon-v1.0.0` directory structure
+- Updated build process documentation to reflect modern Node.js 20+ and Vite 8 requirements
+- Enhanced security section with current EnvFileWriter path traversal protection
+- Simplified repository structure documentation to match current layout
+- Updated CodeCanyon release procedures to reflect current packaging script
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -79,7 +89,7 @@ Key runtime components that affect deployment and operations:
 - Application configuration (app URL, frontend URL, maintenance mode)
 - Database connections (MySQL/MariaDB, PostgreSQL, SQL Server, SQLite)
 - Queue system (database-backed by default; supports Redis/SQS/Beanstalkd)
-- Environment file writer with path traversal protection
+- Environment file writer with enhanced path traversal protection
 
 Operational implications:
 - APP_URL must match the backend domain used by the React app
@@ -91,7 +101,7 @@ Operational implications:
 - [backend/config/app.php:42-62](file://backend/config/app.php#L42-L62)
 - [backend/config/database.php:47-85](file://backend/config/database.php#L47-L85)
 - [backend/config/queue.php:16-45](file://backend/config/queue.php#L16-L45)
-- [sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php:10-41](file://sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php#L10-L41)
+- [backend/app/Services/EnvFileWriter.php:10-41](file://backend/app/Services/EnvFileWriter.php#L10-L41)
 
 ## Architecture Overview
 The recommended production architecture separates the React SPA and Laravel API into distinct domains/subdomains:
@@ -145,7 +155,7 @@ Key steps:
 - Set PHP version and required extensions
 - Generate application key, run migrations, and cache config/routes/views
 - Configure storage link and permissions
-- Enable SSL via Let’s Encrypt or AutoSSL
+- Enable SSL via Let's Encrypt or AutoSSL
 - Set up queue worker via cron
 
 ```mermaid
@@ -266,11 +276,11 @@ Security considerations:
 **Section sources**
 - [documentation/index.html:703-735](file://documentation/index.html#L703-L735)
 - [backend/config/app.php:42-62](file://backend/config/app.php#L42-L62)
-- [sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php:10-41](file://sonyabus-codecanyon-v1.0.0/backend/app/Services/EnvFileWriter.php#L10-L41)
+- [backend/app/Services/EnvFileWriter.php:10-41](file://backend/app/Services/EnvFileWriter.php#L10-L41)
 
 ### SSL Certificate Setup
 Options:
-- cPanel Let’s Encrypt/AutoSSL for shared hosting
+- cPanel Let's Encrypt/AutoSSL for shared hosting
 - Certbot for VPS/cloud platforms
 - Ensure HTTPS redirects are enforced for all domains/subdomains
 
@@ -291,7 +301,7 @@ Nginx:
 Apache:
 - Ensure mod_rewrite is enabled
 - AllowOverride All for document root
-- Use Laravel’s public/.htaccess for routing
+- Use Laravel's public/.htaccess for routing
 
 **Section sources**
 - [documentation/index.html:738-778](file://documentation/index.html#L738-L778)
@@ -342,7 +352,7 @@ Frontend scaling:
 Runtime dependencies:
 - PHP 8.2+ with required extensions
 - MySQL 8.0+ or MariaDB 10.6+
-- Node.js 18+ for frontend build
+- Node.js 20+ for frontend build (Vite 8 compatible)
 - Composer 2.x for backend dependencies
 - Optional Redis for cache and queues
 
@@ -354,7 +364,7 @@ External integrations:
 ```mermaid
 graph LR
 PHP["PHP 8.2+"] --> Laravel["Laravel 12"]
-Node["Node.js 18+"] --> React["React 19"]
+Node["Node.js 20+"] --> React["React 19"]
 Laravel --> MySQL["MySQL 8.0+"]
 Laravel --> Redis["Redis (optional)"]
 Laravel --> ZiniPay["ZiniPay"]
@@ -419,3 +429,30 @@ SonyaBus is designed for robust production deployments across shared hosting, VP
 - [k6/README.md:46-93](file://k6/README.md#L46-L93)
 - [k6/scenarios/homepage_load.js:1-24](file://k6/scenarios/homepage_load.js#L1-L24)
 - [k6/scenarios/admin_dashboard.js:1-13](file://k6/scenarios/admin_dashboard.js#L1-L13)
+
+### Modern Build Processes
+The current build system uses modern tooling:
+- Node.js 20+ with Vite 8 for frontend builds
+- PowerShell-based release packaging script
+- Clean separation between development and production builds
+
+Release packaging:
+- Automated ZIP creation excluding sensitive files
+- Proper exclusion of vendor/, node_modules/, and .env files
+- Validation checklist for pre-submission
+
+**Section sources**
+- [build-release.ps1:1-150](file://build-release.ps1#L1-L150)
+- [CODECANYON_RELEASE_GUIDE.md:218-270](file://CODECANYON_RELEASE_GUIDE.md#L218-L270)
+
+### Security Enhancements
+Enhanced security features include:
+- Path traversal prevention in EnvFileWriter
+- MIME-based file validation
+- Rate limiting on authentication endpoints
+- CSRF protection on state-changing routes
+- License guard middleware for purchase verification
+
+**Section sources**
+- [backend/app/Services/EnvFileWriter.php:10-41](file://backend/app/Services/EnvFileWriter.php#L10-L41)
+- [SECURITY_IMPLEMENTATION_GUIDE.md:763-819](file://SECURITY_IMPLEMENTATION_GUIDE.md#L763-L819)

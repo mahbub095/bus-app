@@ -1,6 +1,6 @@
-# SonyaBus — CodeCanyon Release Guide
+# JourneyGo — CodeCanyon Release Guide
 
-This document is your checklist for preparing and publishing **SonyaBus** (Laravel admin panel + React customer booking app) on [CodeCanyon](https://codecanyon.net).
+This document is your checklist for preparing and publishing **JourneyGo** (Laravel admin panel + React customer booking app) on [CodeCanyon](https://codecanyon.net).
 
 Use it in order. Do not submit until every item in **Phase 1** and **Phase 2** is complete.
 
@@ -10,7 +10,7 @@ Use it in order. Do not submit until every item in **Phase 1** and **Phase 2** i
 
 | Item | Value |
 |------|-------|
-| **Product name** | SonyaBus — Bus Ticket Booking System |
+| **Product name** | JourneyGo — Bus Ticket Booking System |
 | **Stack** | Laravel 12 (PHP 8.2+), React 19, Vite, MySQL/SQLite |
 | **Surfaces** | Customer React app (`/api/*`), Admin Blade dashboard (`/admin/*`) |
 | **Integrations** | ZiniPay payments, SMS gateway (SMS.NET.BD), email password reset |
@@ -53,7 +53,7 @@ Buyers deploy on their own domains. Hardcoded localhost will break production.
 ### 1.3 Polish buyer-facing config defaults
 
 - [ ] Update `backend/.env.example`:
-  - `APP_NAME=SonyaBus`
+  - `APP_NAME=JourneyGo`
   - Clear comments for DB, mail, SMS, and ZiniPay
   - `APP_DEBUG=false` note for production
 - [ ] Ensure `backend/database/seeders/DatabaseSeeder.php` demo passwords are documented and safe for demo only (currently `password123` — acceptable for demo, must be documented).
@@ -83,7 +83,7 @@ CodeCanyon requires clear installation docs. Prepare a **`documentation/`** fold
 
 Include these sections:
 
-1. **Introduction** — what SonyaBus does, demo URLs, support contact.
+1. **Introduction** — what JourneyGo does, demo URLs, support contact.
 2. **Requirements**
    - PHP 8.2+
    - Composer 2.x
@@ -113,9 +113,9 @@ Include these sections:
 
    | Role | Email | Password |
    |------|-------|----------|
-   | Super Admin | superadmin@sonyabus.com | password123 |
-   | Admin | admin@sonyabus.com | password123 |
-   | Customer | user@sonyabus.com | password123 |
+   | Super Admin | superadmin@journeygo.com | password123 |
+   | Admin | admin@journeygo.com | password123 |
+   | Customer | user@journeygo.com | password123 |
 
    Add a warning: change all passwords immediately on production.
 
@@ -220,7 +220,7 @@ Example tags: `bus booking`, `ticket reservation`, `laravel`, `react`, `transpor
 CodeCanyon expects a clean, installable package. Recommended layout:
 
 ```text
-sonyabus-codecanyon-v1.0.0/
+journeygo-codecanyon-v1.0.0/
 ├── changelog.txt
 ├── license.txt
 ├── documentation/
@@ -338,4 +338,4 @@ Sanitize all of these before copying text into public buyer docs.
 
 ---
 
-*Last updated for SonyaBus codebase layout (Laravel backend + React frontend). Adjust version numbers and URLs when you publish.*
+*Last updated for JourneyGo codebase layout (Laravel backend + React frontend). Adjust version numbers and URLs when you publish.*

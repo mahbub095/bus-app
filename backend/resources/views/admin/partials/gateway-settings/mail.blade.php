@@ -65,13 +65,13 @@
             <div class="input-group">
                 <label for="mail_from_address">Global From Email Address</label>
                 <input type="email" name="mail_from_address" id="mail_from_address" class="coupon-input"
-                       value="{{ old('mail_from_address', $mail['mail_from_address'] ?? 'noreply@sonyabus.com') }}" required>
+                       value="{{ old('mail_from_address', $mail['mail_from_address'] ?? 'noreply@journeygo.com') }}" required>
             </div>
 
             <div class="input-group">
                 <label for="mail_from_name">Global Sender Name</label>
                 <input type="text" name="mail_from_name" id="mail_from_name" class="coupon-input"
-                       value="{{ old('mail_from_name', $mail['mail_from_name'] ?? 'SonyaBus') }}" required>
+                       value="{{ old('mail_from_name', $mail['mail_from_name'] ?? 'JourneyGo') }}" required>
             </div>
         </div>
 

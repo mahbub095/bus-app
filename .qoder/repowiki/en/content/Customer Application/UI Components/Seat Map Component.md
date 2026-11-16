@@ -12,6 +12,13 @@
 - [seat_race.js](file://k6/scenarios/seat_race.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated passenger form validation to reflect optional email field
+- Modified email label from "Email *" to "Email (optional)" 
+- Updated validation logic to allow empty email values while maintaining proper format validation when provided
+- Enhanced booking submission flow to handle nullable email fields
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -65,7 +72,7 @@ K6 --> API
 **Diagram sources**
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
 - [bookingUtils.js:1-173](file://frontend/src/bookingUtils.js#L1-L173)
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [ScheduleList.jsx:1-200](file://frontend/src/components/ScheduleList.jsx#L1-L200)
 - [SeatMapService.php:1-593](file://backend/app/Services/SeatMapService.php#L1-L593)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
@@ -75,7 +82,7 @@ K6 --> API
 **Section sources**
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
 - [bookingUtils.js:1-173](file://frontend/src/bookingUtils.js#L1-L173)
-- [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
+- [BookingPortal.jsx:1-653](file://frontend/src/components/BookingPortal.jsx#L1-L653)
 - [SeatMapService.php:1-593](file://backend/app/Services/SeatMapService.php#L1-L593)
 - [BookingController.php:1-150](file://backend/app/Http/Controllers/API/BookingController.php#L1-L150)
 - [api.php:70-80](file://backend/routes/api.php#L70-L80)
@@ -185,6 +192,8 @@ Customization hooks:
 - CSS classes like `status-available`, `status-blocked`, `status-booked_m`, `status-sold_f`, and `selected` control appearance.
 - Legend items can be extended by adding new status keys and labels in shared utilities.
 
+**Updated** The email field in the passenger form now displays as "Email (optional)" instead of "Email *", reflecting its optional nature in the booking process.
+
 **Section sources**
 - [SeatMap.jsx:48-190](file://frontend/src/components/SeatMap.jsx#L48-L190)
 - [SeatMap.jsx:192-208](file://frontend/src/components/SeatMap.jsx#L192-L208)
@@ -262,13 +271,15 @@ Hold mechanism:
 - If failed, the selection is rolled back and an error message is shown.
 
 Polling:
-- Every 5 seconds, the portal re-fetches search results and updates the selected schedule’s seat map.
+- Every 5 seconds, the portal re-fetches search results and updates the selected schedule's seat map.
 - The last sync timestamp is passed to SeatMap.jsx to indicate live updates.
 
 Conflict resolution:
 - Server-side validation ensures only available seats can be held.
 - If another user holds a seat, the request fails with a clear message.
 - Expired holds are cleaned up and removed from the UI.
+
+**Updated** The booking validation now treats the email field as optional. Users can leave the email field blank or provide a valid email address. When an email is provided, it must conform to proper email format validation.
 
 **Section sources**
 - [BookingPortal.jsx:108-161](file://frontend/src/components/BookingPortal.jsx#L108-L161)
@@ -374,11 +385,13 @@ Common issues and resolutions:
 - Hold fails with "not available": Seat is booked/sold or recently pending; check live seat map.
 - Expiration timer shows 00:00: Hold expired; seat was released automatically; reselect if still available.
 - Live updates not reflecting: Verify polling is active and network requests succeed; check last sync timestamp.
+- Email validation errors: Ensure email format is correct when provided, or leave the field blank as it's optional.
 
 Operational tips:
 - Use the legend to understand status colors and labels.
 - Validate phone numbers and required fields before submitting bookings.
 - Monitor k6 race scenarios to detect concurrency bugs under load.
+- Remember that email is now optional - users can proceed without providing an email address.
 
 **Section sources**
 - [BookingPortal.jsx:209-289](file://frontend/src/components/BookingPortal.jsx#L209-L289)
@@ -387,6 +400,8 @@ Operational tips:
 
 ## Conclusion
 The Seat Map component delivers a responsive, visually rich seat selection experience backed by robust backend logic. It supports multiple bus layouts, gender-aware availability, real-time updates, and safe concurrent seat holding. By combining optimistic UI with server-side validation, it provides a smooth user experience while preventing double bookings and resolving conflicts effectively.
+
+The recent enhancement to make the email field optional improves user flexibility while maintaining data integrity through proper format validation when emails are provided.
 
 [No sources needed since this section summarizes without analyzing specific files]
 
@@ -450,3 +465,23 @@ The Seat Map component delivers a responsive, visually rich seat selection exper
 - Consider collapsing the booking form into a modal on small screens.
 
 [No sources needed since this section provides general guidance]
+
+### Passenger Form Validation Updates
+**Updated** The passenger form now includes the following validation rules:
+
+- **Name**: Required field with minimum length validation
+- **Phone**: Required field with minimum 11 digits validation  
+- **Email**: Optional field with format validation when provided
+- **Gender**: Optional field for seat blocking rules
+- **Boarding/Dropping Points**: Required selections for journey routing
+
+The email field validation allows users to either:
+- Leave the email field completely blank (no validation performed)
+- Provide a properly formatted email address (validated against standard email patterns)
+
+This change provides greater flexibility for users who prefer not to share their email address while maintaining data quality when email information is provided.
+
+**Section sources**
+- [BookingPortal.jsx:488-492](file://frontend/src/components/BookingPortal.jsx#L488-L492)
+- [SeatMap.jsx:479-487](file://frontend/src/components/SeatMap.jsx#L479-L487)
+- [BookingController.php:25](file://backend/app/Http/Controllers/API/BookingController.php#L25)

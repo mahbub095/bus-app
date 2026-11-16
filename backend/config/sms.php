@@ -9,6 +9,6 @@ return [
     'is_active' => filter_var(env('SMS_GATEWAY_ACTIVE', true), FILTER_VALIDATE_BOOLEAN),
     'message_template' => env(
         'SMS_GATEWAY_MESSAGE_TEMPLATE',
-        'SonyaBus ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}'
+        'JourneyGo ticket confirmed. PNR {PNR}, Seats {SEATS}, Fare BDT {FARE}. Status: {STATUS}'
     ),
 ];

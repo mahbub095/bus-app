@@ -1,14 +1,14 @@
-# SonyaBus — Bus Ticket Booking System
+# JourneyGo — Bus Ticket Booking System
 
 **Version:** 1.1.0  
-**Author:** SonyaBus  
+**Author:** JourneyGo  
 **License:** CodeCanyon Regular/Extended License  
 
 ---
 
 ## 📋 Overview
 
-SonyaBus is a full-stack, production-ready bus ticket booking system built with **Laravel 12** (backend API) and **React 19** (customer-facing SPA). It includes an admin dashboard for managing routes, schedules, bookings, and system settings, plus a mobile-first customer app for searching, seat selection, and online payment.
+JourneyGo is a full-stack, production-ready bus ticket booking system built with **Laravel 12** (backend API) and **React 19** (customer-facing SPA). It includes an admin dashboard for managing routes, schedules, bookings, and system settings, plus a mobile-first customer app for searching, seat selection, and online payment.
 
 ### Key Features
 
@@ -214,9 +214,9 @@ php artisan db:seed
 
 | Role         | Email                      | Password      |
 |--------------|----------------------------|---------------|
-| Super Admin  | superadmin@sonyabus.com    | password123   |
-| Admin        | admin@sonyabus.com         | password123   |
-| Customer     | user@sonyabus.com          | password123   |
+| Super Admin  | superadmin@journeygo.com    | password123   |
+| Admin        | admin@journeygo.com         | password123   |
+| Customer     | user@journeygo.com          | password123   |
 
 **⚠️ Change all passwords immediately after setup.**
 
@@ -267,5 +267,5 @@ You may NOT redistribute, resell, or sub-license this product without purchasing
 
 ---
 
-**Thank you for purchasing SonyaBus!** 🎉  
+**Thank you for purchasing JourneyGo!** 🎉  
 We hope this system helps you build a successful bus ticketing business.

@@ -4,7 +4,8 @@
     @include('admin.partials.theme-init')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SonyaBus | Admin Login Portal</title>
+    <title>JourneyGo | Admin Login Portal</title>
+    @include('admin.partials.favicon')
     
     @include('admin.partials.fonts')
 
@@ -247,8 +248,8 @@
         <div class="auth-card">
             
             <div class="logo-wrap">
-                <div class="logo-icon">S</div>
-                Sonya<span class="logo-accent">Bus</span> Admin
+                <div class="logo-icon">J</div>
+                Journey<span class="logo-accent">Go</span> Admin
             </div>
             <p class="auth-subtitle">Access administrative control console</p>
 
@@ -283,7 +284,7 @@
                         name="email" 
                         id="email" 
                         class="coupon-input" 
-                        placeholder="e.g. admin@sonyabus.com" 
+                        placeholder="e.g. admin@journeygo.com"
                         required 
                         value="{{ old('email') }}"
                         autocomplete="email"
