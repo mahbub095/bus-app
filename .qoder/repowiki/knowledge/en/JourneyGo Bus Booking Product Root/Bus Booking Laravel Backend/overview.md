@@ -1,0 +1,1 @@
+Laravel application exposing a Sanctum JSON API and Blade admin dashboard over a shared domain layer of services, models, and site settings for bus booking operations.

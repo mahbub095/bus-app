@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: SonyaBus Bus Booking System — Product Root
+title: JourneyGo Bus Booking Product Root
 scope:
     - README.md
     - CODECANYON_RELEASE_GUIDE.md

@@ -1,0 +1,1 @@
+Customer-facing React/Vite single-page application for bus schedule search, seat selection, authentication, and ZiniPay-integrated online payment.

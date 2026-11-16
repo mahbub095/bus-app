@@ -1,1 +1,0 @@
-Grafana k6 performance tests for the SonyaBus booking app, organized as thin scenario runners that compose reusable customer/admin journeys against REST and admin session APIs.
