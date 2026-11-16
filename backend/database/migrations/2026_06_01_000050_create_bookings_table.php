@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('schedule_id')->constrained('schedules')->onDelete('cascade');
             $table->string('passenger_name');
             $table->string('passenger_phone');
-            $table->string('passenger_email');
+            $table->string('passenger_email')->nullable();
             $table->enum('passenger_gender', ['M', 'F'])->default('M');
             $table->string('boarding_point')->nullable();
             $table->string('dropping_point')->nullable();
