@@ -581,40 +581,38 @@ function App() {
     setProbingBackend(false);
   };
 
-  // Still probing for backend — show simple loading state
+  // Still probing for backend — show a silent ring loader (no text)
   if (probingBackend) {
     return (
-      <div className="backend-offline-page">
-        <div className="backend-offline-card" style={{ textAlign: 'center' }}>
-          <div className="backend-offline-icon">🔄</div>
-          <h1 className="backend-offline-title">Connecting to server…</h1>
-          <p className="backend-offline-desc">
-            Detecting backend location. This takes a few seconds.
-          </p>
-        </div>
+      <div className="app-boot-loader">
+        <div className="boot-ring" />
         <style>{`
-          .backend-offline-page {
+          .app-boot-loader {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             background: var(--bg-main, #f8fafc);
-            padding: 24px;
           }
-          .backend-offline-card {
-            background: var(--bg-card, #fff);
-            border: 1px solid var(--border-color, #e2e8f0);
-            border-radius: 16px;
-            padding: 48px 40px;
-            max-width: 440px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,.08);
+          .boot-ring {
+            position: relative;
+            width: 64px;
+            height: 64px;
           }
-          .backend-offline-icon { font-size: 52px; margin-bottom: 20px; animation: pulse 1.4s infinite; }
-          @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .4 } }
-          .backend-offline-title { font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 12px; }
-          .backend-offline-desc { font-size: 14px; color: #64748b; line-height: 1.6; }
+          .boot-ring::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 5px solid var(--border-color, #e2e8f0);
+            border-top-color: #6366f1;
+            border-right-color: #06b6d4;
+            animation: boot-spin .9s linear infinite;
+          }
+          @keyframes boot-spin { to { transform: rotate(360deg); } }
+          @media (prefers-reduced-motion: reduce) {
+            .boot-ring::before { animation: none; }
+          }
         `}</style>
       </div>
     );
