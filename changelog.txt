@@ -16,7 +16,7 @@ SECURITY FIXES
 
 LICENSE SYSTEM
   - Envato purchase code verification via Envato Market API v3
-  - Installation wizard (4 steps: license → database → admin account → finalize)
+    - Installation wizard (3 steps: license → database → finalize)
   - EnsureLicenseIsActivated global middleware — blocks access until activated
   - License management tab in Admin → License (super admin only)
   - Re-verification support for domain migrations

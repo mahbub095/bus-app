@@ -1,0 +1,1 @@
+The app is bootstrapped through `/install` (license → DB config → finalize) plus Artisan commands `artisan install:demo-seed`, `artisan install:finalize`, and `artisan install:reset`; after installation the root route redirects to `/admin/login` unless `config('app.installed')` is false.

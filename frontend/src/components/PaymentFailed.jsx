@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function PaymentFailed({ paymentFailed, setPaymentFailed, setActiveTab }) {
   const isCancelled = paymentFailed?.type === 'cancelled';
   const errorMsg = paymentFailed?.errorMsg;

@@ -1,0 +1,1 @@
+Laravel API controllers providing token-based admin login and a JSON mirror of the Blade dashboard's KPIs, analytics charts, and management lists.

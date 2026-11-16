@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SearchForm from './SearchForm';
 import ScheduleList from './ScheduleList';
 import Features from './Features';
@@ -9,8 +9,6 @@ import { scheduleCache } from '../scheduleCache';
 export default function BookingPortal({
   bookingSuccess,
   setBookingSuccess,
-  verificationStatus,
-  setVerificationStatus,
   authUser,
   authToken,
   clearAuth,
@@ -89,7 +87,7 @@ export default function BookingPortal({
         const data = await res.json();
         setStations(data);
       }
-    } catch (err) {
+    } catch {
       showToast('Cannot connect to Laravel backend. Verify it is active on port 8000.', 'error');
     }
   };
@@ -98,8 +96,8 @@ export default function BookingPortal({
     fetchStations();
   }, []);
 
-  const prevScheduleIdRef = React.useRef(null);
-  const prevSeatsRef = React.useRef([]);
+  const prevScheduleIdRef = useRef(null);
+  const prevSeatsRef = useRef([]);
 
   useEffect(() => {
     prevSeatsRef.current = selectedSeats;
@@ -206,7 +204,7 @@ export default function BookingPortal({
     return () => clearInterval(interval);
   }, [seatExpirations, selectedSchedule?.id]);
 
-  const handleSeatClick = async (seat, status) => {
+  const handleSeatClick = async (seat) => {
     if (!requireAuth()) return;
 
     if (selectedSeats.includes(seat)) {
@@ -372,7 +370,7 @@ export default function BookingPortal({
       } else {
         showToast('Search failed. Please verify your parameters.', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Error connecting to backend server.', 'error');
     } finally {
       setIsLoading(false);
@@ -461,7 +459,7 @@ export default function BookingPortal({
         showToast(data.message || 'Invalid promo code.', 'error');
         setAppliedPromo(null);
       }
-    } catch (err) {
+    } catch {
       showToast('Error validating promo code.', 'error');
     }
   };
@@ -487,8 +485,9 @@ export default function BookingPortal({
       showToast('Passenger phone number must be at least 11 digits.', 'error');
       return;
     }
-    if (!passengerDetails.email.trim()) {
-      showToast('Passenger email is required.', 'error');
+    const trimmedEmail = passengerDetails.email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast('Please enter a valid email address or leave it blank.', 'error');
       return;
     }
     if (!boardingPoint || !droppingPoint) {
@@ -505,7 +504,7 @@ export default function BookingPortal({
           schedule_id: selectedSchedule.id,
           passenger_name: passengerDetails.name,
           passenger_phone: passengerDetails.phone,
-          passenger_email: passengerDetails.email,
+          passenger_email: trimmedEmail || null,
           passenger_gender: passengerGender,
           boarding_point: boardingPoint,
           dropping_point: droppingPoint,
@@ -567,7 +566,7 @@ export default function BookingPortal({
       } else {
         showToast(data.message || 'Seat booking failed. Please try again.', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Network error during booking.', 'error');
     } finally {
       setIsBooking(false);

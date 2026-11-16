@@ -1,1 +1,0 @@
-Production packaging uses `build-release.ps1` to assemble the CodeCanyon zip; local frontend builds use `build-frontend.bat`; development host resolution uses `fix-hosts.bat`. End users install via the `/install` wizard in the backend after deploying `backend/public/` and `frontend/dist/` separately.

@@ -1,0 +1,5 @@
+- Controller methods return `Illuminate\Http\JsonResponse` objects built with `response()->json([...])`, typically wrapping payloads in a `data` key and an optional `message` key.
+- Request validation is performed inline via `$request->validate([...])` with Laravel rule strings before delegating to services.
+- Model-to-JSON serialization is centralized through `format*` helper methods defined in the `FormatsAdminResources` trait rather than using model casts or transformers.
+- Optional relations are guarded with `relationLoaded('x') && $model` checks before accessing nested attributes to avoid N+1 / null reference issues.
+- Date/time fields are emitted as ISO-8601 strings via `optional($attr)->toIso8601String()` to keep responses timezone-safe.

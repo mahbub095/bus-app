@@ -1,0 +1,1 @@
+Defines the bus booking application's request surface: a Sanctum-authenticated JSON API for the React frontend, a Blade-driven admin dashboard with install wizard and payment callbacks, plus the default Artisan command.

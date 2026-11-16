@@ -1,0 +1,12 @@
+schema_version: 1
+module_path: backend/shared_infrastructure
+title: Request Routing Surface (API, Web Admin & Console)
+scope:
+    - backend/routes/api.php
+    - backend/routes/web.php
+    - backend/routes/console.php
+source_files: []
+depends_on: []
+related_to:
+    - path: frontend
+    - path: load_testing

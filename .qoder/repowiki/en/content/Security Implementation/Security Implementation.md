@@ -9,11 +9,14 @@
 - [api.php](file://backend/routes/api.php)
 - [web.php](file://backend/routes/web.php)
 - [UserAuthController.php](file://backend/app/Http/Controllers/API/UserAuthController.php)
+- [AdminAuthController.php](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php)
 - [AuthController.php](file://backend/app/Http/Controllers/Admin/AuthController.php)
 - [User.php](file://backend/app/Models/User.php)
 - [EnsureUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php)
+- [EnsureApiUserIsAdmin.php](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php)
 - [EnsureUserIsSuperAdmin.php](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php)
 - [EnsureUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php)
+- [EnsureApiUserHasMenuPermission.php](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php)
 - [LicenseService.php](file://backend/app\Services\LicenseService.php)
 - [License.php](file://backend/app\Models\License.php)
 - [EnsureLicenseIsActivated.php](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php)
@@ -25,15 +28,17 @@
 - [2026_11_15_000010_add_customer_session_lifetime_site_setting.php](file://backend/database/migrations/2026_11_15_000010_add_customer_session_lifetime_site_setting.php)
 - [site-settings.blade.php](file://backend/resources/views/admin/partials/site-settings.blade.php)
 - [AdminSessionTimeoutTest.php](file://backend/tests/Feature/AdminSessionTimeoutTest.php)
+- [AdminApiTest.php](file://backend/tests/Feature/AdminApiTest.php)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive admin session security system documentation including configurable session expiration and idle timeout enforcement
-- Documented separation between admin session behavior and customer API token behavior
-- Added validation constraints for session lifetime values (1-10080 minutes for admin, 0-43200 minutes for customers)
-- Updated Session Management section with new middleware and service architecture
-- Added new diagrams showing the admin session timeout enforcement flow
+- Added comprehensive documentation for the new Admin API authentication flow with separate token management for admin vs customer sessions
+- Documented menu permission checking middleware for API endpoints (EnsureApiUserHasMenuPermission)
+- Updated authentication architecture to include dual authentication systems: session-based admin dashboard and token-based admin API
+- Added detailed coverage of the api_admin and api_menu middleware aliases
+- Enhanced authorization section with token-guard counterparts for role and permission checks
+- Updated diagrams to reflect the new dual authentication architecture
 
 ## Table of Contents
 1. Introduction
@@ -49,17 +54,18 @@
 ## Introduction
 This document explains the security implementation for SonyaBus, focusing on authentication and authorization with Laravel Sanctum, role-based access control, permission management, input validation, CSRF protection, XSS prevention, SQL injection mitigation, rate limiting, file upload security, path traversal prevention, secure environment variable handling, license verification security, session management, and hardening best practices. It maps these controls to concrete files in the backend so you can trace behavior directly in the codebase.
 
-**Updated** Added comprehensive documentation for the new admin session security system that provides configurable session expiration, idle timeout enforcement, and separation between admin session behavior and customer API token behavior.
+**Updated** Added comprehensive documentation for the enhanced security architecture that now includes a dedicated Admin API authentication flow with separate token management for admin vs customer sessions, along with menu permission checking for API endpoints through specialized middleware.
 
 ## Project Structure
 The security-relevant parts of the backend are organized around:
 - Configuration for authentication, sessions, CORS, and Sanctum
-- API routes for public and authenticated endpoints
+- Dual API routes: public customer API and protected admin API
 - Admin web routes protected by session-based auth and middleware
 - Middleware enforcing admin, super-admin, menu permissions, and license activation
+- Token-guard counterparts for API-specific authorization
 - Models for users and licenses
 - Services for license verification and session management
-- New admin session security components for configurable timeouts
+- Admin session security components for configurable timeouts
 
 ```mermaid
 graph TB
@@ -75,15 +81,20 @@ R2["routes/web.php"]
 end
 subgraph "Controllers"
 K1["API/UserAuthController.php"]
-K2["Admin/AuthController.php"]
+K2["API/Admin/AdminAuthController.php"]
+K3["Admin/AuthController.php"]
 end
-subgraph "Middleware"
+subgraph "Middleware - Web"
 M1["EnsureUserIsAdmin.php"]
 M2["EnsureUserIsSuperAdmin.php"]
 M3["EnsureUserHasMenuPermission.php"]
 M4["EnsureLicenseIsActivated.php"]
 M5["ApplySessionLifetime.php"]
 M6["EnforceAdminSessionTimeout.php"]
+end
+subgraph "Middleware - API"
+M7["EnsureApiUserIsAdmin.php"]
+M8["EnsureApiUserHasMenuPermission.php"]
 end
 subgraph "Models & Services"
 U1["Models/User.php"]
@@ -93,22 +104,26 @@ S2["Services/AdminSessionService.php"]
 S3["Services/SiteSettingsService.php"]
 end
 R1 --> K1
-R2 --> K2
+R1 --> K2
+R2 --> K3
 R1 --> M4
 R2 --> M1
 R2 --> M2
 R2 --> M3
 K1 --> U1
 K2 --> U1
+K3 --> U1
 M4 --> S1
 S1 --> L1
 C1 --> R1
-C2 --> K2
-C3 --> K2
+C2 --> K3
+C3 --> K3
 C4 --> R1
 M5 --> S2
 M6 --> S2
 S3 --> S2
+R1 --> M7
+R1 --> M8
 ```
 
 **Diagram sources**
@@ -116,17 +131,20 @@ S3 --> S2
 - [auth.php:1-118](file://backend/config/auth.php#L1-L118)
 - [session.php:1-218](file://backend/config/session.php#L1-L218)
 - [cors.php:1-35](file://backend/config/cors.php#L1-L35)
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
+- [AdminAuthController.php:1-149](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L149)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
 - [EnsureUserIsAdmin.php:1-41](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L1-L41)
+- [EnsureApiUserIsAdmin.php:1-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L1-L37)
 - [EnsureUserIsSuperAdmin.php:1-38](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L1-L38)
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
+- [EnsureApiUserHasMenuPermission.php:1-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L1-L35)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
-- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [AdminSessionService.php:1-121](file://backend/app\Services/AdminSessionService.php#L1-L121)
 - [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
 - [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
 - [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
@@ -136,19 +154,21 @@ S3 --> S2
 - [auth.php:1-118](file://backend/config/auth.php#L1-L118)
 - [session.php:1-218](file://backend/config/session.php#L1-L218)
 - [cors.php:1-35](file://backend/config/cors.php#L1-L35)
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 
 ## Core Components
-- Authentication
+- **Dual Authentication Systems**
   - Customer API uses Laravel Sanctum tokens via routes grouped under auth:sanctum.
   - Admin dashboard uses session-based authentication with guards configured in auth.php.
+  - **New** Admin API uses separate Sanctum tokens with admin-specific policy and menu permissions.
 - Authorization
   - Role checks: admin vs super_admin via User model methods.
-  - Menu-level permissions enforced through EnsureUserHasMenuPermission middleware.
+  - Menu-level permissions enforced through EnsureUserHasMenuPermission middleware for web routes.
+  - **New** API-specific menu permissions enforced through EnsureApiUserHasMenuPermission middleware.
 - License gating
   - Two-stage gate: installation lock and license activation check via EnsureLicenseIsActivated middleware and LicenseService.
-- **New** Admin Session Security
+- Admin Session Security
   - Configurable session expiration through Site Settings interface.
   - Idle timeout enforcement for admin sessions only.
   - Separation between admin session behavior and customer API token behavior.
@@ -163,21 +183,25 @@ Key responsibilities:
 - CSRF protection for session-based admin routes.
 - Secure password hashing and reset flows.
 - Domain-limited license verification against Envato APIs.
-- **New** Admin session lifetime configuration and enforcement through dedicated services and middleware.
+- **New** Admin API authentication with separate token management and menu permission checking.
+- Admin session lifetime configuration and enforcement through dedicated services and middleware.
 
 **Section sources**
 - [sanctum.php:1-88](file://backend/config/sanctum.php#L1-L88)
 - [auth.php:1-118](file://backend/config/auth.php#L1-L118)
 - [session.php:1-218](file://backend/config/session.php#L1-L218)
 - [cors.php:1-35](file://backend/config/cors.php#L1-L35)
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
+- [AdminAuthController.php:1-149](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L149)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 - [EnsureUserIsAdmin.php:1-41](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L1-L41)
+- [EnsureApiUserIsAdmin.php:1-37](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L1-L37)
 - [EnsureUserIsSuperAdmin.php:1-38](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L1-L38)
 - [EnsureUserHasMenuPermission.php:1-41](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L1-L41)
+- [EnsureApiUserHasMenuPermission.php:1-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L1-L35)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
@@ -186,12 +210,13 @@ Key responsibilities:
 - [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
 
 ## Architecture Overview
-The system enforces security at multiple layers:
+The system enforces security at multiple layers with dual authentication paths:
 - Routing layer applies middleware for maintenance mode, license gating, and role/permission checks.
 - Controllers validate inputs and perform business logic securely.
 - Models encapsulate domain rules (roles, permissions, license domain limits).
 - Services handle external integrations (Envato license verification) with retries, timeouts, and safe caching.
-- **New** Admin session security middleware enforces exact idle timeouts and configures session lifetimes dynamically.
+- **New** Admin API authentication provides separate token management with admin-specific policies and menu permissions.
+- Admin session security middleware enforces exact idle timeouts and configures session lifetimes dynamically.
 
 ```mermaid
 sequenceDiagram
@@ -217,11 +242,17 @@ Routes->>SessionConfig : Configure session lifetimes
 SessionConfig-->>Routes : Apply admin/customer settings
 Routes->>Auth : Authenticate (Sanctum or Session)
 Auth-->>Routes : User context
+alt Admin API
+Routes->>RBAC : Enforce api_admin + api_menu permissions
+RBAC-->>Routes : Access granted/denied
+else Admin Dashboard
 Routes->>RBAC : Enforce roles/permissions
 RBAC-->>Routes : Access granted/denied
-alt Admin Session
 Routes->>TimeoutCheck : Check idle timeout
 TimeoutCheck-->>Routes : Valid or expire session
+else Customer API
+Routes->>RBAC : Enforce customer permissions
+RBAC-->>Routes : Access granted/denied
 end
 Routes->>Controller : Handle request
 Controller-->>Client : Response
@@ -231,7 +262,7 @@ end
 ```
 
 **Diagram sources**
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
 - [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
@@ -239,13 +270,44 @@ end
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
+- [AdminAuthController.php:1-149](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L149)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
 
 ## Detailed Component Analysis
 
 ### Authentication and Authorization
 
-#### Sanctum API Authentication Flow
+#### Dual Authentication Architecture
+SonyaBus now implements two distinct authentication systems:
+
+**Customer API Authentication**: Uses Laravel Sanctum tokens for customer-facing API endpoints.
+**Admin Dashboard Authentication**: Uses session-based authentication for the web interface.
+**Admin API Authentication**: Uses separate Sanctum tokens with admin-specific policies and menu permissions.
+
+```mermaid
+flowchart TD
+Start(["Request Received"]) --> Type{"Request Type?"}
+Type --> |Customer API| CustomerFlow["Customer Sanctum Token Flow"]
+Type --> |Admin Dashboard| AdminFlow["Admin Session Flow"]
+Type --> |Admin API| AdminApiFlow["Admin API Token Flow"]
+CustomerFlow --> CustomerAuth["auth:sanctum middleware"]
+AdminFlow --> AdminAuth["Session guard + CSRF"]
+AdminApiFlow --> AdminApiAuth["auth:sanctum + api_admin middleware"]
+CustomerAuth --> CustomerPerms["Customer permissions"]
+AdminAuth --> AdminPerms["Admin role + menu permissions"]
+AdminApiAuth --> AdminApiPerms["Admin role + API menu permissions"]
+CustomerPerms --> Controller["Controller"]
+AdminPerms --> TimeoutCheck["Idle timeout check"]
+TimeoutCheck --> Controller
+AdminApiPerms --> Controller
+```
+
+**Diagram sources**
+- [api.php:76-88](file://backend/routes/api.php#L76-L88)
+- [api.php:99-265](file://backend/routes/api.php#L99-L265)
+- [web.php:68-70](file://backend/routes/web.php#L68-L70)
+
+#### Sanctum API Authentication Flow (Customer)
 - Public registration/login endpoints are rate-limited and validated.
 - On success, a Sanctum personal access token is issued; logout deletes the current token.
 - Authenticated customer routes require auth:sanctum middleware.
@@ -277,16 +339,64 @@ Ctrl-->>FE : {user}
 ```
 
 **Diagram sources**
-- [api.php:41-75](file://backend/routes/api.php#L41-L75)
+- [api.php:54-59](file://backend/routes/api.php#L54-L59)
+- [api.php:76-88](file://backend/routes/api.php#L76-L88)
 - [UserAuthController.php:17-79](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L79)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 
 **Section sources**
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:54-59](file://backend/routes/api.php#L54-L59)
+- [api.php:76-88](file://backend/routes/api.php#L76-L88)
 - [UserAuthController.php:17-79](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L79)
 - [User.php:1-76](file://backend/app/Models/User.php#L1-L76)
 
-#### Admin Session-Based Authentication
+#### Admin API Authentication Flow (New)
+The new Admin API provides a dedicated authentication flow with separate token management:
+
+**Key Features:**
+- Separate login endpoint at `/api/admin/login`
+- Admin-specific tokens with admin role and custom scopes
+- Token lifetime follows admin idle timeout from Site Settings
+- Returns session policy information including both admin and customer token lifetimes
+- Includes available menus based on user permissions
+- Rate limited to prevent brute-force attacks
+
+```mermaid
+sequenceDiagram
+participant AdminClient as "Admin Client"
+participant API as "Admin API Routes"
+participant Ctrl as "AdminAuthController"
+participant Model as "User"
+participant Sanctum as "Sanctum"
+participant Service as "AdminSessionService"
+AdminClient->>API : POST /api/admin/login
+API->>Ctrl : login()
+Ctrl->>Model : find user by email
+Model-->>Ctrl : User instance
+Ctrl->>Ctrl : Validate admin role
+Ctrl->>Service : Get admin session minutes
+Service-->>Ctrl : Minutes value
+Ctrl->>Sanctum : createToken('admin-api', ['admin'], expiresAt)
+Sanctum-->>Ctrl : Admin Token
+Ctrl-->>AdminClient : {token, expires_at, session_policy, menus}
+AdminClient->>API : GET /api/admin/me
+API->>Ctrl : me()
+Ctrl-->>AdminClient : {user, menus, session_policy, token_info}
+```
+
+**Diagram sources**
+- [api.php:99-102](file://backend/routes/api.php#L99-L102)
+- [AdminAuthController.php:28-68](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L28-L68)
+- [AdminAuthController.php:70-84](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L70-L84)
+- [AdminSessionService.php:16-121](file://backend/app\Services\AdminSessionService.php#L16-L121)
+
+**Section sources**
+- [api.php:99-102](file://backend/routes/api.php#L99-L102)
+- [AdminAuthController.php:28-68](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L28-L68)
+- [AdminAuthController.php:70-84](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L70-L84)
+- [AdminSessionService.php:16-121](file://backend/app\Services/AdminSessionService.php#L16-L121)
+
+#### Admin Session-Based Authentication (Dashboard)
 - Admin login uses session guard with CSRF protection.
 - Successful login regenerates session and redirects to admin dashboard.
 - Logout invalidates session and regenerates token.
@@ -316,10 +426,12 @@ Attempt --> |Failure| Error
 #### Role-Based Access Control and Permissions
 - Roles: user, admin, super_admin.
 - Super admin bypasses menu permissions; admins must have explicit menu permissions.
-- Middleware enforce:
-  - EnsureUserIsAdmin: requires admin role.
+- **Enhanced** Middleware enforce:
+  - EnsureUserIsAdmin: requires admin role (web routes).
+  - EnsureApiUserIsAdmin: requires admin role (API routes).
   - EnsureUserIsSuperAdmin: requires super_admin role.
-  - EnsureUserHasMenuPermission: checks per-menu permission array.
+  - EnsureUserHasMenuPermission: checks per-menu permission array (web routes).
+  - **New** EnsureApiUserHasMenuPermission: checks per-menu permission array (API routes).
 
 ```mermaid
 classDiagram
@@ -332,33 +444,67 @@ class User {
 class EnsureUserIsAdmin {
 +handle(request, next)
 }
+class EnsureApiUserIsAdmin {
++handle(request, next)
+}
 class EnsureUserIsSuperAdmin {
 +handle(request, next)
 }
 class EnsureUserHasMenuPermission {
 +handle(request, next, menu)
 }
+class EnsureApiUserHasMenuPermission {
++handle(request, next, menu)
+}
 EnsureUserIsAdmin --> User : "checks isAdmin()"
+EnsureApiUserIsAdmin --> User : "checks isAdmin()"
 EnsureUserIsSuperAdmin --> User : "checks isSuperAdmin()"
 EnsureUserHasMenuPermission --> User : "checks hasMenuPermission()"
+EnsureApiUserHasMenuPermission --> User : "checks hasMenuPermission()"
 ```
 
 **Diagram sources**
 - [User.php:44-74](file://backend/app/Models/User.php#L44-L74)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
+- [EnsureApiUserIsAdmin.php:18-35](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L18-L35)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
 - [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
+- [EnsureApiUserHasMenuPermission.php:16-33](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L16-L33)
 
 **Section sources**
 - [User.php:44-74](file://backend/app/Models/User.php#L44-L74)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
+- [EnsureApiUserIsAdmin.php:18-35](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L18-L35)
 - [EnsureUserIsSuperAdmin.php:12-35](file://backend/app/Http/Middleware/EnsureUserIsSuperAdmin.php#L12-L35)
 - [EnsureUserHasMenuPermission.php:15-38](file://backend/app/Http/Middleware/EnsureUserHasMenuPermission.php#L15-L38)
+- [EnsureApiUserHasMenuPermission.php:16-33](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L16-L33)
+
+### Admin API Menu Permission Checking (New)
+The new `EnsureApiUserHasMenuPermission` middleware provides API-specific menu permission checking:
+
+**Key Features:**
+- Token-guard counterpart of `EnsureUserHasMenuPermission`
+- Used with `api_menu:menu_name` middleware syntax
+- Returns JSON responses for API endpoints (401/403)
+- Checks user's menu permissions using `hasMenuPermission()` method
+- Integrates seamlessly with Admin API route groups
+
+**Usage Pattern:**
+```php
+Route::middleware('api_menu:bookings')->group(function () {
+    Route::get('/bookings', [BookingApiController::class, 'index']);
+    // ... other booking endpoints
+});
+```
+
+**Section sources**
+- [EnsureApiUserHasMenuPermission.php:1-35](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L1-L35)
+- [api.php:130-263](file://backend/routes/api.php#L130-L263)
 
 ### Admin Session Security System
 
 #### Configurable Session Expiration
-The new admin session security system provides site administrators with granular control over session lifetimes through the Site Settings interface. The system separates admin session behavior from customer API token behavior.
+The admin session security system provides site administrators with granular control over session lifetimes through the Site Settings interface. The system separates admin session behavior from customer API token behavior.
 
 **Key Features:**
 - Admin panel idle timeout: 1-10080 minutes (default: 120 minutes)
@@ -449,29 +595,33 @@ The system maintains strict separation between admin session behavior and custom
 
 **Section sources**
 - [UserAuthController.php:17-208](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L208)
+- [AdminAuthController.php:28-123](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L28-L123)
 - [AuthController.php:24-81](file://backend/app/Http/Controllers/Admin/AuthController.php#L24-L81)
 - [sanctum.php:81-85](file://backend/config/sanctum.php#L81-L85)
 
 ### Rate Limiting
 - Authentication endpoints are rate-limited:
   - API auth group: throttle:10,1.
+  - Admin API login: throttle:10,1.
   - Admin login route: throttle:10,1.
 - Additional sensitive endpoints (e.g., password update) should be individually throttled.
 
 ```mermaid
 flowchart TD
-A["Request to /api/auth/*"] --> B["Throttle Middleware"]
+A["Request to /api/auth/* or /api/admin/login"] --> B["Throttle Middleware"]
 B --> C{"Within limit?"}
 C --> |Yes| D["Proceed to controller"]
 C --> |No| E["429 Too Many Requests"]
 ```
 
 **Diagram sources**
-- [api.php:41-46](file://backend/routes/api.php#L41-L46)
+- [api.php:54-59](file://backend/routes/api.php#L54-L59)
+- [api.php:100-102](file://backend/routes/api.php#L100-L102)
 - [web.php:68-70](file://backend/routes/web.php#L68-L70)
 
 **Section sources**
-- [api.php:41-46](file://backend/routes/api.php#L41-L46)
+- [api.php:54-59](file://backend/routes/api.php#L54-L59)
+- [api.php:100-102](file://backend/routes/api.php#L100-L102)
 - [web.php:68-70](file://backend/routes/web.php#L68-L70)
 
 ### File Upload Security and Path Traversal Prevention
@@ -547,7 +697,7 @@ DomainCheck --> Result["buildResult() -> save/cache/env"]
 - Session driver defaults to database.
 - Lifetime, expiration on close, encryption, httpOnly, SameSite, and partitioned cookies are configurable.
 - Admin login/logout performs session regeneration and invalidation for security.
-- **New** Admin session security system provides:
+- **Enhanced** Admin session security system provides:
   - Configurable idle timeout enforcement through `EnforceAdminSessionTimeout` middleware
   - Dynamic session lifetime configuration via `ApplySessionLifetime` middleware
   - Separation between admin session behavior and customer API token behavior
@@ -575,7 +725,7 @@ Authenticated --> Unauthenticated : "Logout + invalidate"
 - [session.php:21-50](file://backend/config/session.php#L21-L50)
 - [session.php:172-202](file://backend/config/session.php#L172-L202)
 - [AuthController.php:54-61](file://backend/app/Http/Controllers/Admin/AuthController.php#L54-L61)
-- [AdminSessionService.php:16-121](file://backend/app\Services\AdminSessionService.php#L16-L121)
+- [AdminSessionService.php:16-121](file://backend/app\Services/AdminSessionService.php#L16-L121)
 - [ApplySessionLifetime.php:10-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L10-L49)
 - [EnforceAdminSessionTimeout.php:11-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L11-L76)
 
@@ -605,7 +755,8 @@ Security components interact as follows:
 - Controllers depend on models for user and license operations.
 - LicenseService depends on License model and external Envato APIs.
 - Session and Sanctum configurations influence how authentication state is maintained.
-- **New** Admin session security components depend on SiteSettingsService for configuration and AdminSessionService for lifetime calculations.
+- **Enhanced** Admin API authentication depends on AdminSessionService for token lifetime calculations and menu permission checking.
+- **New** API-specific middleware provide token-guard counterparts for role and permission checks.
 
 ```mermaid
 graph LR
@@ -613,9 +764,12 @@ R_API["routes/api.php"] --> MW_LIC["EnsureLicenseIsActivated"]
 R_WEB["routes/web.php"] --> MW_ADMIN["EnsureUserIsAdmin"]
 R_WEB --> MW_SUPER["EnsureUserIsSuperAdmin"]
 R_WEB --> MW_MENU["EnsureUserHasMenuPermission"]
+R_API --> MW_API_ADMIN["EnsureApiUserIsAdmin"]
+R_API --> MW_API_MENU["EnsureApiUserHasMenuPermission"]
 MW_LIC --> SVC_LIC["LicenseService"]
 SVC_LIC --> MOD_LIC["License"]
 CTRL_AUTH["UserAuthController"] --> MOD_USER["User"]
+CTRL_ADMIN_API["AdminAuthController"] --> MOD_USER
 CTRL_ADMIN["Admin/AuthController"] --> MOD_USER
 MW_SESSION["ApplySessionLifetime"] --> SVC_SESSION["AdminSessionService"]
 MW_TIMEOUT["EnforceAdminSessionTimeout"] --> SVC_SESSION
@@ -623,29 +777,31 @@ SVC_SETTINGS["SiteSettingsService"] --> SVC_SESSION
 ```
 
 **Diagram sources**
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
+- [AdminAuthController.php:1-149](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L149)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
 - [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
 - [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
-- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [AdminSessionService.php:1-121](file://backend/app\Services/AdminSessionService.php#L1-L121)
 - [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
 
 **Section sources**
-- [api.php:1-77](file://backend/routes/api.php#L1-L77)
+- [api.php:1-267](file://backend/routes/api.php#L1-L267)
 - [web.php:1-293](file://backend/routes/web.php#L1-L293)
 - [EnsureLicenseIsActivated.php:1-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L1-L169)
 - [LicenseService.php:1-408](file://backend/app\Services\LicenseService.php#L1-L408)
 - [License.php:1-126](file://backend/app\Models\License.php#L1-L126)
 - [UserAuthController.php:1-220](file://backend/app/Http/Controllers/API/UserAuthController.php#L1-L220)
+- [AdminAuthController.php:1-149](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L149)
 - [AuthController.php:1-83](file://backend/app/Http/Controllers/Admin/AuthController.php#L1-L83)
 - [ApplySessionLifetime.php:1-49](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L1-L49)
 - [EnforceAdminSessionTimeout.php:1-76](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L1-L76)
-- [AdminSessionService.php:1-121](file://backend/app\Services\AdminSessionService.php#L1-L121)
+- [AdminSessionService.php:1-121](file://backend/app\Services/AdminSessionService.php#L1-L121)
 - [SiteSettingsService.php:1-205](file://backend/app/Services/SiteSettingsService.php#L1-L205)
 
 ## Performance Considerations
@@ -653,7 +809,8 @@ SVC_SETTINGS["SiteSettingsService"] --> SVC_SESSION
 - LicenseService caches activation status to reduce repeated DB lookups.
 - External API calls in LicenseService use timeouts and retries to avoid hanging requests.
 - Session driver choice impacts performance; database driver is default but Redis may improve throughput.
-- **New** Admin session security system adds minimal overhead through lightweight middleware checks and session storage operations.
+- **Enhanced** Admin API authentication adds minimal overhead through lightweight middleware checks and token validation.
+- **New** Menu permission checking for API endpoints provides fine-grained access control without significant performance impact.
 
 [No sources needed since this section provides general guidance]
 
@@ -661,6 +818,7 @@ SVC_SETTINGS["SiteSettingsService"] --> SVC_SESSION
 - 401/403 on API calls
   - Verify Sanctum stateful domains and CORS configuration.
   - Ensure tokens are present and not expired.
+  - **New** For Admin API: verify admin role and menu permissions.
 - Admin login loops or redirects
   - Confirm session configuration and that CSRF tokens are included.
   - Check role checks in Admin/AuthController and EnsureUserIsAdmin middleware.
@@ -668,25 +826,32 @@ SVC_SETTINGS["SiteSettingsService"] --> SVC_SESSION
   - Inspect LicenseService logs for API errors.
   - Verify product ID and domain limits.
   - Check EnsureLicenseIsActivated middleware allowlists.
-- **New** Admin session timeout issues
+- **New** Admin API authentication issues
   - Verify AdminSessionService configuration values are within valid ranges.
-  - Check that ApplySessionLifetime middleware is registered globally.
-  - Ensure EnforceAdminSessionTimeout middleware is applied to web group.
-  - Validate site settings contain proper session lifetime values.
+  - Check that api_admin and api_menu middleware are registered globally.
+  - Ensure AdminAuthController returns proper session policy information.
+  - Validate menu permissions are correctly configured for admin users.
+- **New** Menu permission issues on API endpoints
+  - Verify EnsureApiUserHasMenuPermission middleware is properly aliased.
+  - Check that routes use correct `api_menu:menu_name` syntax.
+  - Ensure user has appropriate menu permissions in database.
 
 **Section sources**
 - [sanctum.php:21-26](file://backend/config/sanctum.php#L21-L26)
 - [cors.php:18-33](file://backend/config/cors.php#L18-L33)
 - [UserAuthController.php:17-79](file://backend/app/Http/Controllers/API/UserAuthController.php#L17-L79)
+- [AdminAuthController.php:28-68](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L28-L68)
 - [AuthController.php:24-61](file://backend/app/Http/Controllers/Admin/AuthController.php#L24-L61)
 - [EnsureUserIsAdmin.php:12-38](file://backend/app/Http/Middleware/EnsureUserIsAdmin.php#L12-L38)
+- [EnsureApiUserIsAdmin.php:18-35](file://backend/app/Http/Middleware/EnsureApiUserIsAdmin.php#L18-L35)
 - [LicenseService.php:106-157](file://backend/app\Services\LicenseService.php#L106-L157)
 - [EnsureLicenseIsActivated.php:98-169](file://backend/app\Http\Middleware\EnsureLicenseIsActivated.php#L98-L169)
-- [AdminSessionService.php:41-81](file://backend/app\Services\AdminSessionService.php#L41-L81)
+- [AdminSessionService.php:41-81](file://backend/app\Services/AdminSessionService.php#L41-L81)
 - [ApplySessionLifetime.php:27-47](file://backend/app/Http/Middleware/ApplySessionLifetime.php#L27-L47)
 - [EnforceAdminSessionTimeout.php:27-47](file://backend/app/Http/Middleware/EnforceAdminSessionTimeout.php#L27-L47)
+- [EnsureApiUserHasMenuPermission.php:16-33](file://backend/app/Http/Middleware/EnsureApiUserHasMenuPermission.php#L16-L33)
 
 ## Conclusion
 SonyaBus implements a layered security model combining Sanctum-based API authentication, session-based admin authentication, role and permission middleware, robust input validation, CSRF protection, and comprehensive license gating. Configuration files centralize security-critical settings such as CORS, Sanctum, and sessions. The license verification service adds strict validation, domain limits, and safe external API interactions. 
 
-**Updated** The new admin session security system provides site administrators with precise control over session lifetimes through an intuitive interface, while maintaining strict separation between admin session behavior and customer API token behavior. The system includes comprehensive validation, exact idle timeout enforcement, and secure configuration management. Following the recommended hardening steps—restrictive CORS, token expiration, security headers, strong password policies, careful environment management, and appropriate admin session timeout configuration—will further strengthen the application's security posture.
+**Updated** The enhanced security architecture now includes a dedicated Admin API authentication flow with separate token management for admin vs customer sessions, providing precise control over administrative access. The system features comprehensive menu permission checking for API endpoints through specialized middleware, ensuring fine-grained access control. The new admin session security system provides site administrators with precise control over session lifetimes through an intuitive interface, while maintaining strict separation between admin session behavior and customer API token behavior. Following the recommended hardening steps—restrictive CORS, token expiration, security headers, strong password policies, careful environment management, and appropriate admin session timeout configuration—will further strengthen the application's security posture.

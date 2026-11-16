@@ -452,7 +452,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
             <input type="tel" id="cs-booking-phone" class="ticket-field" placeholder="01XXXXXXXXX" autocomplete="tel" value="${escapeHtml(adminPassengerPhone)}">
             <label>Passenger Name *</label>
             <input type="text" id="cs-booking-name" class="ticket-field" placeholder="Full name" autocomplete="name" value="${escapeHtml(adminPassengerName)}">
-            <label>Email *</label>
+            <label>Email (optional)</label>
             <input type="email" id="cs-booking-email" class="ticket-field" placeholder="email@example.com" autocomplete="email" value="${escapeHtml(adminPassengerEmail)}">
             <label>Gender</label>
             <select id="cs-booking-gender" class="ticket-field">
@@ -903,7 +903,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         const errorEl = document.getElementById('cs-booking-error');
         const name = adminPassengerName.trim(), phone = adminPassengerPhone.trim(), email = adminPassengerEmail.trim();
         if (!adminSelectedSeats.length) { showErr(errorEl, 'Please select at least one seat.'); return; }
-        if (!name || !phone || !email || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
+        if (!name || !phone || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
         const pricing = calcPricing(schedule, adminSelectedSeats.length, adminPaymentMethod);
 
         // Resolve status based on payment method:
@@ -914,7 +914,7 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         const resolvedStatus = pm === 'zinipay' ? 'PENDING'
             : (pm === 'cash' ? 'SOLD' : 'BOOKED');
 
-        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:resolvedStatus };
+        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email || null, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:resolvedStatus };
         try {
             const res = await fetch(bookUrl, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify(payload) });
             if (res.ok) {
@@ -937,11 +937,11 @@ import { generateDefaultGrid, DRIVER_SVG } from './bus-layout-helper.js';
         const errorEl = document.getElementById('cs-booking-error');
         const name = adminPassengerName.trim(), phone = adminPassengerPhone.trim(), email = adminPassengerEmail.trim();
         if (!adminSelectedSeats.length) { showErr(errorEl, 'Please select at least one seat.'); return; }
-        if (!name || !phone || !email || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
+        if (!name || !phone || !adminBoardingPoint || !adminDroppingPoint) { showErr(errorEl, 'Please fill boarding, dropping, and passenger details.'); return; }
         const pricing = calcPricing(schedule, adminSelectedSeats.length, adminPaymentMethod);
 
         // Reserve always uses BOOKED status — the seat shows as Booked (M/F) on the map
-        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:'BOOKED' };
+        const payload = { schedule_id:schedule.id, passenger_name:name, passenger_phone:phone, passenger_email:email || null, passenger_gender:adminGender, boarding_point:adminBoardingPoint, dropping_point:adminDroppingPoint, seat_numbers:adminSelectedSeats.join(','), payment_method:adminPaymentMethod, total_fare:pricing.total, status:'BOOKED' };
         try {
             const res = await fetch(bookUrl, { method:'POST', headers:{ Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrfToken }, body:JSON.stringify(payload) });
             if (res.ok) {

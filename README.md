@@ -1,7 +1,7 @@
 # SonyaBus — Bus Ticket Booking System
 
 **Version:** 1.1.0  
-**Author:** Your Name  
+**Author:** SonyaBus  
 **License:** CodeCanyon Regular/Extended License  
 
 ---
@@ -35,27 +35,26 @@ SonyaBus is a full-stack, production-ready bus ticket booking system built with 
 - **DomPDF** for PDF ticket generation
 
 ### Frontend
-- **React 19** (Vite 6)
-- **React Router v7**
-- **Zustand** for state management
-- **Axios** for HTTP requests
-- **Framer Motion** for animations
+- **React 19** (Vite 8)
+- **Vanilla CSS** with CSS custom properties for light/dark theming
+- **Fetch API** for HTTP requests (no extra HTTP client dependency)
+- **ZiniPay JS** for the payment redirect handshake
 
 ---
 
 ## 📦 What's Included
 
 ```
-sonyabus/
+sonyabus-codecanyon-v1.1.0/
 ├── backend/                  # Laravel 12 API
 │   ├── app/
 │   │   ├── Http/Controllers/
 │   │   │   ├── Admin/        # Admin dashboard controllers
 │   │   │   ├── API/          # Customer API controllers
 │   │   │   └── Install/      # Installation wizard
+│   │   ├── Http/Middleware/
 │   │   ├── Models/
-│   │   ├── Services/
-│   │   └── Middleware/
+│   │   └── Services/
 │   ├── database/migrations/
 │   ├── resources/views/      # Admin Blade views + install wizard
 │   ├── routes/
@@ -66,16 +65,17 @@ sonyabus/
 │
 ├── frontend/                 # React 19 SPA
 │   ├── src/
-│   │   ├── pages/            # Search, seat map, checkout, my tickets
-│   │   ├── components/
-│   │   ├── stores/           # Zustand state
-│   │   └── api/
+│   │   ├── components/       # Search form, schedule list, seat map, checkout, tickets
+│   │   ├── bookingUtils.js  # Seat-code and fare helpers
+│   │   ├── scheduleCache.js # Session-level schedule cache
+│   │   └── zinipay.js       # Payment gateway client
 │   ├── .env.example
 │   └── package.json
 │
 ├── documentation/            # HTML user guide
 │   └── index.html
 ├── changelog.txt
+├── license.txt
 └── README.md                 # This file
 ```
 
@@ -87,7 +87,7 @@ sonyabus/
 
 - **PHP:** 8.2 or higher
 - **MySQL:** 8.0 or higher
-- **Node.js:** 18+ (for frontend build)
+- **Node.js:** 20.19+ (22 LTS recommended) — required by Vite 8
 - **Composer:** 2.x
 - **Web Server:** Nginx or Apache with `mod_rewrite`
 
@@ -133,12 +133,13 @@ See `documentation/index.html` for full Nginx/Apache configs.
 
 ### 3. License Activation
 
-Open your **backend URL** in a browser. You'll be redirected to `/install`. Complete the 4-step wizard:
+Open your **backend URL** in a browser. You'll be redirected to `/install`. Complete the 3-step wizard:
 
-1. **License** — Enter your Envato purchase code and personal token
-2. **Database** — Enter MySQL credentials (live connection test)
-3. **Admin Account** — Create super-admin login
-4. **Finalize** — Runs migrations and clears cache
+1. **License** — Enter the Envato purchase code, select the item and verify
+2. **Database** — Enter MySQL credentials (connection is tested live)
+3. **Finalize** — Enter the super-admin name, email and password; migrations run and the installer locks itself
+
+An optional demo-data button appears on the final screen if you want sample routes, coaches and bookings.
 
 After activation, the wizard is inaccessible. The system is ready to use.
 
@@ -215,7 +216,7 @@ php artisan db:seed
 |--------------|----------------------------|---------------|
 | Super Admin  | superadmin@sonyabus.com    | password123   |
 | Admin        | admin@sonyabus.com         | password123   |
-| Customer     | customer@sonyabus.com      | password123   |
+| Customer     | user@sonyabus.com          | password123   |
 
 **⚠️ Change all passwords immediately after setup.**
 
@@ -225,7 +226,7 @@ php artisan db:seed
 
 ### Security & License
 - Envato purchase code verification via Market API v3
-- Installation wizard with 4-step license activation
+- 3-step installation wizard with license activation
 - License re-verification for domain migrations
 - Rate limiting on all auth endpoints
 - MIME-based file upload validation (favicon, logo)
@@ -246,7 +247,7 @@ For installation help, bug reports, or feature requests:
 
 1. Check `documentation/index.html` → **Troubleshooting** section
 2. Contact via your CodeCanyon purchase page
-3. Email: your-support-email@example.com
+3. Open a support request from your Envato profile
 
 ---
 
@@ -261,7 +262,7 @@ You may NOT redistribute, resell, or sub-license this product without purchasing
 
 - **Laravel Framework** — [laravel.com](https://laravel.com)
 - **React** — [react.dev](https://react.dev)
-- **Icons** — Lucide React
+- **Icons** — Unicode emoji glyphs (no icon-font dependency)
 - **PDF Generation** — barryvdh/laravel-dompdf
 
 ---

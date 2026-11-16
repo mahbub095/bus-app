@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function OffersList({ API_BASE, showToast }) {
   const [offers, setOffers] = useState([]);
@@ -12,7 +12,7 @@ export default function OffersList({ API_BASE, showToast }) {
         const data = await res.json();
         setOffers(data);
       }
-    } catch (err) {
+    } catch {
       showToast('Could not fetch promotions.', 'error');
     } finally {
       setIsLoadingOffers(false);

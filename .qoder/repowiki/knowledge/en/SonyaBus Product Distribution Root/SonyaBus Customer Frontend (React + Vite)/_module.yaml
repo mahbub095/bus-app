@@ -1,0 +1,12 @@
+schema_version: 1
+module_path: frontend
+title: SonyaBus Customer Frontend (React + Vite)
+scope:
+    - frontend/
+source_files: []
+depends_on: []
+related_to:
+    - path: backend/bookings_domain
+    - path: backend/promotions_domain
+    - path: backend/shared_infrastructure
+    - path: backend/site_settings_license_sms

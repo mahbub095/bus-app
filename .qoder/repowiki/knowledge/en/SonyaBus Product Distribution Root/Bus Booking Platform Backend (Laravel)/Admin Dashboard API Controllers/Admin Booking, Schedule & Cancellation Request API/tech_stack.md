@@ -1,0 +1,1 @@
+Laravel controllers returning `Illuminate\Http\JsonResponse`, Eloquent query builder with `when()` scoping and `paginate()->through()` for DTO mapping, and a third-party payment integration via `ZinipayService`.

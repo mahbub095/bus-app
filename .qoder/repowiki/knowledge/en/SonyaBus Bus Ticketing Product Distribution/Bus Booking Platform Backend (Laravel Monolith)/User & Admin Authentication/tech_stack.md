@@ -1,1 +1,0 @@
-Laravel Sanctum for API bearer tokens, Laravel built-in session auth for admin routes, Hashed 6-digit OTPs stored in `password_reset_tokens` with 60-minute TTL verified via Carbon.

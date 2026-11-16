@@ -1,0 +1,4 @@
+- Controllers extend `BaseAdminApiController` and `use FormatsAdminResources`, delegating response shaping to `itemResponse()` and resource formatting to `formatXxx()` methods provided by the trait.
+- List endpoints validate shared `search` / `per_page` parameters and build queries with chained `when($request->filled(...))` clauses before calling `paginate($this->perPage($request))`.
+- Store actions return status 201 via `itemResponse($resource, 'message', 201)`, while update/destroy return plain messages through `response()->json(['message' => ...])`.
+- Blade-form payloads that post JSON text (e.g. `seat_layout_grid`, `boarding_points_json`) are accepted alongside native arrays via dedicated normalisation helpers that detect `is_array` vs `is_string` and decode or merge accordingly.

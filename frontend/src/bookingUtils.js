@@ -111,7 +111,7 @@ export function getSeatMap(schedule) {
         seatCodes.push('L-' + row + num);
       }
     }
-    let lastRowLetter = rowLetters[rIndex++];
+    let lastRowLetter = rowLetters[rIndex];
     for (let num = 1; num <= 4; num++) {
       seatCodes.push('L-' + lastRowLetter + num);
     }
@@ -127,7 +127,7 @@ export function getSeatMap(schedule) {
         seatCodes.push('U-' + row + num);
       }
     }
-    let lastRowLetterU = rowLetters[rIndex++];
+    let lastRowLetterU = rowLetters[rIndex];
     for (let num = 1; num <= 4; num++) {
       seatCodes.push('U-' + lastRowLetterU + num);
     }

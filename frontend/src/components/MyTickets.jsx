@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function MyTickets({
   authUser,
@@ -67,7 +67,7 @@ export default function MyTickets({
         `PNR: ${booking.pnr}`,
         `Passenger: ${booking.passenger_name}`,
         `Phone: ${booking.passenger_phone}`,
-        `Email: ${booking.passenger_email}`,
+        `Email: ${booking.passenger_email || 'N/A'}`,
         `From: ${booking.schedule?.route?.from || 'N/A'}`,
         `To: ${booking.schedule?.route?.to || 'N/A'}`,
         `Bus Name: ${booking.schedule?.bus?.operator_name || 'N/A'}`,
@@ -86,7 +86,7 @@ export default function MyTickets({
         try {
           const subtype = logoUrl.slice(5, logoUrl.indexOf(';')).split('/')[1].toUpperCase();
           doc.addImage(logoUrl, subtype === 'JPG' ? 'JPEG' : subtype, 158, 10, 34, 16);
-        } catch (err) {
+        } catch {
           // Logo is optional - ignore unsupported formats such as SVG
         }
       }
@@ -98,7 +98,7 @@ export default function MyTickets({
 
       const fileName = `ticket-${booking.pnr || booking.id}.pdf`;
       doc.save(fileName);
-    } catch (err) {
+    } catch {
       showToast('Unable to download PDF right now. Please try again.', 'error');
     }
   };
@@ -138,7 +138,7 @@ export default function MyTickets({
       } else {
         showToast('Failed to load your tickets.', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Error connecting to server.', 'error');
     } finally {
       setIsSearchingCancel(false);
@@ -181,7 +181,7 @@ export default function MyTickets({
       } else {
         showToast(data.message || 'Failed to cancel booking.', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Network error during cancellation.', 'error');
     }
   };

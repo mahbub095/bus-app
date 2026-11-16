@@ -1,0 +1,1 @@
+Dual-channel authentication layer providing Sanctum bearer-token API endpoints for customers and session-based Blade auth for admin users, sharing the User model.

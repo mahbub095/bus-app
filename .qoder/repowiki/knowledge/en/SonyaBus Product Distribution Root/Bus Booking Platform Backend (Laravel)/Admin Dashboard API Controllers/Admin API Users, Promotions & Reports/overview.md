@@ -1,0 +1,1 @@
+Laravel API controllers exposing the admin dashboard's user management, promotion/coupon CRUD, and report preview endpoints backed by dedicated report services.

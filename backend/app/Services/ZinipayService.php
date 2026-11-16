@@ -59,7 +59,9 @@ class ZinipayService
                 ])
                 ->post("{$this->baseUrl}/v1/payment/create", [
                     'cus_name' => $booking->passenger_name,
-                    'cus_email' => $booking->passenger_email,
+                    // Passenger email is optional; fall back to the global sender address
+                    // because ZiniPay requires a valid customer email for invoicing.
+                    'cus_email' => $booking->passenger_email ?: (config('mail.from.address') ?: 'noreply@sonyabus.com'),
                     'amount' => (float) $booking->total_fare,
                     'metadata' => [
                         'booking_id' => $booking->id,

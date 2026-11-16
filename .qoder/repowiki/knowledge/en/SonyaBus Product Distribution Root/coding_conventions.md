@@ -1,0 +1,2 @@
+- Environment-driven configuration via per-child `.env.example` files instead of checked-in secrets.
+- Release packaging excludes runtime dependencies (`vendor/`, `node_modules/`) and generated caches (`storage/framework/*`, `bootstrap/cache`, `dist/`) as enforced by the root packager.

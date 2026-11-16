@@ -1,0 +1,1 @@
+Laravel Eloquent query builder with `when()` conditional scopes and collection `through()`/`map()` transformers; report data aggregation uses `Illuminate\Support\Collection` and typed `Builder` parameters.

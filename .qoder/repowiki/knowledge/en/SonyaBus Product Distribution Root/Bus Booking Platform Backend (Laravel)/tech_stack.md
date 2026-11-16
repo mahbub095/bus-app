@@ -1,0 +1,1 @@
+Laravel 12 with Sanctum for token-based API auth, Blade views for the admin panel, Vite for asset compilation, and a queue-backed job (`SendBookingSmsNotification`) for outbound notifications.

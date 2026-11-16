@@ -121,8 +121,8 @@
                 <input type="text" name="passenger_phone" class="coupon-input" placeholder="01XXXXXXXXX" required value="{{ old('passenger_phone') }}">
             </div>
             <div class="input-group">
-                <label>Email Address</label>
-                <input type="email" name="passenger_email" class="coupon-input" placeholder="email@example.com" required value="{{ old('passenger_email') }}">
+                <label>Email Address (Optional)</label>
+                <input type="email" name="passenger_email" class="coupon-input" placeholder="email@example.com" value="{{ old('passenger_email') }}">
             </div>
             <div class="input-group">
                 <label>Seat Numbers (comma-separated)</label>

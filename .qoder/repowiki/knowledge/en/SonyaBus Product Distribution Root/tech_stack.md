@@ -1,0 +1,1 @@
+Laravel 12 + PHP 8.2+ backend, React 19 + Vite 6 frontend, MySQL 8.0+, and k6 for performance testing; Sanctum token auth and ZiniPay payment integration are the shared contracts between backend and frontend.

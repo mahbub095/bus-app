@@ -17,19 +17,29 @@
 - [zinipay.js](file://frontend/src/zinipay.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated authentication section to reflect current token expiration handling implementation
+- Added documentation for admin API backend capabilities and potential frontend integration points
+- Enhanced security considerations section with token lifecycle management details
+- Updated troubleshooting guide with session expiration scenarios
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+5. [Authentication and Token Management](#authentication-and-token-management)
+6. [Admin API Integration Points](#admin-api-integration-points)
+7. [Detailed Component Analysis](#detailed-component-analysis)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Security Considerations](#security-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the React 19 frontend architecture for the bus booking application. It covers component organization, state management patterns, API communication using native fetch with environment-driven backend discovery, routing via tab-based navigation, UI composition, build configuration with Vite, asset handling, responsive design, accessibility considerations, and performance techniques such as in-memory caching and optimistic UI updates.
+This document explains the React 19 frontend architecture for the bus booking application. It covers component organization, state management patterns, API communication using native fetch with environment-driven backend discovery, routing via tab-based navigation, UI composition, build configuration with Vite, asset handling, responsive design, accessibility considerations, and performance techniques such as in-memory caching and optimistic UI updates. The frontend implements comprehensive authentication with token expiration handling and provides integration points for future admin API functionality.
 
 ## Project Structure
 The frontend is a Vite + React 19 application. The entry point mounts the root App component under StrictMode. Application logic is organized into:
@@ -56,7 +66,7 @@ B --> K["src/zinipay.js"]
 
 **Diagram sources**
 - [main.jsx:1-12](file://frontend/src/main.jsx#L1-L12)
-- [App.jsx:1-805](file://frontend/src/App.jsx#L1-L805)
+- [App.jsx:1-863](file://frontend/src/App.jsx#L1-L863)
 - [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
@@ -71,7 +81,7 @@ B --> K["src/zinipay.js"]
 - [package.json:1-28](file://frontend/package.json#L1-L28)
 
 ## Core Components
-- App.jsx: Orchestrates global state (auth, site settings, toast, active tab), resolves backend base URL, renders layout and feature views, and handles payment redirections.
+- App.jsx: Orchestrates global state (auth, site settings, toast, active tab), resolves backend base URL, renders layout and feature views, and handles payment redirections. Implements comprehensive token expiration handling.
 - BookingPortal.jsx: Implements search flow, seat selection, promo validation, and booking submission. Integrates with schedule cache and live seat map refresh.
 - SearchForm.jsx: Presents station/date/coach filters and triggers search.
 - ScheduleList.jsx: Renders available schedules and expands to SeatMap for selected routes.
@@ -83,7 +93,7 @@ B --> K["src/zinipay.js"]
 - bookingUtils.js: Shared helpers for seat mapping, status labels, and pricing calculations.
 
 **Section sources**
-- [App.jsx:1-805](file://frontend/src/App.jsx#L1-L805)
+- [App.jsx:1-863](file://frontend/src/App.jsx#L1-L863)
 - [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
@@ -95,7 +105,7 @@ B --> K["src/zinipay.js"]
 - [bookingUtils.js:1-173](file://frontend/src/bookingUtils.js#L1-L173)
 
 ## Architecture Overview
-The frontend uses a single-page application pattern with tab-based navigation instead of a client-side router. Global state is managed at the App level and passed down via props. Backend connectivity is resolved at runtime through environment variables and probing heuristics. API calls use the Fetch API with JSON payloads and Bearer tokens where required.
+The frontend uses a single-page application pattern with tab-based navigation instead of a client-side router. Global state is managed at the App level and passed down via props. Backend connectivity is resolved at runtime through environment variables and probing heuristics. API calls use the Fetch API with JSON payloads and Bearer tokens where required. The system implements comprehensive token expiration handling with automatic logout when sessions expire.
 
 ```mermaid
 sequenceDiagram
@@ -138,6 +148,82 @@ end
 - [scheduleCache.js:1-65](file://frontend/src/scheduleCache.js#L1-L65)
 - [zinipay.js:1-179](file://frontend/src/zinipay.js#L1-L179)
 
+## Authentication and Token Management
+
+### Current Implementation
+The frontend implements comprehensive authentication with token expiration handling:
+
+**Token Storage and Lifecycle:**
+- Tokens are stored in localStorage with corresponding expiration timestamps
+- Automatic token validation on app startup by calling `/auth/me` endpoint
+- Session timers automatically log out users when their configured lifetime expires
+- Support for both expiring and non-expiring tokens (when admin sets lifetime to 0)
+
+**Key Features:**
+- **Automatic Expiration Handling**: Users are automatically logged out when their session expires
+- **Graceful Degradation**: Network errors during token validation clear local auth state
+- **Persistent Sessions**: User preferences and auth state persist across browser restarts
+- **Configurable Lifetime**: Token lifetimes are controlled by admin settings and applied dynamically
+
+```mermaid
+flowchart TD
+Start(["App Mount"]) --> CheckAuth{"Has saved token?"}
+CheckAuth --> |Yes| ValidateToken["Call /auth/me<br/>with Bearer token"]
+CheckAuth --> |No| ShowGuest["Show guest view"]
+ValidateToken --> Valid{"Token valid?"}
+Valid --> |Yes| SetUserState["Set user state<br/>and expires_at"]
+Valid --> |No| ClearAuth["Clear local auth"]
+SetUserState --> StartTimer["Start expiration timer"]
+ClearAuth --> ShowGuest
+StartTimer --> TimerCheck{"Time remaining > 0?"}
+TimerCheck --> |Yes| Continue["Continue with authenticated session"]
+TimerCheck --> |No| AutoLogout["Auto logout<br/>show 'session expired' message"]
+```
+
+**Diagram sources**
+- [App.jsx:434-485](file://frontend/src/App.jsx#L434-L485)
+- [App.jsx:164-184](file://frontend/src/App.jsx#L164-L184)
+
+**Section sources**
+- [App.jsx:164-184](file://frontend/src/App.jsx#L164-L184)
+- [App.jsx:434-485](file://frontend/src/App.jsx#L434-L485)
+
+## Admin API Integration Points
+
+### Backend Capabilities
+The backend provides comprehensive admin API functionality with advanced authentication and session management:
+
+**Admin Authentication Features:**
+- Token-based authentication with configurable idle timeouts
+- Session security policies with admin-configurable lifetimes
+- Multi-device support with device name tracking
+- Password change functionality that invalidates other devices
+
+**Session Management:**
+- Configurable admin panel idle timeout (default: 120 minutes)
+- Customer API token lifetime control (default: 1440 minutes, 0 = never expire)
+- Real-time session enforcement with exact timeout precision
+- Automatic cleanup of stale sessions
+
+### Frontend Integration Readiness
+The current frontend is structured to support admin API integration:
+
+**Integration Points:**
+- Existing authentication infrastructure can be extended for admin users
+- Token management system supports different token types and lifetimes
+- Error handling patterns are consistent and reusable
+- State management architecture supports additional user roles
+
+**Potential Enhancements:**
+- Add admin role detection and conditional UI rendering
+- Implement separate admin dashboard with real-time monitoring
+- Add admin-specific features like user management and system configuration
+- Extend error handling for admin-specific authentication scenarios
+
+**Section sources**
+- [AdminSessionService.php:1-121](file://backend/app/Services/AdminSessionService.php#L1-L121)
+- [AdminAuthController.php:1-148](file://backend/app/Http/Controllers/API/Admin/AdminAuthController.php#L1-L148)
+
 ## Detailed Component Analysis
 
 ### App.jsx — Global Orchestration and State
@@ -146,12 +232,14 @@ Responsibilities:
 - Manage auth state (user/token), site settings, toast notifications, and active tab.
 - Render layout and route-like views based on activeTab.
 - Handle ZiniPay redirect verification and error states.
+- Implement comprehensive token expiration handling with automatic logout.
 
 Key implementation highlights:
 - Candidate list includes explicit env, same-origin /api, common local URLs, and Laragon-style subdirectory paths.
 - Probing uses HEAD/GET against /site-settings with timeout and CORS-safe headers.
 - Site settings are polled periodically to reflect branding changes.
 - Dynamic document title, favicon, and SEO meta tags are applied from site settings.
+- **Enhanced**: Automatic session expiration handling with configurable timeouts.
 
 ```mermaid
 flowchart TD
@@ -167,6 +255,15 @@ Offline --> ShowOffline["Render BackendOffline"]
 Settings --> InstallCheck{"installed=false?"}
 InstallCheck --> |Yes| ShowInstall["Show install wizard page"]
 InstallCheck --> |No| RenderApp["Render main app"]
+RenderApp --> AuthCheck{"Has saved auth?"}
+AuthCheck --> |Yes| ValidateAuth["Validate token<br/>check expiration"]
+AuthCheck --> |No| ShowGuest["Show guest view"]
+ValidateAuth --> Valid{"Token valid?"}
+Valid --> |Yes| StartTimer["Start expiration timer"]
+Valid --> |No| ClearAuth["Clear local auth"]
+StartTimer --> TimerCheck{"Time remaining > 0?"}
+TimerCheck --> |Yes| Continue["Continue with authenticated session"]
+TimerCheck --> |No| AutoLogout["Auto logout<br/>show 'session expired' message"]
 ```
 
 **Diagram sources**
@@ -175,9 +272,10 @@ InstallCheck --> |No| RenderApp["Render main app"]
 - [App.jsx:429-500](file://frontend/src/App.jsx#L429-L500)
 - [App.jsx:502-524](file://frontend/src/App.jsx#L502-L524)
 - [App.jsx:565-689](file://frontend/src/App.jsx#L565-L689)
+- [App.jsx:434-485](file://frontend/src/App.jsx#L434-L485)
 
 **Section sources**
-- [App.jsx:1-805](file://frontend/src/App.jsx#L1-L805)
+- [App.jsx:1-863](file://frontend/src/App.jsx#L1-L863)
 
 ### BookingPortal.jsx — Search, Seats, Promo, Booking
 Responsibilities:
@@ -327,7 +425,7 @@ App --> ZP["zinipay.js"]
 ```
 
 **Diagram sources**
-- [App.jsx:1-805](file://frontend/src/App.jsx#L1-L805)
+- [App.jsx:1-863](file://frontend/src/App.jsx#L1-L863)
 - [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
 - [SearchForm.jsx:1-109](file://frontend/src/components/SearchForm.jsx#L1-L109)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
@@ -337,7 +435,7 @@ App --> ZP["zinipay.js"]
 - [zinipay.js:1-179](file://frontend/src/zinipay.js#L1-L179)
 
 **Section sources**
-- [App.jsx:1-805](file://frontend/src/App.jsx#L1-L805)
+- [App.jsx:1-863](file://frontend/src/App.jsx#L1-L863)
 - [BookingPortal.jsx:1-654](file://frontend/src/components/BookingPortal.jsx#L1-L654)
 - [ScheduleList.jsx:1-225](file://frontend/src/components/ScheduleList.jsx#L1-L225)
 - [SeatMap.jsx:1-612](file://frontend/src/components/SeatMap.jsx#L1-L612)
@@ -351,13 +449,38 @@ App --> ZP["zinipay.js"]
 - Live seat map polling: Refreshes every 5 seconds only when a schedule is expanded to limit overhead.
 - Vite dev proxy: Centralizes backend endpoints (/api, /uploads) and provides fallback routes for local environments.
 - Environment-driven API base: Avoids hardcoding and reduces misconfiguration latency.
+- **Enhanced**: Efficient token validation with minimal network calls and automatic cleanup of expired sessions.
 
 Recommendations:
 - Consider lazy loading heavy components (e.g., SeatMap) with dynamic imports when not visible.
 - Debounce search submissions and throttle polling intervals based on user activity.
 - Use HTTP caching headers on backend for /search to leverage browser cache.
+- Consider implementing axios interceptors for centralized error handling and token refresh logic.
 
-[No sources needed since this section provides general guidance]
+## Security Considerations
+
+### Token Security
+- **Secure Storage**: Authentication tokens are stored in localStorage with expiration timestamps
+- **Automatic Cleanup**: Expired tokens are automatically cleared from storage
+- **Network Security**: All API calls use HTTPS when configured and include proper CORS headers
+- **Session Validation**: Server-side token validation prevents unauthorized access
+
+### Authentication Flow Security
+- **Password Protection**: Passwords are never stored locally or transmitted in plain text
+- **CSRF Protection**: API endpoints implement CSRF protection mechanisms
+- **Rate Limiting**: Authentication endpoints should implement rate limiting to prevent brute force attacks
+- **Session Timeout**: Configurable session timeouts prevent long-lived unauthorized access
+
+### Future Admin API Security
+When implementing admin API integration, consider:
+- **Role-Based Access Control**: Separate authentication flows for admin and customer users
+- **Enhanced Token Security**: Shorter token lifetimes for admin sessions
+- **Audit Logging**: Track admin actions for security monitoring
+- **IP Whitelisting**: Restrict admin access to specific IP ranges in production
+
+**Section sources**
+- [App.jsx:156-184](file://frontend/src/App.jsx#L156-L184)
+- [App.jsx:434-485](file://frontend/src/App.jsx#L434-L485)
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -371,10 +494,20 @@ Common issues and resolutions:
   - Check redirect parameters and webhook endpoint responses.
 - Seat hold expired:
   - Re-select seats; holds have limited lifetimes enforced by the backend.
+- **New**: Authentication session expired:
+  - Users are automatically logged out when their configured session lifetime expires
+  - Check admin session settings if sessions expire too quickly
+  - Verify network connectivity for token validation calls
+- **New**: Token validation failures:
+  - Clear browser storage and log in again
+  - Check if admin has changed session lifetime settings
+  - Verify backend API is responding to /auth/me endpoint
 
 Operational checks:
 - Confirm Vite dev server proxies /api and /uploads.
 - Validate CORS and credentials behavior for cross-origin setups.
+- Monitor browser console for authentication-related errors.
+- Check localStorage for proper token and expiration timestamp storage.
 
 **Section sources**
 - [App.jsx:502-524](file://frontend/src/App.jsx#L502-L524)
@@ -383,4 +516,6 @@ Operational checks:
 - [vite.config.js:1-74](file://frontend/vite.config.js#L1-L74)
 
 ## Conclusion
-The frontend follows a clear component-based architecture with strong separation of concerns: App orchestrates global state and routing-like behavior, BookingPortal drives the core booking workflow, and supporting components render specialized UI. State is primarily local with shared context passed via props, and API communication uses Fetch with robust backend discovery and error handling. Vite config simplifies development with proxying and environment variables. Performance is addressed through in-memory caching, optimistic UI, and targeted polling. Responsive design and accessibility are supported through semantic HTML, labeled inputs, and CSS variables.
+The frontend follows a clear component-based architecture with strong separation of concerns: App orchestrates global state and routing-like behavior, BookingPortal drives the core booking workflow, and supporting components render specialized UI. State is primarily local with shared context passed via props, and API communication uses Fetch with robust backend discovery and error handling. Vite config simplifies development with proxying and environment variables. Performance is addressed through in-memory caching, optimistic UI, and targeted polling. 
+
+**Enhanced**: The system now includes comprehensive authentication with automatic token expiration handling, providing a secure and user-friendly experience. The architecture is well-positioned for future admin API integration, with existing authentication infrastructure that can be extended to support administrative functionality. Responsive design and accessibility are supported through semantic HTML, labeled inputs, and CSS variables.

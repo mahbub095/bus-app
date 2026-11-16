@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: backend/admin_api/site_settings_coach_service
+title: Admin Site Settings & Coach Services API
+scope:
+    - backend/app/Http/Controllers/API/Admin/SiteSettingsApiController.php
+    - backend/app/Http/Controllers/API/Admin/CoachServiceApiController.php
+    - backend/app/Http/Controllers/API/Admin/Concerns/FormatsAdminResources.php
+source_files: []
+depends_on: []
+related_to: []

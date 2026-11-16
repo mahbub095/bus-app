@@ -1,0 +1,1 @@
+Laravel controllers over Sanctum personal access tokens for admin auth; `Illuminate\Pagination\LengthAwarePaginator` for list responses; password hashing via `Hash::check`.

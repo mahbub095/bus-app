@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: backend/admin_api/user_promotion_report
+title: 'Admin API: Users, Promotions & Reports'
+scope:
+    - backend/app/Http/Controllers/API/Admin/UserApiController.php
+    - backend/app/Http/Controllers/API/Admin/PromotionApiController.php
+    - backend/app/Http/Controllers/API/Admin/ReportApiController.php
+source_files: []
+depends_on: []
+related_to:
+    - path: load_testing
