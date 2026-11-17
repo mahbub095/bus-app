@@ -83,14 +83,20 @@ class GatewaySettingsService
         ]);
 
         $this->envFileWriter->set([
-            'MAIL_MAILER' => $validated['mail_mailer'],
-            'MAIL_HOST' => $validated['mail_host'] ?? '',
-            'MAIL_PORT' => (string) ($validated['mail_port'] ?? ''),
-            'MAIL_USERNAME' => $validated['mail_username'] ?? '',
-            'MAIL_PASSWORD' => $validated['mail_password'] ?? '',
-            'MAIL_ENCRYPTION' => $encryption ?? '',
+            'MAIL_MAILER'       => $validated['mail_mailer'],
+            'MAIL_HOST'         => $validated['mail_host'] ?? '',
+            'MAIL_PORT'         => (string) ($validated['mail_port'] ?? ''),
+            'MAIL_USERNAME'     => $validated['mail_username'] ?? '',
+            'MAIL_PASSWORD'     => $validated['mail_password'] ?? '',
+            'MAIL_ENCRYPTION'   => $encryption ?? '',
+            // Map to Symfony Mailer scheme: port 587=smtp, port 465=smtps
+            'MAIL_SCHEME'       => match (strtolower((string) $encryption)) {
+                'ssl', 'smtps' => 'smtps',
+                'tls', 'smtp'  => 'smtp',
+                default        => '',
+            },
             'MAIL_FROM_ADDRESS' => $validated['mail_from_address'],
-            'MAIL_FROM_NAME' => $validated['mail_from_name'],
+            'MAIL_FROM_NAME'    => $validated['mail_from_name'],
         ]);
     }
 

@@ -153,24 +153,14 @@ class UserAuthController extends BaseController
             Mail::to($user->email)->send(new ResetPasswordCodeMail($code));
         } catch (\Exception $e) {
             Log::error("Failed to send password reset email to {$user->email}: " . $e->getMessage());
-            if (config('app.env') !== 'local') {
-                throw ValidationException::withMessages([
-                    'email' => ['We encountered an error while sending the password reset code. Please try again.'],
-                ]);
-            }
+            throw ValidationException::withMessages([
+                'email' => ['Failed to send reset email: ' . $e->getMessage()],
+            ]);
         }
 
-        // Return message
-        $response = [
-            'message' => 'A password reset code has been sent to your email.'
-        ];
-        
-        // Return code in local and testing environments for development convenience
-        if (config('app.env') === 'local' || config('app.env') === 'testing') {
-            $response['code'] = $code;
-        }
-
-        return response()->json($response);
+        return response()->json([
+            'message' => 'A password reset code has been sent to your email.',
+        ]);
     }
 
     public function resetPassword(Request $request)

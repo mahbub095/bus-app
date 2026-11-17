@@ -69,6 +69,12 @@ Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/admin/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Forgot / Reset password (guest, rate-limited)
+Route::get('/admin/forgot-password', [AuthController::class, 'showForgotPassword'])->name('admin.forgot-password.show');
+Route::post('/admin/forgot-password', [AuthController::class, 'forgotPassword'])->name('admin.forgot-password')->middleware('throttle:5,1');
+Route::get('/admin/reset-password', [AuthController::class, 'showResetPassword'])->name('admin.reset-password.show');
+Route::post('/admin/reset-password', [AuthController::class, 'resetPassword'])->name('admin.reset-password')->middleware('throttle:5,1');
+
 /*
 |--------------------------------------------------------------------------
 | Admin console (Blade dashboard + form CRUD + session AJAX)

@@ -313,6 +313,12 @@
                 <button class="btn btn-primary" type="submit">
                     Sign In to Portal
                 </button>
+
+                <div style="text-align:center;margin-top:4px;">
+                    <a href="{{ route('admin.forgot-password.show') }}" style="font-size:12px;color:var(--text-secondary);text-decoration:none;">
+                        Forgot Password?
+                    </a>
+                </div>
             </form>
 
         </div>
