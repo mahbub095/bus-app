@@ -37,11 +37,27 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
+        // ── Always fix MAIL_ENCRYPTION → scheme mapping ───────────────────────
+        // Laravel 12 / Symfony Mailer valid scheme values: 'smtp' (port 587
+        // STARTTLS) or 'smtps' (port 465 SSL). Old MAIL_ENCRYPTION values
+        // 'tls'/'ssl' must be mapped correctly.
+        if (empty(config('mail.mailers.smtp.scheme'))) {
+            $raw = env('MAIL_SCHEME') ?: env('MAIL_ENCRYPTION');
+            $scheme = match (strtolower((string) $raw)) {
+                'ssl', 'smtps' => 'smtps',  // port 465
+                'tls', 'smtp'  => 'smtp',   // port 587 STARTTLS
+                default        => null,     // auto-negotiate
+            };
+            if ($scheme) {
+                config(['mail.mailers.smtp.scheme' => $scheme]);
+            }
+        }
+
         // Dynamic gateway and service configuration overrides from database
         try {
             if (Schema::hasTable('site_settings')) {
                 $settings = SiteSetting::getAllCached();
-                
+
                 // Override mail configurations
                 if (!empty($settings['mail_mailer'])) {
                     config(['mail.default' => $settings['mail_mailer']]);
@@ -58,8 +74,16 @@ class AppServiceProvider extends ServiceProvider
                 if (isset($settings['mail_password'])) {
                     config(['mail.mailers.smtp.password' => $settings['mail_password']]);
                 }
-                if (isset($settings['mail_encryption'])) {
-                    config(['mail.mailers.smtp.scheme' => $settings['mail_encryption']]);
+                if (array_key_exists('mail_encryption', $settings)) {
+                    // DB stores 'tls', 'ssl', or null (none).
+                    // Symfony Mailer valid values: 'smtp' (587) or 'smtps' (465).
+                    $enc = $settings['mail_encryption'];
+                    $scheme = match (strtolower((string) $enc)) {
+                        'ssl', 'smtps' => 'smtps',
+                        'tls', 'smtp'  => 'smtp',
+                        default        => null,
+                    };
+                    config(['mail.mailers.smtp.scheme' => $scheme]);
                 }
                 if (!empty($settings['mail_from_address'])) {
                     config(['mail.from.address' => $settings['mail_from_address']]);
